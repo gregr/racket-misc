@@ -1,10 +1,15 @@
 #lang racket/base
+(provide
+  record
+  records
+  record-struct
+  )
+
 (require (for-syntax racket/base))
 (require (for-syntax racket/list))
 (require racket/dict)
 (require racket/list)
 (require racket/match)
-(provide record-struct record records)
 
 (define-syntax record-struct
   (syntax-rules ()
@@ -50,10 +55,6 @@
                     (list (identifier-with-? ident) #'datum))
                   (syntax->list #'(rname ...)))))
          (record rname rfield ...) ...))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; private
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax (record-hash stx)
   (syntax-case stx ()
