@@ -1,24 +1,28 @@
 #lang racket/base
 (provide
-  ; cursor notation
-  ::0
-  ::^
-  ::^.
-  ::^*
-  ::^*.
-  ::@*
-  ::@
-  ::.
-  ::=
-  ::~
-  ; lens-like operators
-  :o
-  :.
-  :=
-  :~
-  :.*
-  :=*
-  :~*
+  ;; cursor notation
+  ::0   ; create a new cursor focusing on the given datum
+  ::^   ; ascend one level or optionally to the same depth as another cursor
+  ::^.  ; ascend as in ::^, then retrieve the focus
+  ::^*  ; ascend completely
+  ::^*. ; ascend completely, then retrieve the focus
+  ::@*  ; descend through all paths in a given list of paths
+  ::@   ; descend as in ::@*, but take each path as an additional argument
+  ::.   ; descend as in ::@, then retrieve the focus
+  ::=   ; descend as in ::@, refocus with a new value, then ascend to the
+        ; original position
+  ::~   ; like ::=, but refocus by applying a transformation to the target
+        ; focus
+
+  ;; lens operators
+  :o  ; merge a list of paths into one path
+  :.  ; follow all paths given as arguments and get the target value
+  :=  ; follow all paths given as arguments and set the target value
+  :~  ; follow all paths given as arguments and apply a transformation to the
+      ; target value
+  :.* ; like :. but the arguments taken are segments of a single path
+  :=* ; like := but the arguments taken are segments of a single path
+  :~* ; like :~ but the arguments taken are segments of a single path
   )
 
 (require "list.rkt")
