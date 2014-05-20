@@ -3,6 +3,7 @@
   maybe?
   (struct-out nothing)
   (struct-out just)
+  maybe-from
   maybe-monad
   )
 
@@ -13,6 +14,11 @@
 (records maybe
   (nothing)
   (just x))
+
+(define (maybe-from default maybe-value)
+  (match maybe-value
+    ((nothing) default)
+    ((just x)  x)))
 
 (define maybe-monad
   (monad
