@@ -15,12 +15,16 @@
 (require (for-syntax racket/base))
 (require "match.rkt")
 (require "record.rkt")
-(require racket/function)
 (require racket/match)
 
 (record monad pure bind)
 
-(define identity-monad (monad identity (lambda (prev next) (next prev))))
+(record identity x)
+
+(define identity-monad
+  (monad
+    identity
+    (lambda/destruct ((identity value) next) (next value))))
 
 (define current-monad (make-parameter identity-monad))
 
