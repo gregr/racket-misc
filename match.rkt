@@ -12,6 +12,9 @@
 (require racket/function)
 (require racket/match)
 
+(module+ test
+  (require rackunit))
+
 (define-syntax (lambda/destruct stx)
   (syntax-case stx ()
     ((_ (pattern ...) body ...)
@@ -26,6 +29,10 @@
     ((_ (name pattern ...) body ...)
      (define name
        (lambda/destruct (pattern ...) body ...)))))
+
+(module+ test
+  (define/destruct (list-2nd-of-4 (list a b c d)) b)
+  (check-equal? (list-2nd-of-4 '(a b c d)) 'b))
 
 (define current-cata
   (make-parameter
@@ -56,3 +63,10 @@
   (syntax-rules ()
     ((_ value body ...)
      ((lambda/cata body ...) value))))
+
+(module+ test
+  (check-equal?
+    (match/cata (list 1 2 3 4)
+      ('()               '())
+      ((cons a (cata b)) (cons (+ a 1) b)))
+    (list 2 3 4 5)))
