@@ -5,11 +5,13 @@
   record-struct
   )
 
-(require (for-syntax racket/base))
-(require (for-syntax racket/list))
-(require racket/dict)
-(require racket/list)
-(require racket/match)
+(require
+  (for-syntax racket/base)
+  (for-syntax racket/list)
+  racket/dict
+  racket/list
+  racket/match
+  )
 
 (define-syntax record-struct
   (syntax-rules ()

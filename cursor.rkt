@@ -25,11 +25,13 @@
   :~* ; like :~ but the arguments taken are segments of a single path
   )
 
-(require "list.rkt")
-(require "record.rkt")
-(require racket/dict)
-(require racket/function)
-(require racket/match)
+(require
+  "list.rkt"
+  "record.rkt"
+  racket/dict
+  racket/function
+  racket/match
+  )
 
 (define (ref+set datum)
   (cond

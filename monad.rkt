@@ -12,10 +12,12 @@
   begin/with-monad
   )
 
-(require (for-syntax racket/base))
-(require "match.rkt")
-(require "record.rkt")
-(require racket/match)
+(require
+  (for-syntax racket/base)
+  "match.rkt"
+  "record.rkt"
+  racket/match
+  )
 
 (record monad pure bind)
 

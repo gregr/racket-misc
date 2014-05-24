@@ -6,9 +6,11 @@
   either-monad
   )
 
-(require "monad.rkt")
-(require "record.rkt")
-(require racket/match)
+(require
+  "monad.rkt"
+  "record.rkt"
+  racket/match
+  )
 
 (records either
   (left x)

@@ -8,9 +8,11 @@
   match/cata
   )
 
-(require (for-syntax racket/base))
-(require racket/function)
-(require racket/match)
+(require
+  (for-syntax racket/base)
+  racket/function
+  racket/match
+  )
 
 (module+ test
   (require rackunit))
