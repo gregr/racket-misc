@@ -6,6 +6,7 @@
   lambda/cata
   define/cata
   match/cata
+  for/fold/match/derived
   for/fold/match
   )
 
@@ -74,18 +75,26 @@
       ((cons a (cata b)) (cons (+ a 1) b)))
     (list 2 3 4 5)))
 
-(define-syntax (for/fold/match stx)
+(define-syntax (for/fold/match/derived stx)
   (syntax-case stx ()
-    ((_ ((acc-pattern acc-init) ...) ((element-pattern seq) ...) body ...)
+    ((_ original
+        ((acc-pattern acc-init) ...)
+        ((element-pattern seq) ...)
+        body ...)
      (with-syntax (((acc ...)
                     (generate-temporaries #'((acc-pattern acc-init) ...)))
                    ((element ...)
                     (generate-temporaries #'((element-pattern seq) ...))))
-      #'(for/fold/derived stx ((acc acc-init) ...) ((element seq) ...)
+      #'(for/fold/derived original ((acc acc-init) ...) ((element seq) ...)
           (match* (acc ...)
             ((acc-pattern ...)
              (match* (element ...)
                ((element-pattern ...) body ...)))))))))
+
+(define-syntax (for/fold/match stx)
+  (syntax-case stx ()
+    ((_ accs seqs body ...)
+     #`(for/fold/match/derived #,stx accs seqs body ...))))
 
 (module+ test
   (check-equal?
