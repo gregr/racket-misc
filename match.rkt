@@ -8,6 +8,7 @@
   match/cata
   for/fold/match/derived
   for/fold/match
+  for/list/match
   )
 
 (require
@@ -103,3 +104,20 @@
         (((cons a b) (list (cons 1 2) (cons 7 4))))
       (cons (+ a b sum) 'something))
     (cons 14 'something)))
+
+(define-syntax (for/list/match stx)
+  (syntax-case stx ()
+    ((_ seqs body ...)
+     (with-syntax ((original stx)
+                   (list-acc (datum->syntax #'this 'list-acc)))
+     #'(reverse
+         (for/fold/match/derived original ((list-acc '())) seqs
+          (cons (begin body ...) list-acc)))))))
+
+(module+ test
+  (check-equal?
+    (for/list/match
+      (((list a b) '((a b) (c d)))
+       ((list c d) '((1 2) (3 4))))
+      (list a b c d))
+    '((a b 1 2) (c d 3 4))))
