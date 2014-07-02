@@ -4,6 +4,7 @@
   (struct-out left)
   (struct-out right)
   either-from
+  either-iterate
   either-map
   either-monad
   either-or
@@ -45,3 +46,8 @@
           (if (right? result) result #f)) => (lambda (result) result))
        ...
        (else (nothing))))))
+
+(define (either-iterate f arg)
+  (match (f arg)
+    ((left _)    arg)
+    ((right arg) (either-iterate f arg))))
