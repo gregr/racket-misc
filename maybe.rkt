@@ -4,6 +4,7 @@
   (struct-out nothing)
   (struct-out just)
   maybe-from
+  maybe-map
   maybe-monad
   maybe-or
   )
@@ -22,6 +23,11 @@
   (match maybe-value
     ((nothing) default)
     ((just x)  x)))
+
+(define (maybe-map f val)
+  (match val
+    ((nothing) val)
+    ((just x) (just (f x)))))
 
 (define maybe-monad
   (monad
