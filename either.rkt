@@ -4,6 +4,7 @@
   (struct-out left)
   (struct-out right)
   either-monad
+  either-or
   )
 
 (require
@@ -23,3 +24,12 @@
       (match prev
         ((left x) (left x))
         ((right x) (next x))))))
+
+(define-syntax either-or
+  (syntax-rules ()
+    ((_ arg ...)
+     (cond
+       ((let ((result arg))
+          (if (right? result) result #f)) => (lambda (result) result))
+       ...
+       (else (nothing))))))

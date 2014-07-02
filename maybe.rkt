@@ -5,6 +5,7 @@
   (struct-out just)
   maybe-from
   maybe-monad
+  maybe-or
   )
 
 (require
@@ -29,3 +30,12 @@
       (match prev
         ((nothing) (nothing))
         ((just x) (next x))))))
+
+(define-syntax maybe-or
+  (syntax-rules ()
+    ((_ arg ...)
+     (cond
+       ((let ((result arg))
+          (if (just? result) result #f)) => (lambda (result) result))
+       ...
+       (else (nothing))))))
