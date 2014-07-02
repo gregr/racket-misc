@@ -3,6 +3,7 @@
   maybe?
   (struct-out nothing)
   (struct-out just)
+  maybe-fold
   maybe-from
   maybe-iterate
   maybe-map
@@ -25,10 +26,15 @@
     ((nothing) default)
     ((just x)  x)))
 
+(define (maybe-fold nothing-fold just-fold val)
+  (match val
+    ((nothing) nothing-fold)
+    ((just x)  (just-fold x))))
+
 (define (maybe-map f val)
   (match val
     ((nothing) val)
-    ((just x) (just (f x)))))
+    ((just x)  (just (f x)))))
 
 (define maybe-monad
   (monad
@@ -36,7 +42,7 @@
     (lambda (prev next)
       (match prev
         ((nothing) (nothing))
-        ((just x) (next x))))))
+        ((just x)  (next x))))))
 
 (define-syntax maybe-or
   (syntax-rules ()

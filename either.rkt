@@ -3,6 +3,7 @@
   either?
   (struct-out left)
   (struct-out right)
+  either-fold
   either-from
   either-iterate
   either-map
@@ -22,12 +23,17 @@
 
 (define (either-from default maybe-value)
   (match maybe-value
-    ((left _) default)
-    ((right x)  x)))
+    ((left _)  default)
+    ((right x) x)))
+
+(define (either-fold left-fold right-fold val)
+  (match val
+    ((left x)  (left-fold x))
+    ((right x) (right-fold x))))
 
 (define (either-map f val)
   (match val
-    ((left _) val)
+    ((left _)  val)
     ((right x) (right (f x)))))
 
 (define either-monad
@@ -35,7 +41,7 @@
     right
     (lambda (prev next)
       (match prev
-        ((left x) (left x))
+        ((left x)  (left x))
         ((right x) (next x))))))
 
 (define-syntax either-or
