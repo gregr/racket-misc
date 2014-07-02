@@ -1,5 +1,7 @@
 #lang racket/base
 (provide
+  (struct-out cursor)
+
   ;; cursor notation
   ::0   ; create a new cursor focusing on the given datum
   ::^   ; ascend one level or optionally to the same depth as another cursor
