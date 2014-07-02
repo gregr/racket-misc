@@ -3,6 +3,7 @@
   either?
   (struct-out left)
   (struct-out right)
+  either-from
   either-map
   either-monad
   either-or
@@ -17,6 +18,11 @@
 (records either
   (left x)
   (right x))
+
+(define (either-from default maybe-value)
+  (match maybe-value
+    ((left _) default)
+    ((right x)  x)))
 
 (define (either-map f val)
   (match val
