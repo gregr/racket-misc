@@ -4,6 +4,7 @@
   (struct-out nothing)
   (struct-out just)
   maybe-from
+  maybe-iterate
   maybe-map
   maybe-monad
   maybe-or
@@ -45,3 +46,8 @@
           (if (just? result) result #f)) => (lambda (result) result))
        ...
        (else (nothing))))))
+
+(define (maybe-iterate f arg)
+  (match (f arg)
+    ((nothing)  arg)
+    ((just arg) (maybe-iterate f arg))))
