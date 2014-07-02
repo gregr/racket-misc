@@ -14,6 +14,7 @@
 (require
   "monad.rkt"
   "record.rkt"
+  racket/function
   racket/match
   )
 
@@ -32,9 +33,7 @@
     ((right x) (right-fold x))))
 
 (define (either-map f val)
-  (match val
-    ((left _)  val)
-    ((right x) (right (f x)))))
+  (either-fold (const val) (compose1 right f) val))
 
 (define either-monad
   (monad

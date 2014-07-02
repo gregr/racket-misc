@@ -32,9 +32,7 @@
     ((just x)  (just-fold x))))
 
 (define (maybe-map f val)
-  (match val
-    ((nothing) val)
-    ((just x)  (just (f x)))))
+  (maybe-fold val (compose1 just f) val))
 
 (define maybe-monad
   (monad
