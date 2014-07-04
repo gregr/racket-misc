@@ -37,7 +37,7 @@
 
 (define (ref+set datum)
   (cond
-    ((list? datum) (list list-ref list-set))
+    ((pair? datum) (list list-ref-key list-set-key))
     ((dict? datum) (list dict-ref dict-set))))
 
 (record cursor focus trail ancestors)
