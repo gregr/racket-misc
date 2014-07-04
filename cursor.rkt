@@ -10,6 +10,8 @@
   ::^*. ; ascend completely, then retrieve the focus
   ::@*  ; descend through all paths in a given list of paths
   ::@   ; descend as in ::@*, but take each path as an additional argument
+  ::@*? ; like ::@* but return left (unmatchable path) or right (cursor)
+  ::@?  ; like ::@*? but return left (unmatchable path) or right (cursor)
   ::.   ; descend as in ::@, then retrieve the focus
   ::=   ; descend as in ::@, refocus with a new value, then ascend to the
         ; original position
@@ -29,6 +31,7 @@
 
 (require
   "list.rkt"
+  "either.rkt"
   "record.rkt"
   racket/dict
   racket/function
@@ -39,6 +42,10 @@
   (cond
     ((pair? datum) (list list-ref-key list-set-key))
     ((dict? datum) (list dict-ref dict-set))))
+(define (datum-has-key? datum key)
+  ((cond
+     ((pair? datum) list-has-key?)
+     ((dict? datum) dict-has-key?)) datum key))
 
 (record cursor focus trail ancestors)
 (define (cursor-new datum) (cursor datum '() '()))
@@ -63,6 +70,13 @@
        (cursor new-focus (cons key keys) (cons focus ancestors))))))
 (define (cursor-descend* cur keys)
   (foldl (flip cursor-descend) cur keys))
+(define (cursor-descend*/either cur keys)
+  (match keys
+    ('()             (right cur))
+    ((cons key keys)
+     (if (datum-has-key? (cursor-focus cur) key)
+       (cursor-descend*/either (cursor-descend cur key) keys)
+       (left (cons key keys))))))
 
 (define ((flip proc) x y) (proc y x))
 
@@ -79,6 +93,8 @@
 (define ::^*. (compose1 cursor-focus cursor-ascend*))
 (define (::@* cur paths) (cursor-descend* cur (:o paths)))
 (define (::@ cur . paths) (::@* cur paths))
+(define (::@*? cur paths) (cursor-descend*/either cur (:o paths)))
+(define (::@? cur . paths) (::@*? cur paths))
 (define (::. cur . paths) (cursor-focus (::@* cur paths)))
 (define (::= cur val . paths)
   (cursor-ascend-to (cursor-refocus (::@* cur paths) val)
