@@ -38,6 +38,9 @@
   racket/match
   )
 
+(module+ test
+  (require rackunit))
+
 (define (ref+set datum)
   (cond
     ((pair? datum) (list list-ref-key list-set-key))
@@ -111,3 +114,17 @@
 (define (:.* src . path)       (:. src path))
 (define (:=* src val . path)   (:= src val path))
 (define (:~* src trans . path) (:~ src trans path))
+
+(module+ test
+  (record foo x y)
+  (record bar a b)
+  (define foobar (foo (bar 5 1) '(one two three)))
+  (check-equal? (:.* foobar 'x 'b)
+                1)
+  (check-equal? (:.* foobar 'y 'rest 'first)
+                'two)
+  (check-equal? (:.* (:~* foobar (curry + 3) 'x 'a) 'x 'a)
+                8)
+  (check-equal? (:= 'src 'tgt) 'tgt)
+  )
+
