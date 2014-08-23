@@ -15,6 +15,9 @@
   racket/match
   )
 
+(module+ test
+  (require rackunit))
+
 (define (list-set xs idx val)
   (let-values (((start end) (split-at xs idx)))
               (append start (cons val (cdr end)))))
@@ -34,6 +37,10 @@
 
 (define (list-init lst) (reverse (cdr (reverse lst))))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
+
+(module+ test
+  (check-equal? (list-inits '(a b c d))
+                '(() (a) (a b) (a b c) (a b c d))))
 
 (define (iterate proc seed count)
   (if (<= count 0) (list seed)
