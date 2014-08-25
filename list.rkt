@@ -6,6 +6,7 @@
   list-set-key
   list-init
   list-inits
+  list-path
   iterate
   )
 
@@ -37,6 +38,8 @@
 
 (define (list-init lst) (reverse (cdr (reverse lst))))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
+
+(define (list-path index) (append (make-list index 'rest) '(first)))
 
 (module+ test
   (check-equal? (list-inits '(a b c d))
