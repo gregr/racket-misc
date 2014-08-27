@@ -39,7 +39,7 @@
 (define (list-init lst) (reverse (cdr (reverse lst))))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
 
-(define (list-path index) (append (make-list index 'rest) '(first)))
+(define (list-path index . path) (append (make-list index 'rest) path))
 
 (module+ test
   (check-equal? (list-inits '(a b c d))
