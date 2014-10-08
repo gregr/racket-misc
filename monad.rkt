@@ -19,6 +19,9 @@
   racket/match
   )
 
+(module+ test
+  (require rackunit))
+
 (record monad pure bind)
 
 (record identity x)
@@ -70,3 +73,11 @@
     ((_ monad body ...)
      (with-monad monad
       (begin/monad body ...)))))
+
+(module+ test
+  (check-equal?
+    7
+    (begin/with-monad identity-monad
+      x <- (pure 4)
+      y = 3
+      (+ x y))))
