@@ -2,6 +2,7 @@
 (provide
   lets
   forf
+  forl
   )
 
 (require
@@ -51,3 +52,22 @@
     (forf result = '()
           elem <- (list 1 2 3)
       (cons elem result))))
+
+(define-syntax forl-cont
+  (syntax-rules (<-)
+    ((_ (elem-seqs ...) elem <- seq rest ...)
+     (forl-cont (elem-seqs ... (elem seq)) rest ...))
+    ((_ elem-seqs body ...)
+     (for/list/match elem-seqs body ...))))
+
+(define-syntax forl
+  (syntax-rules ()
+    ((_ rest ...)
+     (forl-cont () rest ...))))
+
+(module+ test
+  (check-equal?
+    '((a 1) (b 2) (c 3))
+    (forl x <- '(a b c)
+          y <- '(1 2 3)
+      (list x y))))
