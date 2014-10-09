@@ -1,8 +1,9 @@
 #lang racket/base
 (provide
-  lets
+  def
   forf
   forl
+  lets
   )
 
 (require
@@ -71,3 +72,16 @@
     (forl x <- '(a b c)
           y <- '(1 2 3)
       (list x y))))
+
+(define-syntax def
+  (syntax-rules ()
+    ((_ (name pattern ...) body ...)
+     (define/destruct (name pattern ...) (lets body ...)))))
+
+(module+ test
+  (def (test-def (list x y) z)
+    w = (+ x y)
+    (* z w))
+  (check-equal?
+    (test-def (list 1 2) 3)
+    9))
