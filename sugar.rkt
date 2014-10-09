@@ -1,9 +1,12 @@
 #lang racket/base
 (provide
   lets
+  forf
   )
 
 (require
+  (for-syntax racket/base)
+  "match.rkt"
   racket/match
   )
 
@@ -29,3 +32,22 @@
       x = 4
       y = 3
       (+ x y))))
+
+(define-syntax forf-cont
+  (syntax-rules (<-)
+    ((_ acc (elem-seqs ...) elem <- seq rest ...)
+     (forf-cont acc (elem-seqs ... (elem seq)) rest ...))
+    ((_ acc elem-seqs body ...)
+     (for/fold/match acc elem-seqs body ...))))
+
+(define-syntax forf
+  (syntax-rules (=)
+    ((_ acc = acc-init rest ...)
+     (forf-cont ((acc acc-init)) () rest ...))))
+
+(module+ test
+  (check-equal?
+    (list 3 2 1)
+    (forf result = '()
+          elem <- (list 1 2 3)
+      (cons elem result))))
