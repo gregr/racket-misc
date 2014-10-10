@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   def
+  fn
   forf
   forl
   lets
