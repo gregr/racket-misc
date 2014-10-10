@@ -73,10 +73,24 @@
           y <- '(1 2 3)
       (list x y))))
 
+(define-syntax fn
+  (syntax-rules ()
+    ((_ (pattern ...) body ...)
+     (lambda/destruct (pattern ...) (lets body ...)))))
+
+(module+ test
+  (check-equal?
+    ((fn ((list x y) z)
+        w = (+ x y)
+        (* z w))
+     (list 1 2) 3)
+    9))
+
 (define-syntax def
   (syntax-rules ()
     ((_ (name pattern ...) body ...)
-     (define/destruct (name pattern ...) (lets body ...)))))
+     (define name
+       (fn (pattern ...) body ...)))))
 
 (module+ test
   (def (test-def (list x y) z)
