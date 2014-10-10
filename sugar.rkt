@@ -40,7 +40,7 @@
     ((_ acc (elem-seqs ...) elem <- seq rest ...)
      (forf-cont acc (elem-seqs ... (elem seq)) rest ...))
     ((_ acc elem-seqs body ...)
-     (for/fold/match acc elem-seqs body ...))))
+     (for/fold/match acc elem-seqs (lets body ...)))))
 
 (define-syntax forf
   (syntax-rules (=)
@@ -49,17 +49,18 @@
 
 (module+ test
   (check-equal?
-    (list 3 2 1)
+    (list 6 4 2)
     (forf result = '()
           elem <- (list 1 2 3)
-      (cons elem result))))
+          doubled = (* 2 elem)
+      (cons doubled result))))
 
 (define-syntax forl-cont
   (syntax-rules (<-)
     ((_ (elem-seqs ...) elem <- seq rest ...)
      (forl-cont (elem-seqs ... (elem seq)) rest ...))
     ((_ elem-seqs body ...)
-     (for/list/match elem-seqs body ...))))
+     (for/list/match elem-seqs (lets body ...)))))
 
 (define-syntax forl
   (syntax-rules ()
@@ -68,10 +69,11 @@
 
 (module+ test
   (check-equal?
-    '((a 1) (b 2) (c 3))
+    '((a 2) (b 4) (c 6))
     (forl x <- '(a b c)
           y <- '(1 2 3)
-      (list x y))))
+          yy = (* 2 y)
+      (list x yy))))
 
 (define-syntax fn
   (syntax-rules ()
