@@ -29,11 +29,12 @@
 
 (module+ test
   (check-equal?
-    7
     (lets
       x = 4
       y = 3
-      (+ x y))))
+      (+ x y))
+    7
+    ))
 
 (define-syntax forf-cont
   (syntax-rules (<-)
@@ -49,31 +50,27 @@
 
 (module+ test
   (check-equal?
-    (list 6 4 2)
     (forf result = '()
           elem <- (list 1 2 3)
           doubled = (* 2 elem)
-      (cons doubled result))))
+      (cons doubled result))
+    (list 6 4 2)
+    ))
 
-(define-syntax forl-cont
-  (syntax-rules (<-)
-    ((_ (elem-seqs ...) elem <- seq rest ...)
-     (forl-cont (elem-seqs ... (elem seq)) rest ...))
-    ((_ elem-seqs body ...)
-     (for/list/match elem-seqs (lets body ...)))))
-
-(define-syntax forl
-  (syntax-rules ()
-    ((_ rest ...)
-     (forl-cont () rest ...))))
+(define-syntax (forl stx)
+  (syntax-case stx ()
+    ((_ most ... body)
+     (with-syntax ((list-acc (datum->syntax #'this 'list-acc)))
+      #'(reverse (forf list-acc = '() most ... (cons body list-acc)))))))
 
 (module+ test
   (check-equal?
-    '((a 2) (b 4) (c 6))
     (forl x <- '(a b c)
           y <- '(1 2 3)
           yy = (* 2 y)
-      (list x yy))))
+      (list x yy))
+    '((a 2) (b 4) (c 6))
+    ))
 
 (define-syntax fn
   (syntax-rules ()
