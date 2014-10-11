@@ -3,6 +3,7 @@
   def
   fn
   forf
+  forf*
   forl
   lets
   )
@@ -57,6 +58,11 @@
     ((_ acc = acc-init rest ...)
      (for_-cont for/fold/match (((acc acc-init))) () rest ...))))
 
+(define-syntax forf*
+  (syntax-rules (=)
+    ((_ acc = acc-init rest ...)
+     (for_-cont for*/fold/match (((acc acc-init))) () rest ...))))
+
 (module+ test
   (check-equal?
     (forf result = '()
@@ -74,6 +80,16 @@
       doubled = (* 2 elem)
       (cons doubled result))
     (list 6 2)
+    ))
+
+(module+ test
+  (check-equal?
+    (forf* result = '()
+          x <- (list 1 2)
+          y <- '(a b)
+      doubled = (* 2 x)
+      (cons (list doubled y) result))
+    '((4 b) (4 a) (2 b) (2 a))
     ))
 
 (define-syntax forl
