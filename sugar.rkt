@@ -41,6 +41,14 @@
   (syntax-rules (<-)
     ((_ acc (elem-seqs ...) elem <- seq rest ...)
      (forf-cont acc (elem-seqs ... (elem seq)) rest ...))
+    ((_ acc (elem-seqs ...) #:when expr rest ...)
+     (forf-cont acc (elem-seqs ... #:when expr) rest ...))
+    ((_ acc (elem-seqs ...) #:unless expr rest ...)
+     (forf-cont acc (elem-seqs ... #:unless expr) rest ...))
+    ((_ acc (elem-seqs ...) #:break expr rest ...)
+     (forf-cont acc (elem-seqs ... #:break expr) rest ...))
+    ((_ acc (elem-seqs ...) #:final expr rest ...)
+     (forf-cont acc (elem-seqs ... #:final expr) rest ...))
     ((_ acc elem-seqs body ...)
      (for/fold/match acc elem-seqs (lets body ...)))))
 
@@ -53,9 +61,19 @@
   (check-equal?
     (forf result = '()
           elem <- (list 1 2 3)
-          doubled = (* 2 elem)
+      doubled = (* 2 elem)
       (cons doubled result))
     (list 6 4 2)
+    ))
+
+(module+ test
+  (check-equal?
+    (forf result = '()
+          elem <- (list 1 2 3)
+          #:when (odd? elem)
+      doubled = (* 2 elem)
+      (cons doubled result))
+    (list 6 2)
     ))
 
 (define-syntax (forl stx)
