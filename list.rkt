@@ -12,6 +12,7 @@
 
 (require
   "match.rkt"
+  racket/function
   racket/list
   racket/match
   )
@@ -48,3 +49,11 @@
 (define (iterate proc seed count)
   (if (<= count 0) (list seed)
     (cons seed (iterate proc (proc seed) (- count 1)))))
+
+(define (zip xss) (apply (curry map list) xss))
+(define (zip* . xss) (zip xss))
+
+(module+ test
+  (check-equal?
+    (zip* '(1 2) '(3 4) '(a b))
+    '((1 3 a) (2 4 b))))
