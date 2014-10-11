@@ -11,6 +11,7 @@
   for/fold/match
   for*/fold/match
   for/list/match
+  for*/list/match
   )
 
 (require
@@ -175,15 +176,22 @@
     '((7 b) (7 a) (3 b) (3 a))
     ))
 
-
-(define-syntax (for/list/match stx)
+(define-syntax (for_/list/match stx)
   (syntax-case stx ()
-    ((_ seqs body ...)
+    ((_ cont seqs body ...)
      (with-syntax ((original stx)
                    (list-acc (datum->syntax #'this 'list-acc)))
      #'(reverse
-         (for/fold/match/derived original ((list-acc '())) seqs
+         (cont original ((list-acc '())) seqs
           (cons (begin body ...) list-acc)))))))
+
+(define-syntax for/list/match
+  (syntax-rules ()
+    ((_ rest ...) (for_/list/match for/fold/match/derived rest ...))))
+
+(define-syntax for*/list/match
+  (syntax-rules ()
+    ((_ rest ...) (for_/list/match for*/fold/match/derived rest ...))))
 
 (module+ test
   (check-equal?
@@ -203,3 +211,11 @@
          )
       (list tag z (+ x y)))
     '((i a 5) (i b 5) (i c 5) (k a 9) (k b 9) (k c 9))))
+
+(module+ test
+  (check-equal?
+    (for*/list/match
+      (((list a b) '((a b) (c d)))
+       (c '(1 2)))
+      (list a b c))
+    '((a b 1) (a b 2) (c d 1) (c d 2))))
