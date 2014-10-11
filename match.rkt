@@ -7,7 +7,9 @@
   define/cata
   match/cata
   for/fold/match/derived
+  for*/fold/match/derived
   for/fold/match
+  for*/fold/match
   for/list/match
   )
 
@@ -76,48 +78,61 @@
       ((cons a (cata b)) (cons (+ a 1) b)))
     (list 2 3 4 5)))
 
-(define-syntax (for/fold/match/derived-cont stx)
+(define-syntax (for_/fold/match/derived-cont stx)
   (syntax-case stx ()
-    ((_ original acc for-clauses ()
+    ((_ cont original acc for-clauses ()
         (source ...) (pattern ...) body ...)
-      #'(for/fold/derived original acc for-clauses
+      #'(cont original acc for-clauses
           (match* (source ...) ((pattern ...) body ...))))
-    ((_ original acc (for-clause ...) ((pat seq) pat-for-clause ...)
+    ((_ cont original acc (for-clause ...) ((pat seq) pat-for-clause ...)
         (source ...) (pattern ...) body ...)
      (with-syntax (((elem) (generate-temporaries #'(pat))))
-     #'(for/fold/match/derived-cont
-         original acc
+     #'(for_/fold/match/derived-cont
+         cont original acc
          (for-clause ... (elem seq))
          (pat-for-clause ...)
          (source ... elem) (pattern ... pat)
          body ...)))
-    ((_ original acc (for-clause ...) (kw expr pat-for-clause ...)
+    ((_ cont original acc (for-clause ...) (kw expr pat-for-clause ...)
         (source ...) (pattern ...) body ...)
-     #'(for/fold/match/derived-cont
-         original acc
+     #'(for_/fold/match/derived-cont
+         cont original acc
          (for-clause ... kw (match* (source ...) ((pattern ...) expr)))
          (pat-for-clause ...)
          (source ...) (pattern ...)
          body ...))))
 
-(define-syntax (for/fold/match/derived stx)
+(define-syntax (for_/fold/match/derived stx)
   (syntax-case stx ()
-    ((_ original
+    ((_ cont original
         ((acc-pattern acc-init) ...)
         (pat-for-clause ...)
         body ...)
      (with-syntax (((acc ...)
                     (generate-temporaries #'((acc-pattern acc-init) ...))))
-      #'(for/fold/match/derived-cont
-          original ((acc acc-init) ...)
+      #'(for_/fold/match/derived-cont
+          cont original ((acc acc-init) ...)
           () (pat-for-clause ...)
           (acc ...) (acc-pattern ...)
           body ...)))))
+
+(define-syntax for/fold/match/derived
+  (syntax-rules ()
+    ((_ rest ...) (for_/fold/match/derived for/fold/derived rest ...))))
+
+(define-syntax for*/fold/match/derived
+  (syntax-rules ()
+    ((_ rest ...) (for_/fold/match/derived for*/fold/derived rest ...))))
 
 (define-syntax (for/fold/match stx)
   (syntax-case stx ()
     ((_ accs seqs body ...)
      #`(for/fold/match/derived #,stx accs seqs body ...))))
+
+(define-syntax (for*/fold/match stx)
+  (syntax-case stx ()
+    ((_ accs seqs body ...)
+     #`(for*/fold/match/derived #,stx accs seqs body ...))))
 
 (module+ test
   (check-equal?
@@ -149,6 +164,17 @@
          )
       (list (cons (list tag z) junk) (+ x y sum)))
     (list (reverse '((i a) (i b) (i c) (k a) (k b) (k c))) (* 3 (+ 1 3 4 6)))))
+
+(module+ test
+  (check-equal?
+    (for*/fold/match
+        ((results '()))
+        (((list x y) '((1 2) (3 4)))
+         (sym '(a b)))
+      (cons (list (+ x y) sym) results))
+    '((7 b) (7 a) (3 b) (3 a))
+    ))
+
 
 (define-syntax (for/list/match stx)
   (syntax-case stx ()
