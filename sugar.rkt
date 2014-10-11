@@ -5,6 +5,7 @@
   forf
   forf*
   forl
+  forl*
   lets
   )
 
@@ -97,13 +98,27 @@
     ((_ rest ...)
      (for_-cont for/list/match () () rest ...))))
 
+(define-syntax forl*
+  (syntax-rules (=)
+    ((_ rest ...)
+     (for_-cont for*/list/match () () rest ...))))
+
 (module+ test
   (check-equal?
     (forl x <- '(a b c)
           y <- '(1 2 3)
-          yy = (* 2 y)
+      yy = (* 2 y)
       (list x yy))
     '((a 2) (b 4) (c 6))
+    ))
+
+(module+ test
+  (check-equal?
+    (forl* x <- '(a b)
+           y <- '(1 2)
+      yy = (* 2 y)
+      (list x yy))
+    '((a 2) (a 4) (b 2) (b 4))
     ))
 
 (define-syntax fn
