@@ -76,21 +76,43 @@
       ((cons a (cata b)) (cons (+ a 1) b)))
     (list 2 3 4 5)))
 
+(define-syntax (for/fold/match/derived-cont stx)
+  (syntax-case stx ()
+    ((_ original acc for-clauses ()
+        (source ...) (pattern ...) body ...)
+      #'(for/fold/derived original acc for-clauses
+          (match* (source ...) ((pattern ...) body ...))))
+    ((_ original acc (for-clause ...) ((pat seq) pat-for-clause ...)
+        (source ...) (pattern ...) body ...)
+     (with-syntax (((elem) (generate-temporaries #'(pat))))
+     #'(for/fold/match/derived-cont
+         original acc
+         (for-clause ... (elem seq))
+         (pat-for-clause ...)
+         (source ... elem) (pattern ... pat)
+         body ...)))
+    ((_ original acc (for-clause ...) (kw expr pat-for-clause ...)
+        (source ...) (pattern ...) body ...)
+     #'(for/fold/match/derived-cont
+         original acc
+         (for-clause ... kw (match* (source ...) ((pattern ...) expr)))
+         (pat-for-clause ...)
+         (source ...) (pattern ...)
+         body ...))))
+
 (define-syntax (for/fold/match/derived stx)
   (syntax-case stx ()
     ((_ original
         ((acc-pattern acc-init) ...)
-        ((element-pattern seq) ...)
+        (pat-for-clause ...)
         body ...)
      (with-syntax (((acc ...)
-                    (generate-temporaries #'((acc-pattern acc-init) ...)))
-                   ((element ...)
-                    (generate-temporaries #'((element-pattern seq) ...))))
-      #'(for/fold/derived original ((acc acc-init) ...) ((element seq) ...)
-          (match* (acc ...)
-            ((acc-pattern ...)
-             (match* (element ...)
-               ((element-pattern ...) body ...)))))))))
+                    (generate-temporaries #'((acc-pattern acc-init) ...))))
+      #'(for/fold/match/derived-cont
+          original ((acc acc-init) ...)
+          () (pat-for-clause ...)
+          (acc ...) (acc-pattern ...)
+          body ...)))))
 
 (define-syntax (for/fold/match stx)
   (syntax-case stx ()
@@ -104,6 +126,29 @@
         (((cons a b) (list (cons 1 2) (cons 7 4))))
       (cons (+ a b sum) 'something))
     (cons 14 'something)))
+
+(module+ test
+  (check-equal?
+    (for/fold/match
+        (((cons sum _) (cons 0 'irrelevant)))
+        (((cons a b) (list (cons 1 2) (cons 7 4)))
+         #:when #t
+         (c (list 10 20))
+         )
+      (cons (+ a b c sum) 'something))
+    (cons (* 2 (+ 1 2 7 4 10 20)) 'something)))
+
+(module+ test
+  (check-equal?
+    (for/fold/match
+        (((list junk sum) (list '() 0)))
+        ((x (list 1 2 3))
+         ((list y tag) '((4 i) (5 j) (6 k)))
+         #:when (even? y)
+         (z '(a b c))
+         )
+      (list (cons (list tag z) junk) (+ x y sum)))
+    (list (reverse '((i a) (i b) (i c) (k a) (k b) (k c))) (* 3 (+ 1 3 4 6)))))
 
 (define-syntax (for/list/match stx)
   (syntax-case stx ()
@@ -121,3 +166,14 @@
        ((list c d) '((1 2) (3 4))))
       (list a b c d))
     '((a b 1 2) (c d 3 4))))
+
+(module+ test
+  (check-equal?
+    (for/list/match
+        ((x (list 1 2 3))
+         ((list y tag) '((4 i) (5 j) (6 k)))
+         #:when (even? y)
+         (z '(a b c))
+         )
+      (list tag z (+ x y)))
+    '((i a 5) (i b 5) (i c 5) (k a 9) (k b 9) (k c 9))))
