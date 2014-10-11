@@ -37,25 +37,25 @@
     7
     ))
 
-(define-syntax forf-cont
+(define-syntax for_-cont
   (syntax-rules (<-)
-    ((_ acc (elem-seqs ...) elem <- seq rest ...)
-     (forf-cont acc (elem-seqs ... (elem seq)) rest ...))
-    ((_ acc (elem-seqs ...) #:when expr rest ...)
-     (forf-cont acc (elem-seqs ... #:when expr) rest ...))
-    ((_ acc (elem-seqs ...) #:unless expr rest ...)
-     (forf-cont acc (elem-seqs ... #:unless expr) rest ...))
-    ((_ acc (elem-seqs ...) #:break expr rest ...)
-     (forf-cont acc (elem-seqs ... #:break expr) rest ...))
-    ((_ acc (elem-seqs ...) #:final expr rest ...)
-     (forf-cont acc (elem-seqs ... #:final expr) rest ...))
-    ((_ acc elem-seqs body ...)
-     (for/fold/match acc elem-seqs (lets body ...)))))
+    ((_ cont (acc ...) (elem-seqs ...) elem <- seq rest ...)
+     (for_-cont cont (acc ...) (elem-seqs ... (elem seq)) rest ...))
+    ((_ cont (acc ...) (elem-seqs ...) #:when expr rest ...)
+     (for_-cont cont (acc ...) (elem-seqs ... #:when expr) rest ...))
+    ((_ cont (acc ...) (elem-seqs ...) #:unless expr rest ...)
+     (for_-cont cont (acc ...) (elem-seqs ... #:unless expr) rest ...))
+    ((_ cont (acc ...) (elem-seqs ...) #:break expr rest ...)
+     (for_-cont cont (acc ...) (elem-seqs ... #:break expr) rest ...))
+    ((_ cont (acc ...) (elem-seqs ...) #:final expr rest ...)
+     (for_-cont cont (acc ...) (elem-seqs ... #:final expr) rest ...))
+    ((_ cont (acc ...) elem-seqs body ...)
+     (cont acc ... elem-seqs (lets body ...)))))
 
 (define-syntax forf
   (syntax-rules (=)
     ((_ acc = acc-init rest ...)
-     (forf-cont ((acc acc-init)) () rest ...))))
+     (for_-cont for/fold/match (((acc acc-init))) () rest ...))))
 
 (module+ test
   (check-equal?
@@ -76,11 +76,10 @@
     (list 6 2)
     ))
 
-(define-syntax (forl stx)
-  (syntax-case stx ()
-    ((_ most ... body)
-     (with-syntax ((list-acc (datum->syntax #'this 'list-acc)))
-      #'(reverse (forf list-acc = '() most ... (cons body list-acc)))))))
+(define-syntax forl
+  (syntax-rules (=)
+    ((_ rest ...)
+     (for_-cont for/list/match () () rest ...))))
 
 (module+ test
   (check-equal?
