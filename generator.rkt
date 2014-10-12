@@ -44,7 +44,7 @@
             (yield (curry yield-at tag)))
        (run-at tag body ...)))))
 
-(define (yield-at tag v) (shift-at tag k (gen-susp v k)))
+(define (yield-at tag v) (shift-at tag k (gen-susp v (lambda (i) (k i)))))
 (define (yield v) (yield-at (default-continuation-prompt-tag) v))
 
 (define-syntax generator
