@@ -2,6 +2,7 @@
 ; generalized yield-run as described in:
 ; http://www.cs.indiana.edu/~sabry/papers/yield.pdf
 (provide
+  in-gen
   run-at
   run
   run*
@@ -11,13 +12,16 @@
   generator*
   gen-fold
   gen->list
+  gen->stream
   )
 
 (require
+  "either.rkt"
   "record.rkt"
   racket/control
   racket/function
   racket/match
+  racket/stream
   )
 
 (module+ test
@@ -90,4 +94,47 @@
                             (yield0 3)))
                 (yield0 4)))
     (list 1 3 4)
+    ))
+
+(struct gen-stream ((state #:mutable)) #:transparent
+  #:methods gen:stream
+  ((define (state-next gs)
+     (match (gen-stream-state gs)
+       ((left gen)
+        (let ((next (gen (void))))
+          (set-gen-stream-state! gs (right next))
+          next))
+       ((right next) next)))
+   (define (stream-empty? gs)
+     (match (state-next gs)
+       ((gen-result _) #t)
+       ((gen-susp _ _) #f)))
+   (define (stream-first gs)
+     (match (state-next gs)
+       ((gen-susp v k) v)
+       ((gen-result _) (void))))
+   (define (stream-rest gs)
+     (match (state-next gs)
+       ((gen-susp v k) (gen-stream (left k)))
+       ((gen-result _) (void))))
+   ))
+(define (gen->stream gen) (gen-stream (left gen)))
+(define in-gen gen->stream)
+
+(module+ test
+  (check-equal?
+    (let* ((stream (gen->stream (generator _ (yield 3) (yield 5))))
+           (v0 (stream-first stream))
+           (stream (stream-rest stream))
+           (v1 (stream-first stream)))
+      (list v0 v1))
+    (list 3 5)
+    ))
+
+(module+ test
+  (check-equal?
+    (for/list ((v (in-gen (generator _
+                            (yield 10) (yield 11) (yield 12)))))
+      v)
+    (list 10 11 12)
     ))
