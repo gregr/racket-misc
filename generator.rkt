@@ -11,12 +11,14 @@
   generator
   generator*
   gen-fold
+  gen-for/fold
   gen->list
   gen->stream
   )
 
 (require
   "either.rkt"
+  "match.rkt"
   "record.rkt"
   racket/control
   racket/function
@@ -74,10 +76,17 @@
      (match-let (((list input acc) (on-susp v acc)))
        (gen-fold on-susp on-result input acc k)))))
 
+(define-syntax gen-for/fold
+  (syntax-rules ()
+    ((_ (acc acc-init) (output gen-expr) on-susp result on-result)
+     (gen-fold (lambda/destruct (output acc) on-susp)
+               (lambda/destruct (result acc) on-result)
+               (void) acc-init (lambda (_) gen-expr)))))
+
 (define (gen->list gen)
-  (gen-fold (lambda (v vs) (list (void) (cons v vs)))
-            (lambda (_ vs) (reverse vs))
-            (void) '() gen))
+  (gen-for/fold (vs '()) (v (gen (void)))
+    (list (void) (cons v vs))
+    _ (reverse vs)))
 
 (module+ test
   (check-equal?
