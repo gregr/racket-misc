@@ -9,6 +9,8 @@
   yield
   generator
   generator*
+  gen-fold
+  gen->list
   )
 
 (require
@@ -59,4 +61,33 @@
                  ((gen-result r) (gen (void))))
       (list v0 v1 r))
     (list 3 5 (void))
+    ))
+
+(define (gen-fold on-susp on-result input acc gen)
+  (match (gen input)
+    ((gen-result r) (on-result r acc))
+    ((gen-susp v k)
+     (match-let (((list input acc) (on-susp v acc)))
+       (gen-fold on-susp on-result input acc k)))))
+
+(define (gen->list gen)
+  (gen-fold (lambda (v vs) (list (void) (cons v vs)))
+            (lambda (_ vs) (reverse vs))
+            (void) '() gen))
+
+(module+ test
+  (check-equal?
+    (gen->list (generator _ (yield 3) (yield 5)))
+    (list 3 5)
+    ))
+
+(module+ test
+  (check-equal?
+    (gen->list (generator* yield0 _
+                (yield0 1)
+                (gen->list (generator* yield1 _
+                            (yield1 'ignored)
+                            (yield0 3)))
+                (yield0 4)))
+    (list 1 3 4)
     ))
