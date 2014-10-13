@@ -11,7 +11,9 @@
   generator
   generator*
   gen-fold
+  gen-for
   gen-for/fold
+  gen-iterate
   gen->list
   gen->stream
   )
@@ -81,6 +83,24 @@
      (gen-fold (lambda/destruct (output acc) on-susp)
                (lambda/destruct (result acc) on-result)
                (void) acc-init (lambda (_) gen-expr)))))
+
+(define (gen-iterate on-susp gen (seed (void)))
+  (gen-fold (lambda (v _) (list (on-susp v) (void)))
+            (lambda (r _) r)
+            seed (void) gen))
+
+(define-syntax gen-for
+  (syntax-rules ()
+    ((_ (output gen-expr) body ...)
+     (gen-iterate (lambda/destruct (output) body ...) (lambda (_) gen-expr)))))
+
+(module+ test
+  (check-equal?
+    (gen-for
+      (v (run (yield (+ 3 (yield (+ 2 (yield 1)))))))
+      (* v 10))
+    1230
+    ))
 
 (define (gen->list gen)
   (gen-for/fold (vs '()) (v (gen (void)))
