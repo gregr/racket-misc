@@ -19,7 +19,6 @@
   )
 
 (require
-  "either.rkt"
   "match.rkt"
   "record.rkt"
   racket/control
@@ -147,29 +146,26 @@
     (list 1 3 4)
     ))
 
+(records gen-stream-state
+  (gen-stream-pending gen)
+  (gen-stream-data first rest)
+  (gen-stream-empty))
 (struct gen-stream ((state #:mutable)) #:transparent
   #:methods gen:stream
   ((define (state-next gs)
      (match (gen-stream-state gs)
-       ((left gen)
-        (let ((next (gen (void))))
-          (set-gen-stream-state! gs (right next))
+       ((gen-stream-pending gen)
+        (let ((next (match (gen (void))
+                      ((gen-result _) (gen-stream-empty))
+                      ((gen-susp v k) (gen-stream-data v (gen->stream k))))))
+          (set-gen-stream-state! gs next)
           next))
-       ((right next) next)))
-   (define (stream-empty? gs)
-     (match (state-next gs)
-       ((gen-result _) #t)
-       ((gen-susp _ _) #f)))
-   (define (stream-first gs)
-     (match (state-next gs)
-       ((gen-susp v k) v)
-       ((gen-result _) (void))))
-   (define (stream-rest gs)
-     (match (state-next gs)
-       ((gen-susp v k) (gen-stream (left k)))
-       ((gen-result _) (void))))
+       (state state)))
+   (define (stream-empty? gs) (gen-stream-empty? (state-next gs)))
+   (define (stream-first gs) (gen-stream-data-first (state-next gs)))
+   (define (stream-rest gs) (gen-stream-data-rest (state-next gs)))
    ))
-(define (gen->stream gen) (gen-stream (left gen)))
+(define (gen->stream gen) (gen-stream (gen-stream-pending gen)))
 (define in-gen gen->stream)
 
 (module+ test
@@ -188,4 +184,23 @@
                             (yield 10) (yield 11) (yield 12)))))
       v)
     (list 10 11 12)
+    ))
+
+(module+ test
+  (check-equal?
+    (let* ((count (box 0))
+           (inc-yield (lambda (v)
+                        (set-box! count (+ 1 (unbox count)))
+                        (yield v)))
+           (vs (gen->stream
+                 (generator _ (inc-yield 1) (inc-yield 2) (inc-yield 3))))
+           (v0 (stream-first vs))
+           (vs-extra (stream-rest vs))
+           (vs (stream-rest vs))
+           (v1 (stream-first vs))
+           (v2 (stream-first vs-extra))
+           (vs (stream-rest vs))
+           (v3 (stream-first vs)))
+      (list (list v0 v1 v2 v3) (unbox count)))
+    (list '(1 2 2 3) 3)
     ))
