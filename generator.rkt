@@ -10,8 +10,6 @@
   yield
   generator
   generator*
-  gen-co-fold
-  gen-co-for
   gen-fold
   gen-for/fold
   gen->list
@@ -83,46 +81,6 @@
      (gen-fold (lambda/destruct (output acc) on-susp)
                (lambda/destruct (result acc) on-result)
                (void) acc-init (lambda (_) gen-expr)))))
-
-(define (gen-co-fold seed gens)
-  (if (= 0 (length gens)) seed
-    (let loop ((input seed) (finished '()) (pending gens))
-      (match pending
-        ('() (loop input '() (reverse finished)))
-        ((cons gen gens)
-         (match (gen input)
-           ((gen-result r) r)
-           ((gen-susp v k) (loop v (cons k finished) gens))))))))
-(define (gen-co-fold* seed . gens) (gen-co-fold seed gens))
-
-(define-syntax gen-co-for
-  (syntax-rules ()
-    ((_ gen-expr gens ...)
-     (gen-co-fold* (void) (lambda (_) gen-expr) gens ...))))
-
-(module+ test
-  (check-equal?
-    (gen-co-for
-      (run (yield (+ 1 (yield 10))))
-      (generator (input) (yield (+ 3 (yield (+ input 2))))))
-    (+ 10 1 3 2)
-    ))
-
-(module+ test
-  (check-equal?
-    (gen-co-for
-      (run (let* ((i0 (yield '(a)))
-                  (i1 (yield (append i0 '(c))))
-                  (i2 (yield (append i1 '(e)))))
-             i2))
-      (generator (i0)
-        (let* ((i1 (yield (append i0 '(b))))
-               (i2 (yield (append i1 '(d))))
-               (i3 (yield (append i2 '(f))))
-               (i4 (yield (append i2 '(unreached)))))
-          i4)))
-    '(a b c d e f)
-    ))
 
 (define (gen->list gen)
   (gen-for/fold (vs '()) (v (gen (void)))
