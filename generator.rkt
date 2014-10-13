@@ -10,16 +10,24 @@
   yield
   generator
   generator*
+  generator-monad
   gen-fold
   gen-for
   gen-for/fold
   gen-iterate
   gen->list
   gen->stream
+  next
+  next-try
+  send
+  send-try
+  with-gen
   )
 
 (require
+  "either.rkt"
   "match.rkt"
+  "monad.rkt"
   "record.rkt"
   racket/control
   racket/function
@@ -181,4 +189,72 @@
            (v3 (stream-first vs)))
       (list (list v0 v1 v2 v3) (unbox count)))
     (list '(1 2 2 3) 3)
+    ))
+
+(record gen-state run)
+(define (gen-exec gst gen)
+  (match ((gen-state-run gst) gen)
+    ((gen-result r) r)
+    ((gen-susp v k) v)))
+(define (gen-pure v) (gen-state (lambda (k) (gen-susp v k))))
+(define/destruct (gen-bind (gen-state run) next)
+  (gen-state
+    (lambda (k)
+      (with-monad generator-monad
+        (match (run k)
+          ((gen-result r) (gen-result r))
+          ((gen-susp v k) ((gen-state-run (next v)) k)))))))
+(define generator-monad (monad gen-pure gen-bind))
+
+(define (send input) (gen-state (lambda (k) (k input))))
+(define (send-try input)
+  (gen-state (lambda (k)
+               (match (k input)
+                 ((gen-result r) (gen-susp (left r)
+                                           (lambda (_) (gen-result r))))
+                 ((gen-susp v k) (gen-susp (right v) k))))))
+(define next (curry send (void)))
+(define next-try (curry send-try (void)))
+
+(define-syntax with-gen
+  (syntax-rules ()
+    ((_ gen body ...)
+     (gen-exec (begin/with-monad generator-monad body ...) gen))))
+
+(module+ test
+  (check-equal?
+    (with-gen (generator _ (yield (* 2 (yield 10))))
+      v0 <- next
+      v1 <- (send (+ 1 v0))
+      (pure v1))
+    22
+    ))
+
+(module+ test
+  (check-equal?
+    (with-gen (generator _ (yield (* 2 (yield 10))))
+      v0 <- next
+      v1 <- (send (+ 1 v0))
+      v2 <- (send (* 5 v1))
+      (pure 'unreached))
+    (* 22 5)
+    ))
+
+(module+ test
+  (check-equal?
+    (with-gen (generator _ (yield (* 2 (yield 10))))
+      (right v0) <- next-try
+      v1 <- (send (+ 1 v0))
+      (pure v1))
+    22
+    ))
+
+(module+ test
+  (check-equal?
+    (with-gen (generator _ (yield (* 2 (yield 10))))
+      v0 <- next
+      v1 <- (send (+ 1 v0))
+      (left v2) <- (send-try (* 5 v1))
+      (pure (list 'normally-unreached v2)))
+    (list 'normally-unreached (* 22 5))
     ))
