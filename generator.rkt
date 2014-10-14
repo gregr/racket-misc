@@ -201,7 +201,7 @@
     (list '(1 2 2 3) 3)
     ))
 
-(define (gen-pure v) (gen-susp v (const (gen-result (void)))))
+(define/destruct (gen-pure (cons v k)) (gen-susp v k))
 (define (gen-bind gresp next)
   (match gresp
     ((gen-result r) gresp)
@@ -230,7 +230,7 @@
         (cons v2 g1-1) <- (g0 (+ 2 v1))
         (cons v3 g2-0) <- (g1-0 (+ 3 v2))
         (cons v4 g2-1) <- (g1-1 (+ 4 v3))
-        (pure (list v0 v1 v2 v3 v4))))
+        (pure (cons (list v0 v1 v2 v3 v4) g2-1))))
     (list 10 22 48 51 55)
     ))
 
@@ -242,7 +242,7 @@
         (cons v0 g) <- (g)
         (cons v1 g) <- (g)
         (cons v2 g) <- (gen-handle (const (list v0 v1)) (g))
-        (pure 'unreached)))
+        (pure (cons 'unreached g))))
     (list 1 2)
     ))
 
@@ -254,7 +254,7 @@
         (cons v0 g) <- (g)
         (cons v1 g) <- (g)
         (cons v2 g) <- (gen-catch right left (g))
-        (pure (list v0 v1 v2))))
+        (pure (cons (list v0 v1 v2) g))))
     (list 1 2 (left 3))
     ))
 
