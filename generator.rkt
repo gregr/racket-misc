@@ -8,6 +8,11 @@
   run*
   yield-at
   yield
+  gen-eval
+  gen-state-run
+  gen-response?
+  (struct-out gen-result)
+  (struct-out gen-susp)
   generator
   generator*
   generator-monad
