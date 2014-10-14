@@ -8,14 +8,14 @@
   run*
   yield-at
   yield
-  gen-eval
+  gen-state-eval
+  gen-state-monad
   gen-state-run
   gen-response?
   (struct-out gen-result)
   (struct-out gen-susp)
   generator
   generator*
-  generator-monad
   gen-fold
   gen-for
   gen-for/fold
@@ -198,19 +198,19 @@
     ))
 
 (record gen-state run)
-(define (gen-eval gst gen)
+(define (gen-state-eval gst gen)
   (match ((gen-state-run gst) gen)
     ((gen-result r) r)
     ((gen-susp v k) v)))
-(define (gen-pure v) (gen-state (lambda (k) (gen-susp v k))))
-(define/destruct (gen-bind (gen-state run) next)
+(define (gen-state-pure v) (gen-state (lambda (k) (gen-susp v k))))
+(define/destruct (gen-state-bind (gen-state run) next)
   (gen-state
     (lambda (k)
-      (with-monad generator-monad
+      (with-monad gen-state-monad
         (match (run k)
           ((gen-result r) (gen-result r))
           ((gen-susp v k) ((gen-state-run (next v)) k)))))))
-(define generator-monad (monad gen-pure gen-bind))
+(define gen-state-monad (monad gen-state-pure gen-state-bind))
 
 (define (send input) (gen-state (lambda (k) (k input))))
 (define (send-try input)
@@ -225,7 +225,7 @@
 (define-syntax with-gen
   (syntax-rules ()
     ((_ gen body ...)
-     (gen-eval (begin/with-monad generator-monad body ...) gen))))
+     (gen-state-eval (begin/with-monad gen-state-monad body ...) gen))))
 
 (module+ test
   (check-equal?
