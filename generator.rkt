@@ -192,7 +192,7 @@
     ))
 
 (record gen-state run)
-(define (gen-exec gst gen)
+(define (gen-eval gst gen)
   (match ((gen-state-run gst) gen)
     ((gen-result r) r)
     ((gen-susp v k) v)))
@@ -219,7 +219,7 @@
 (define-syntax with-gen
   (syntax-rules ()
     ((_ gen body ...)
-     (gen-exec (begin/with-monad generator-monad body ...) gen))))
+     (gen-eval (begin/with-monad generator-monad body ...) gen))))
 
 (module+ test
   (check-equal?
