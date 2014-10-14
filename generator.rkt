@@ -9,6 +9,8 @@
   yield-at
   yield
   gen-eval
+  gen-catch
+  gen-handle
   gen-monad
   gen-state-eval
   gen-state-monad
@@ -209,6 +211,14 @@
   (match gresp
     ((gen-result r) r)
     ((gen-susp v k) v)))
+(define (gen-handle f gresp)
+  (match gresp
+    ((gen-result r) (gen-result (f r)))
+    ((gen-susp v k) gresp)))
+(define (gen-catch on-susp on-result gresp)
+  (match gresp
+    ((gen-result r) (gen-susp (on-result r) (const gresp)))
+    ((gen-susp v k) (gen-susp (on-susp v) k))))
 
 (module+ test
   (check-equal?
@@ -222,6 +232,30 @@
         (cons v4 g2-1) <- (g1-1 (+ 4 v3))
         (pure (list v0 v1 v2 v3 v4))))
     (list 10 22 48 51 55)
+    ))
+
+(module+ test
+  (check-equal?
+    (gen-result-r
+      (begin/with-monad gen-monad
+        g = (generator _ (yield 1) (yield 2))
+        (cons v0 g) <- (g)
+        (cons v1 g) <- (g)
+        (cons v2 g) <- (gen-handle (const (list v0 v1)) (g))
+        (pure 'unreached)))
+    (list 1 2)
+    ))
+
+(module+ test
+  (check-equal?
+    (gen-susp-v
+      (begin/with-monad gen-monad
+        g = (generator _ (yield 1) (yield 2) 3)
+        (cons v0 g) <- (g)
+        (cons v1 g) <- (g)
+        (cons v2 g) <- (gen-catch right left (g))
+        (pure (list v0 v1 v2))))
+    (list 1 2 (left 3))
     ))
 
 (record gen-state run)
