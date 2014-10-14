@@ -18,9 +18,10 @@
   )
 
 (module+ test
-  (require rackunit)
-  (require racket/function)
-  )
+  (require
+    racket/function
+    rackunit
+    ))
 
 (record state run)
 (define (state-eval st s) (car ((state-run st) s)))
