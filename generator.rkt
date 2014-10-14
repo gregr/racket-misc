@@ -8,6 +8,8 @@
   run*
   yield-at
   yield
+  gen-eval
+  gen-monad
   gen-state-eval
   gen-state-monad
   gen-state-run
@@ -195,6 +197,31 @@
            (v3 (stream-first vs)))
       (list (list v0 v1 v2 v3) (unbox count)))
     (list '(1 2 2 3) 3)
+    ))
+
+(define (gen-pure v) (gen-susp v (const (gen-result (void)))))
+(define (gen-bind gresp next)
+  (match gresp
+    ((gen-result r) gresp)
+    ((gen-susp v k) (next (cons v k)))))
+(define gen-monad (monad gen-pure gen-bind))
+(define (gen-eval gresp)
+  (match gresp
+    ((gen-result r) r)
+    ((gen-susp v k) v)))
+
+(module+ test
+  (check-equal?
+    (gen-susp-v
+      (begin/with-monad gen-monad
+        g0 = (generator _ (yield (yield (* 2 (yield 10)))))
+        (cons v0 g0) <- (g0)
+        (cons v1 g1-0) <- (g0 (+ 1 v0))
+        (cons v2 g1-1) <- (g0 (+ 2 v1))
+        (cons v3 g2-0) <- (g1-0 (+ 3 v2))
+        (cons v4 g2-1) <- (g1-1 (+ 4 v3))
+        (pure (list v0 v1 v2 v3 v4))))
+    (list 10 22 48 51 55)
     ))
 
 (record gen-state run)
