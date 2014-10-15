@@ -4,6 +4,10 @@
   gets
   modify
   put
+  state-t-run
+  state-t-eval
+  state-t-exec
+  state-monad-t
   state-run
   state-eval
   state-exec
@@ -23,22 +27,39 @@
     rackunit
     ))
 
-(record state run)
-(define (state-eval st s) (car ((state-run st) s)))
-(define (state-exec st s) (cdr ((state-run st) s)))
+(record state-t run)
+(define ((state-t-eval m) st s)
+  (begin/with-monad m
+    (cons v s) <- ((state-t-run st) s)
+    (pure v)))
+(define ((state-t-exec m) st s)
+  (begin/with-monad m
+    (cons v s) <- ((state-t-run st) s)
+    (pure s)))
 
-(define (state-pure v) (state (lambda (s) (cons v s))))
-(define/destruct (state-bind (state run) next)
-  (state
-    (lambda (s)
-      (with-monad state-monad
-        (match-let* (((cons v s) (run s))
-                     ((state run) (next v)))
-          (run s))))))
-(define state-monad (monad state-pure state-bind))
+(define (state-t-pure v) (lift (lambda () (pure v))))
+(define (state-t-bind m)
+  (lambda/destruct ((state-t run) next)
+    (state-t
+      (lambda (s)
+        (begin/with-monad m
+          sm = (state-monad-t m)
+          (cons v s) <- (with-monad sm (run s))
+          (with-monad sm ((state-t-run (next v)) s)))))))
+(define ((state-t-lift m) mc)
+  (state-t (lambda (s)
+    (begin/with-monad m
+      v <- (mc)
+      (pure (cons v s))))))
+(define (state-monad-t m)
+  (monad-t state-t-pure (state-t-bind m) (state-t-lift m)))
+(define state-monad (state-monad-t ident-monad))
+(define (state-run st) (compose1 ident-x (state-t-run st)))
+(define (state-eval st s) (ident-x ((state-t-eval ident-monad) st s)))
+(define (state-exec st s) (ident-x ((state-t-exec ident-monad) st s)))
 
-(define get (state (lambda (s) (cons s s))))
-(define (put v) (state (lambda (s) (cons (void) v))))
+(define get (state-t (lambda (s) ((state-t-run (state-t-pure s)) s))))
+(define (put v) (state-t (lambda (s) ((state-t-run (state-t-pure (void))) v))))
 (define (gets f)
   (begin/monad
     val <- get
@@ -52,7 +73,16 @@
   (check-equal?
     (let ((comp (begin/with-monad state-monad
                   val <- (gets (curry + 1))
+                  (pure val))))
+     (state-eval comp 5))
+    6
+    ))
+
+(module+ test
+  (check-equal?
+    (let ((comp (begin/with-monad state-monad
+                  val <- (gets (curry + 1))
                   (modify (curry * val)))))
-      (state-exec comp 5))
+     (state-exec comp 5))
     (* 5 (+ 5 1))
     ))
