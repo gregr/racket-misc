@@ -3,7 +3,8 @@
   (struct-out monad)
   pure
   bind
-  identity-monad
+  (struct-out ident)
+  ident-monad
   with-monad
   let1/monad
   let/monad
@@ -24,14 +25,13 @@
 
 (record monad pure bind)
 
-(record identity x)
-
-(define identity-monad
+(record ident x)
+(define ident-monad
   (monad
-    identity
-    (lambda/destruct ((identity value) next) (next value))))
+    ident
+    (lambda/destruct ((ident value) next) (next value))))
 
-(define current-monad (make-parameter identity-monad))
+(define current-monad (make-parameter ident-monad))
 
 (define (pure value) ((monad-pure (current-monad)) value))
 (define (bind prev next) ((monad-bind (current-monad)) prev next))
@@ -77,7 +77,7 @@
 (module+ test
   (check-equal?
     7
-    (begin/with-monad identity-monad
+    (begin/with-monad ident-monad
       x <- (pure 4)
       y = 3
       (+ x y))))
