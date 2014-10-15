@@ -1,8 +1,10 @@
 #lang racket/base
 (provide
-  (struct-out monad)
+  monad
+  monad-t
   pure
   bind
+  lift
   (struct-out ident)
   ident-monad
   with-monad
@@ -23,7 +25,10 @@
 (module+ test
   (require rackunit))
 
-(record monad pure bind)
+(record monad-rec pure bind extra)
+(record monad-rec-t lift)
+(define (monad pure bind (extra (void))) (monad-rec pure bind extra))
+(define (monad-t pure bind lift) (monad pure bind (monad-rec-t lift)))
 
 (record ident x)
 (define ident-monad
@@ -32,9 +37,9 @@
     (lambda/destruct ((ident value) next) (next value))))
 
 (define current-monad (make-parameter ident-monad))
-
-(define (pure value) ((monad-pure (current-monad)) value))
-(define (bind prev next) ((monad-bind (current-monad)) prev next))
+(define (pure value) ((monad-rec-pure (current-monad)) value))
+(define (bind prev next) ((monad-rec-bind (current-monad)) prev next))
+(define (lift mc) ((monad-rec-t-lift (monad-rec-extra (current-monad))) mc))
 
 (define-syntax with-monad
   (syntax-rules ()
