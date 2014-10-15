@@ -26,6 +26,7 @@
   gen-iterate
   gen->list
   gen->stream
+  sequence->gen
   next
   next-try
   send
@@ -45,7 +46,10 @@
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    racket/list
+    rackunit
+    ))
 
 (records gen-response
   (gen-result r)
@@ -199,6 +203,16 @@
            (v3 (stream-first vs)))
       (list (list v0 v1 v2 v3) (unbox count)))
     (list '(1 2 2 3) 3)
+    ))
+
+(define (sequence->gen stream)
+  (generator* yield* (_)
+    (for ((val stream)) (yield* val))))
+
+(module+ test
+  (check-equal?
+    (for/list ((val (gen->stream (sequence->gen (in-range 10 16))))) val)
+    (range 10 16)
     ))
 
 (define/destruct (gen-pure (cons v k)) (gen-susp v k))
