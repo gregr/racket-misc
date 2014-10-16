@@ -39,6 +39,7 @@
   "match.rkt"
   "monad.rkt"
   "record.rkt"
+  "state.rkt"
   racket/control
   racket/function
   racket/match
@@ -272,30 +273,36 @@
     (list 1 2 (left 3))
     ))
 
-(record gen-state run)
+(define gen-state-monad (state-monad-t either-monad))
+(define ((gen-state-run gst) gen)
+  (match ((state-t-run gst) gen)
+    ((left  r)          (gen-result r))
+    ((right (cons v k)) (gen-susp v k))))
 (define (gen-state-eval gst gen)
   (match ((gen-state-run gst) gen)
     ((gen-result r) r)
     ((gen-susp v k) v)))
-(define (gen-state-pure v) (gen-state (lambda (k) (gen-susp v k))))
-(define/destruct (gen-state-bind (gen-state run) next)
-  (gen-state
-    (lambda (k)
-      (with-monad gen-state-monad
-        (match (run k)
-          ((gen-result r) (gen-result r))
-          ((gen-susp v k) ((gen-state-run (next v)) k)))))))
-(define gen-state-monad (monad gen-state-pure gen-state-bind))
+(define (gen-response->either gresp)
+  (match gresp
+    ((gen-result r) (left r))
+    ((gen-susp v k) (right v))))
 
-(define (send input) (gen-state (lambda (k) (k input))))
 (define (send-try input)
-  (gen-state (lambda (k)
-               (match (k input)
-                 ((gen-result r) (gen-susp (left r)
-                                           (lambda (_) (gen-result r))))
-                 ((gen-susp v k) (gen-susp (right v) k))))))
-(define next (curry send (void)))
-(define next-try (curry send-try (void)))
+  (begin/with-monad gen-state-monad
+    gen <- get
+    gresp = (gen input)
+    either = (gen-response->either gresp)
+    _ <- (put (if (right? either)
+                (gen-susp-k gresp)
+                (thunk gresp)))
+    (pure either)))
+(define (send input)
+  (begin/with-monad gen-state-monad
+    either <- (send-try input)
+    (lift (thunk either))))
+
+(define next (send (void)))
+(define next-try (send-try (void)))
 
 (define-syntax with-gen
   (syntax-rules ()
