@@ -48,7 +48,8 @@
 (define (datum-has-key? datum key)
   ((cond
      ((pair? datum) list-has-key?)
-     ((dict? datum) dict-has-key?)) datum key))
+     ((dict? datum) dict-has-key?)
+     (else (const #f))) datum key))
 
 (record cursor focus trail ancestors)
 (define (cursor-new datum) (cursor datum '() '()))
