@@ -15,8 +15,8 @@
   )
 
 (require
-  "monad.rkt"
   "match.rkt"
+  "monad.rkt"
   "record.rkt"
   racket/match
   )

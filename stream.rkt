@@ -12,10 +12,10 @@
   )
 
 (require
-  "state.rkt"
-  "maybe.rkt"
   "match.rkt"
+  "maybe.rkt"
   "monad.rkt"
+  "state-monad.rkt"
   racket/function
   racket/match
   racket/stream
