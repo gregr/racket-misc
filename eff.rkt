@@ -4,6 +4,7 @@
 (provide
   effect
   handler
+  handler-compose
   eff-handle
   @!
   @!!
@@ -80,6 +81,8 @@
   (syntax-rules ()
     ((_ handler-expr body ...) (handler-expr (thunk body ...)))))
 
+(define (handler-compose h0 h1)
+  (lambda (body-thunk) (h0 (thunk (h1 body-thunk)))))
 
 ; test cases based on examples found at:
 ; https://github.com/matijapretnar/eff/blob/master/examples/choice.eff
