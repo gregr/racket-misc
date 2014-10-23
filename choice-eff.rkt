@@ -1,8 +1,11 @@
 #lang racket/base
 (provide
   abstain
+  abstention
+  abstention?
   single
   choose
+  reconsider
   choice
   maybe-choice
   either-choice
@@ -25,16 +28,33 @@
     rackunit
     ))
 
-(define (choice) (effect abstain single choose))
+(define (choice) (effect abstention abstention? single choose))
 
-(define (abstain ch reason) (@! ch abstain reason))
-(define (single ch v)       (@! ch single v))
-(define (choose ch xs)      (@! ch choose xs))
+(define (abstain ch reason)    (choose ch (abstention ch reason)))
+(define (abstention ch reason) (@! ch abstention reason))
+(define (abstention? ch xs)    (@! ch abstention? xs))
+(define (single ch v)          (@! ch single v))
+(define (choose ch xs)         (@! ch choose xs))
+
+(define-syntax reconsider
+  (syntax-rules ()
+    ((_ ch on-abstention on-participation body ...)
+      (eff-handle
+        (handler
+          (ch (choose xs k)
+            (k (if (abstention? ch xs)
+                 (on-abstention xs)
+                 (on-participation xs)))))
+        body ...))))
 
 (define (maybe-choice ch)
   (handler
-    (ch (abstain _ k) (nothing))
-    (ch (single v k)  (k (just v)))
+    (ch (abstention _ k) (k (nothing)))
+    (ch (abstention? xs k)
+      (k (match xs
+           ((nothing) #t)
+           ((just _)  #f))))
+    (ch (single v k)     (k (just v)))
     (ch (choose maybe k)
       (match maybe
         ((nothing) (nothing))
@@ -43,8 +63,12 @@
 
 (define (either-choice ch)
   (handler
-    (ch (abstain reason k) (left reason))
-    (ch (single v k)       (k (right v)))
+    (ch (abstention reason k) (k (left reason)))
+    (ch (abstention? xs k)
+      (k (match xs
+           ((left _)  #t)
+           ((right _) #f))))
+    (ch (single v k)          (k (right v)))
     (ch (choose either k)
       (match either
         ((left _)  either)
@@ -53,8 +77,12 @@
 
 (define (list-choice ch)
   (handler
-    (ch (abstain _ k) '())
-    (ch (single v k)  (k (list v)))
+    (ch (abstention _ k) '())
+    (ch (abstention? xs k)
+      (k (match xs
+           ('()        #t)
+           ((cons _ _) #f))))
+    (ch (single v k)     (k (list v)))
     (ch (choose choices k)
       (apply append (for/list ((choice choices)) (k choice))))
     (return v (list v))))
@@ -104,6 +132,18 @@
         y = (choose ch (just 4))
         (+ x y)))
     (nothing)
+    ))
+
+(module+ test
+  (check-equal?
+    (eff-maybe-choice ch
+      (lets
+        x = (choose ch (just 3))
+        z = (reconsider ch (lambda (x) x) (lambda (x) x)
+              (abstain ch 'explicit))
+        y = (choose ch (just 4))
+        (list (+ x y) z)))
+    (just (list (+ 3 4) (nothing)))
     ))
 
 (module+ test
