@@ -14,7 +14,6 @@
 (require
   "choice-eff.rkt"
   "eff.rkt"
-  "maybe.rkt"
   "match.rkt"
   "record.rkt"
   "state-eff.rkt"
@@ -25,6 +24,7 @@
 
 (module+ test
   (require
+    "maybe.rkt"
     "sugar.rkt"
     rackunit
     ))
