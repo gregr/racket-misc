@@ -50,7 +50,7 @@
 (define (:::@? path)
   (begin/with-monad state-monad
     cur <- get
-    (match (::@*? cur (list path))
+    (match (::@?* cur (list path))
       ((right cur) (begin/monad
                      _ <- (put cur)
                      (pure '())))

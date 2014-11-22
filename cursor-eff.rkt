@@ -68,7 +68,7 @@
 (define/destruct (:::^* (cursor-choice-state ch st)) (modify st ::^*))
 
 (define/destruct (cur-with-descent (cursor-choice-state ch st) path f)
-  (match (::@*? (get st) (list path))
+  (match (::@?* (get st) (list path))
     ((left keys) (abstain ch (list 'cannot-descend keys)))
     ((right cur) (f cur))))
 

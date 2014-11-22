@@ -10,8 +10,8 @@
   ::^*. ; ascend completely, then retrieve the focus
   ::@*  ; descend through all paths in a given list of paths
   ::@   ; descend as in ::@*, but take each path as an additional argument
-  ::@*? ; like ::@* but return left (unmatchable path) or right (cursor)
-  ::@?  ; like ::@*? but return left (unmatchable path) or right (cursor)
+  ::@?  ; like ::@?* but return left (unmatchable path) or right (cursor)
+  ::@?* ; like ::@* but return left (unmatchable path) or right (cursor)
   ::.   ; descend as in ::@, then retrieve the focus
   ::=   ; descend as in ::@, refocus with a new value, then ascend to the
         ; original position
@@ -109,7 +109,7 @@
       cur)))
 
 (define (::@* cur . path)       (::@ cur path))
-(define (::@*? cur . path)      (::@? cur path))
+(define (::@?* cur . path)      (::@? cur path))
 (define (::.* cur . path)       (::. cur path))
 (define (::=* cur val . path)   (::= cur val path))
 (define (::~* cur trans . path) (::~ cur trans path))
