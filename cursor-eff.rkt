@@ -68,16 +68,16 @@
 (define/destruct (:::^* (cursor-choice-state ch st)) (modify st ::^*))
 
 (define/destruct (cur-with-descent (cursor-choice-state ch st) path f)
-  (match (::@?* (get st) (list path))
+  (match (::@? (get st) path)
     ((left keys) (abstain ch (list 'cannot-descend keys)))
     ((right cur) (f cur))))
 
 (define (:::@ cs path)
   (cur-with-descent cs path (curry put (cursor-choice-state-st cs))))
-(define (:::. cs path) (cur-with-descent cs path ::.))
+(define (:::. cs path) (cur-with-descent cs path ::.*))
 (define (:::~ cs trans path)
   (cur-with-descent cs path
-    (lambda (cur) (put-cursor cs (::^ (::~ cur trans) (get-cursor cs))))))
+    (lambda (cur) (put-cursor cs (::^ (::~* cur trans) (get-cursor cs))))))
 (define (:::= cs val path) (:::~ cs (const val) path))
 
 (define (:::@* cs . path)       (:::@ cs path))
