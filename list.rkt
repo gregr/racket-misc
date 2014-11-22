@@ -4,6 +4,7 @@
   list-has-key?
   list-ref-key
   list-set-key
+  list-init+last
   list-init
   list-inits
   list-path
@@ -37,7 +38,10 @@
     ('first (cons val xs))
     ('rest (cons x val))))
 
-(define (list-init lst) (reverse (cdr (reverse lst))))
+(define (list-init+last lst)
+  (let ((rlist (reverse lst)))
+    (list (reverse (cdr rlist)) (car rlist))))
+(define (list-init lst) (car (list-init+last lst)))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
 
 (define (list-path index . path) (append (make-list index 'rest) path))
