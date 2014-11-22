@@ -8,14 +8,14 @@
   modify-cursor
   :::^
   :::^*
-  :::@*
-  :::.*
-  :::=*
-  :::~*
   :::@
   :::.
   :::=
   :::~
+  :::@*
+  :::.*
+  :::=*
+  :::~*
   )
 
 (require
@@ -72,18 +72,18 @@
     ((left keys) (abstain ch (list 'cannot-descend keys)))
     ((right cur) (f cur))))
 
-(define (:::@* cs path)
+(define (:::@ cs path)
   (cur-with-descent cs path (curry put (cursor-choice-state-st cs))))
-(define (:::.* cs path) (cur-with-descent cs path ::.))
-(define (:::~* cs trans path)
+(define (:::. cs path) (cur-with-descent cs path ::.))
+(define (:::~ cs trans path)
   (cur-with-descent cs path
     (lambda (cur) (put-cursor cs (::^ (::~ cur trans) (get-cursor cs))))))
-(define (:::=* cs val path) (:::~* cs (const val) path))
+(define (:::= cs val path) (:::~ cs (const val) path))
 
-(define (:::@ cs . path) (:::@* cs path))
-(define (:::. cs . path) (:::.* cs path))
-(define (:::= cs val . path) (:::=* cs val path))
-(define (:::~ cs trans . path) (:::~* cs trans path))
+(define (:::@* cs . path)       (:::@ cs path))
+(define (:::.* cs . path)       (:::. cs path))
+(define (:::=* cs val . path)   (:::= cs val path))
+(define (:::~* cs trans . path) (:::~ cs trans path))
 
 (module+ test
   (check-equal?
@@ -91,15 +91,15 @@
       (eff-cursor* ch cur '(1 (2 3) 4 (5 ((6) 7) 8))
         (lets
           (left 'cannot-ascend) = (cursor-try :::^ cur)
-          v0 = (:::. cur 'first)
-          v1 = (:::. cur 'rest 'first 'first)
-          _ = (:::@ cur 'rest 'rest 'rest)
-          v2 = (:::. cur 'first 'rest 'first 'first 'first)
-          _ = (:::= cur 10 'first 'first)
-          _ = (:::~ cur (curry + 10) 'first 'rest 'first 'rest 'first)
+          v0 = (:::.* cur 'first)
+          v1 = (:::.* cur 'rest 'first 'first)
+          _ = (:::@* cur 'rest 'rest 'rest)
+          v2 = (:::.* cur 'first 'rest 'first 'first 'first)
+          _ = (:::=* cur 10 'first 'first)
+          _ = (:::~* cur (curry + 10) 'first 'rest 'first 'rest 'first)
           _ = (:::^ cur)
-          v3 = (:::. cur 'first)
-          result = (cursor-try :::@ cur 'first 'first 'rest)
+          v3 = (:::.* cur 'first)
+          result = (cursor-try :::@* cur 'first 'first 'rest)
           (list v0 v1 v2 v3 result)
           )))
     (right (list (list 1 2 6 4 (left '(cannot-descend (first rest))))
