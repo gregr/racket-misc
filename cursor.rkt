@@ -5,18 +5,21 @@
   ;; cursor notation
   ::0   ; create a new cursor focusing on the given datum
   ::^   ; ascend one level or optionally to the same depth as another cursor
-  ::^.  ; ascend as in ::^, then retrieve the focus
+  ::^.  ; ascend as in ::^ then retrieve the focus
   ::^*  ; ascend completely
-  ::^*. ; ascend completely, then retrieve the focus
-  ::@*  ; descend through all paths in a given list of paths
-  ::@   ; descend as in ::@*, but take each path as an additional argument
-  ::@?  ; like ::@?* but return left (unmatchable path) or right (cursor)
-  ::@?* ; like ::@* but return left (unmatchable path) or right (cursor)
-  ::.   ; descend as in ::@, then retrieve the focus
+  ::^*. ; ascend completely then retrieve the focus
+  ::@   ; descend through a given path
+  ::@?  ; like ::@ but return left (unmatchable path) or right (cursor)
+  ::.   ; descend as in ::@ then retrieve the focus
   ::=   ; descend as in ::@, refocus with a new value, then ascend to the
         ; original position
-  ::~   ; like ::=, but refocus by applying a transformation to the target
+  ::~   ; like ::= but refocus by applying a transformation to the target
         ; focus
+  ::@*  ; like ::@ but take each path component as an additional argument
+  ::@?* ; like ::@* but return left (unmatchable path) or right (cursor)
+  ::.*  ; like ::. but take each path component as an additional argument
+  ::=*  ; like ::= but take each path component as an additional argument
+  ::~*  ; like ::~ but take each path component as an additional argument
 
   ;; lens operators
   :o  ; merge a list of paths into one path
