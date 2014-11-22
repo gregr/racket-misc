@@ -4,13 +4,16 @@
   with-cursor*
   :::^
   :::^*
-  :::@*
   :::@
-  :::@*?
   :::@?
   :::.
   :::=
   :::~
+  :::@*
+  :::@?*
+  :::.*
+  :::=*
+  :::~*
   )
 
 (require
@@ -39,12 +42,12 @@
 
 (define :::^ (with-monad state-monad (modify ::^)))
 (define :::^* (with-monad state-monad (modify ::^*)))
-(define (:::@* path)
+
+(define (:::@ path)
   (begin/with-monad state-monad
     cur <- get
     (put (::@* cur (list path)))))
-(define (:::@ . path) (:::@* path))
-(define (:::@*? path)
+(define (:::@? path)
   (begin/with-monad state-monad
     cur <- get
     (match (::@*? cur (list path))
@@ -52,32 +55,37 @@
                      _ <- (put cur)
                      (pure '())))
       ((left keys) (pure keys)))))
-(define (:::@? . path) (:::@*? path))
-(define (:::. . path)
+(define (:::. path)
   (begin/with-monad state-monad
     cur <- get
     (pure (apply ::. (list cur path)))))
-(define (:::= val . path)
+(define (:::= val path)
   (begin/with-monad state-monad
     cur <- get
     (put (apply ::= (list cur val path)))))
-(define (:::~ trans . path)
+(define (:::~ trans path)
   (begin/with-monad state-monad
     cur <- get
     (put (apply ::~ (list cur trans path)))))
 
+(define (:::@* . path)       (:::@ path))
+(define (:::@?* . path)      (:::@? path))
+(define (:::.* . path)       (:::. path))
+(define (:::=* val . path)   (:::= val path))
+(define (:::~* trans . path) (:::~ trans path))
+
 (module+ test
   (check-equal?
     (with-cursor* '(1 (2 3) 4 (5 ((6) 7) 8))
-      v0 <- (:::. 'first)
-      v1 <- (:::. 'rest 'first 'first)
-      _ <- (:::@ 'rest 'rest 'rest)
-      v2 <- (:::. 'first 'rest 'first 'first 'first)
-      _ <- (:::= 10 'first 'first)
-      _ <- (:::~ (curry + 10) 'first 'rest 'first 'rest 'first)
+      v0 <- (:::.* 'first)
+      v1 <- (:::.* 'rest 'first 'first)
+      _ <- (:::@* 'rest 'rest 'rest)
+      v2 <- (:::.* 'first 'rest 'first 'first 'first)
+      _ <- (:::=* 10 'first 'first)
+      _ <- (:::~* (curry + 10) 'first 'rest 'first 'rest 'first)
       _ <- :::^
-      v3 <- (:::. 'first)
-      keys <- (:::@? 'first 'first 'rest)
+      v3 <- (:::.* 'first)
+      keys <- (:::@?* 'first 'first 'rest)
       (pure (list v0 v1 v2 v3 keys)))
     (cons (list 1 2 6 4 '(first rest))
           '(1 (2 3) 4 (10 ((6) 17) 8)))
