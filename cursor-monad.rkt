@@ -46,11 +46,11 @@
 (define (:::@ path)
   (begin/with-monad state-monad
     cur <- get
-    (put (::@* cur (list path)))))
+    (put (::@ cur path))))
 (define (:::@? path)
   (begin/with-monad state-monad
     cur <- get
-    (match (::@?* cur (list path))
+    (match (::@? cur path)
       ((right cur) (begin/monad
                      _ <- (put cur)
                      (pure '())))
@@ -58,15 +58,15 @@
 (define (:::. path)
   (begin/with-monad state-monad
     cur <- get
-    (pure (apply ::. (list cur path)))))
+    (pure (::. cur path))))
 (define (:::= val path)
   (begin/with-monad state-monad
     cur <- get
-    (put (apply ::= (list cur val path)))))
+    (put (::= cur val path))))
 (define (:::~ trans path)
   (begin/with-monad state-monad
     cur <- get
-    (put (apply ::~ (list cur trans path)))))
+    (put (::~ cur trans path))))
 
 (define (:::@* . path)       (:::@ path))
 (define (:::@?* . path)      (:::@? path))
