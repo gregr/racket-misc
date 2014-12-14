@@ -45,7 +45,6 @@
   (syntax-rules (finally)
     ((_ ops ret (finally r finally-body ...))
      (handler-full ops ret (finally r finally-body ...)))
-     ;(let ((finally (lambda (r) finally-body ...))) main-expr))
     ((_ ops ret)
      (handler-finally ops ret (finally r r)))))
 
@@ -53,9 +52,6 @@
   (syntax-rules (return)
     ((_ ops (return v return-body ...) finally ...)
      (handler-finally ops (return v return-body ...) finally ...))
-      ;(let ((return (lambda (v) return-body ...)))
-        ;main-expr)
-      ;finally ...))
     ((_ ops finally ...)
      (handler-return+finally ops (return v v) finally ...))))
 
