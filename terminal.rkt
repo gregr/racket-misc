@@ -11,6 +11,8 @@
   screen-clear
   screen-save
   screen-restore
+  cursor-hide
+  cursor-show
   )
 
 (require
@@ -30,6 +32,11 @@
 (define (screen-save) (system* (find-executable-path "tput") "smcup"))
 ; \e[?47l
 (define (screen-restore) (system* (find-executable-path "tput") "rmcup"))
+
+; \e[?25l
+(define (cursor-hide) (system* (find-executable-path "tput") "civis"))
+; \e[?25h
+(define (cursor-show) (system* (find-executable-path "tput") "cnorm"))
 
 (define colors
   (make-immutable-hash
