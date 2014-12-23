@@ -8,6 +8,9 @@
   styled-block-fill
   styled-block-blit
   styled-block->string
+  screen-clear
+  screen-save
+  screen-restore
   )
 
 (require
@@ -16,10 +19,17 @@
   racket/list
   racket/match
   racket/string
+  racket/system
   )
 
 (module+ test
   (require rackunit))
+
+(define (screen-clear) (system* (find-executable-path "clear")))
+; \e[?47h
+(define (screen-save) (system* (find-executable-path "tput") "smcup"))
+; \e[?47l
+(define (screen-restore) (system* (find-executable-path "tput") "rmcup"))
 
 (define colors
   (make-immutable-hash
