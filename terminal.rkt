@@ -27,16 +27,18 @@
 (module+ test
   (require rackunit))
 
+(define (tput arg) (system* (find-executable-path "tput") arg))
+
 (define (screen-clear) (system* (find-executable-path "clear")))
 ; \e[?47h
-(define (screen-save) (system* (find-executable-path "tput") "smcup"))
+(define (screen-save) (tput "smcup"))
 ; \e[?47l
-(define (screen-restore) (system* (find-executable-path "tput") "rmcup"))
+(define (screen-restore) (tput "rmcup"))
 
 ; \e[?25l
-(define (cursor-hide) (system* (find-executable-path "tput") "civis"))
+(define (cursor-hide) (tput "civis"))
 ; \e[?25h
-(define (cursor-show) (system* (find-executable-path "tput") "cnorm"))
+(define (cursor-show) (tput "cnorm"))
 
 (define colors
   (make-immutable-hash
