@@ -260,7 +260,8 @@
 
 (define (styled-block-fill sty char w h)
   (define sgrc (style->sgrcodes sty))
-  (build-list h (lambda _ (styled-line-fill sgrc char w))))
+  (define row (styled-line-fill sgrc char w))
+  (build-list h (lambda _ row)))
 (def (styled-block-sub styled-block (rect (coord x y) w h))
   bh = (length styled-block)
   y = (min y bh)
