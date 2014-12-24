@@ -12,6 +12,7 @@
   styled-block-sub
   styled-block-blit
   styled-block->string
+  screen-size
   screen-clear
   screen-save
   screen-restore
@@ -41,8 +42,18 @@
 (module+ test
   (require rackunit))
 
+(record coord x y)
+(record size w h)
+(record rect loc sz)
+
 (define (tput arg) (system* (find-executable-path "tput") arg))
 
+(define (screen-size)
+  (define (out->num thnk)
+    (string->number (string-trim (with-output-to-string thnk))))
+  (size
+    (out->num (thunk (tput "cols")))
+    (out->num (thunk (tput "lines")))))
 (define (screen-clear) (system* (find-executable-path "clear")))
 ; \e[?47h
 (define (screen-save) (tput "smcup"))
@@ -299,10 +310,6 @@
         (styled-string style-2 "lmno")
         (styled-string style-1 "8qrstuvwxyz"))
       )))
-
-(record coord x y)
-(record size w h)
-(record rect loc sz)
 
 (def (styled-block-fill sty char (size w h))
   sgrc = (style->sgrcodes sty)
