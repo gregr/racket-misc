@@ -14,6 +14,7 @@
   with-screen-fresh
   cursor-hide
   cursor-show
+  with-cursor-hidden
   )
 
 (require
@@ -47,6 +48,13 @@
 (define (cursor-hide) (tput "civis"))
 ; \e[?25h
 (define (cursor-show) (tput "cnorm"))
+(define-syntax with-cursor-hidden
+  (syntax-rules ()
+    ((_ body ...)
+     (dynamic-wind
+       cursor-hide
+       (lambda () body ...)
+       cursor-show))))
 
 (define colors
   (make-immutable-hash
