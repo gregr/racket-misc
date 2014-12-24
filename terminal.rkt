@@ -51,8 +51,8 @@
   (syntax-rules ()
     ((_ body ...)
      (dynamic-wind
-       (lambda () (screen-save) (screen-clear))
-       (lambda () body ...)
+       (thunk (screen-save) (screen-clear))
+       (thunk body ...)
        screen-restore))))
 
 ; \e[?25l
@@ -64,13 +64,13 @@
     ((_ body ...)
      (dynamic-wind
        cursor-hide
-       (lambda () body ...)
+       (thunk body ...)
        cursor-show))))
 
 (define (stty . args)
   (apply (curry system* (find-executable-path "stty")) args))
 (define (stty-state-current)
-  (string-trim (with-output-to-string (lambda () (stty "-g")))))
+  (string-trim (with-output-to-string (thunk (stty "-g")))))
 (define stty-state-saved (make-parameter (stty-state-current)))
 (define (stty-state-recover) (stty (stty-state-saved)))
 (define-syntax with-stty-saved
@@ -84,8 +84,8 @@
      (let ((args stty-args))
        (with-stty-saved
          (dynamic-wind
-           (lambda () (apply stty args))
-           (lambda () body ...)
+           (thunk (apply stty args))
+           (thunk body ...)
            stty-state-recover))))))
 (define-syntax with-stty-direct
   (syntax-rules ()
