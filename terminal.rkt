@@ -15,13 +15,17 @@
   cursor-hide
   cursor-show
   with-cursor-hidden
+  stty
+  with-stty-direct
   )
 
 (require
   "record.rkt"
   "sugar.rkt"
+  racket/function
   racket/list
   racket/match
+  racket/port
   racket/string
   racket/system
   )
@@ -55,6 +59,34 @@
        cursor-hide
        (lambda () body ...)
        cursor-show))))
+
+(define (stty . args)
+(define (stty-set-direct) (stty "raw" "-echo"))
+  (apply (curry system* (find-executable-path "stty")) args))
+(define (stty-state-current)
+  (string-trim (with-output-to-string (lambda () (stty "-g")))))
+(define stty-state-saved (make-parameter (stty-state-current)))
+(define (stty-state-recover) (stty (stty-state-saved)))
+(define-syntax with-stty-saved
+  (syntax-rules ()
+    ((_ body ...)
+     (parameterize ((stty-state-saved (stty-state-current)))
+        body ...))))
+(define-syntax with-stty-direct
+  (syntax-rules ()
+    ((_ body ...)
+     (with-stty-saved
+       (dynamic-wind
+         stty-set-direct
+         (lambda () body ...)
+         stty-state-recover)))))
+
+(module+ test
+  (check-equal?
+    (with-stty-direct
+      (stty-state-saved))
+    (stty-state-current)
+    ))
 
 (define colors
   (make-immutable-hash
