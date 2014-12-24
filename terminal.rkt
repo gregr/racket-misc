@@ -4,8 +4,10 @@
   (struct-out rect)
   (struct-out style)
   style-empty
+  blank-string
   styled-string
   styled-block-fill
+  styled-block-fill-blank
   styled-block-blit
   styled-block->string
   screen-clear
@@ -158,6 +160,10 @@
 
 (record sgrstr codes str)
 (define (styled-string sty str) (sgrstr (style->sgrcodes sty) str))
+(define blank-codes (list 0 0 0 0 0 0))
+(define (blank-string len)
+  (sgrstr blank-codes (string->immutable-string (make-string len #\space))))
+(def (sgrstr-blank? (sgrstr codes _)) (equal? codes blank-codes))
 
 (define (styled-line-split styled-line idx)
   (let loop ((lhs '()) (styled-line styled-line) (idx idx))
@@ -225,6 +231,7 @@
     )
   )
 
+(def (sgrstr-length (sgrstr _ str)) (string-length str))
 (define (styled-line-fill sgrc char count)
   (list (sgrstr sgrc (string->immutable-string (make-string count char)))))
 (define (styled-line-length styled-line)
@@ -232,18 +239,30 @@
     (forl
       (sgrstr _ str) <- styled-line
       (string-length str))))
-(def (styled-line-rextract styled-line start len)
+(def (styled-line-extract styled-line start len)
   (list _ styled-line) = (styled-line-split styled-line start)
   (list rstyled-line _) = (styled-line-split styled-line len)
-  rstyled-line)
-(def (styled-line-replace styled-line rstyled-line start len)
+  (reverse rstyled-line))
+(def (styled-line-overlay overs unders)
+  (let loop ((result '()) (overs overs) (pos 0))
+    (match overs
+      ('() (append* (reverse result)))
+      ((cons over overs)
+       (lets
+         len = (sgrstr-length over)
+         next = (if (sgrstr-blank? over)
+                  (styled-line-extract unders pos len)
+                  (list over))
+         (loop (cons next result) overs (+ pos len)))))))
+(def (styled-line-replace styled-line overlay start len)
   (list rprefix styled-line) = (styled-line-split styled-line start)
-  (list _ suffix) = (styled-line-split styled-line len)
-  (styled-line-revappend rprefix (styled-line-revappend rstyled-line suffix)))
+  (list runderlay suffix) = (styled-line-split styled-line len)
+  rline = (reverse (styled-line-overlay overlay (reverse runderlay)))
+  (styled-line-revappend rprefix (styled-line-revappend rline suffix)))
 (def (styled-line-blit tgt tgt-start src src-start src-len)
   len = (min (- (styled-line-length src) src-start) src-len)
-  rline = (styled-line-rextract src src-start len)
-  (styled-line-replace tgt rline tgt-start len))
+  line = (styled-line-extract src src-start len)
+  (styled-line-replace tgt line tgt-start len))
 
 (module+ test
   (check-equal?
@@ -255,6 +274,31 @@
       (sgrstr test-sgrs-2 " eight"))
     ))
 
+(module+ test
+  (lets
+    style-0 = style-empty
+    style-1 = style-empty
+    style-2 = (style 'red 'default #f #f #f #t)
+    source = (list
+               (styled-string style-0 "1234")
+               (blank-string 3)
+               (styled-string style-0 "567")
+               (blank-string 4)
+               (styled-string style-0 "890"))
+    target = (list
+               (styled-string style-1 "abcdef")
+               (styled-string style-2 "ghijklmnop")
+               (styled-string style-1 "qrstuvwxyz"))
+    (check-equal?
+      (styled-line-blit target 2 source 1 14)
+      (list
+        (styled-string style-1 "ab234f")
+        (styled-string style-2 "gh")
+        (styled-string style-0 "567")
+        (styled-string style-2 "lmno")
+        (styled-string style-1 "8qrstuvwxyz"))
+      )))
+
 (record coord x y)
 (record rect loc w h)
 
@@ -262,12 +306,15 @@
   (define sgrc (style->sgrcodes sty))
   (define row (styled-line-fill sgrc char w))
   (build-list h (lambda _ row)))
+(define (styled-block-fill-blank w h)
+  (define row (list (blank-string w)))
+  (build-list h (lambda _ row)))
 (def (styled-block-sub styled-block (rect (coord x y) w h))
   bh = (length styled-block)
   y = (min y bh)
   h = (min h (- bh y))
   styled-block = (take (drop styled-block y) h)
-  (map (lambda (line) (reverse (styled-line-rextract line x w))) styled-block))
+  (map (lambda (line) (styled-line-extract line x w)) styled-block))
 (def (styled-block-blit tgt (coord tx ty) src src-rect)
   (rect (coord x y) w h) = src-rect
   src = (styled-block-sub src src-rect)
@@ -283,9 +330,12 @@
 
 (module+ test
   (define test-block-0 (styled-block-fill test-style-0 #\- 20 30))
-  (define test-block-1 (styled-block-fill test-style-1 #\o 10 12))
+  (define test-block-1-0 (styled-block-fill-blank 15 18))
+  (define test-block-1-1 (styled-block-fill test-style-1 #\o 10 12))
+  (define test-block-1 (styled-block-blit test-block-1-0 (coord 2 3)
+                                          test-block-1-1 (rect (coord 0 0) 10 12)))
   (check-equal?
-    (styled-block-blit test-block-0 (coord 5 10) test-block-1 (rect (coord 1 2) 6 8))
+    (styled-block-blit test-block-0 (coord 4 9) test-block-1 (rect (coord 1 2) 7 9))
     (list
       (list (sgrstr test-sgrs-0 "--------------------"))
       (list (sgrstr test-sgrs-0 "--------------------"))
@@ -342,7 +392,7 @@
 
 (def (styled-block->string sb)
   str-reset = (sgrcodes->string (list 0))
-  ss-empty = (sgrstr (list 0 0 0 0 0 0) "")
+  ss-empty = (blank-string 0)
   block = (forl
             slp <- (cons (list) sb)
             sline <- sb
