@@ -17,9 +17,11 @@
   with-cursor-hidden
   stty
   with-stty-direct
+  maybe-read-char
   )
 
 (require
+  "maybe.rkt"
   "record.rkt"
   "sugar.rkt"
   racket/function
@@ -87,6 +89,8 @@
       (stty-state-saved))
     (stty-state-current)
     ))
+
+(define (maybe-read-char) (if (char-ready?) (just (read-char)) (nothing)))
 
 (define colors
   (make-immutable-hash
