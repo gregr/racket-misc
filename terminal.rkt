@@ -16,7 +16,9 @@
   cursor-show
   with-cursor-hidden
   stty
+  with-stty
   with-stty-direct
+  with-stty-previous
   maybe-read-char
   )
 
@@ -63,7 +65,6 @@
        cursor-show))))
 
 (define (stty . args)
-(define (stty-set-direct) (stty "raw" "-echo"))
   (apply (curry system* (find-executable-path "stty")) args))
 (define (stty-state-current)
   (string-trim (with-output-to-string (lambda () (stty "-g")))))
@@ -74,19 +75,36 @@
     ((_ body ...)
      (parameterize ((stty-state-saved (stty-state-current)))
         body ...))))
+(define-syntax with-stty
+  (syntax-rules ()
+    ((_ stty-args body ...)
+     (let ((args stty-args))
+       (with-stty-saved
+         (dynamic-wind
+           (lambda () (apply stty args))
+           (lambda () body ...)
+           stty-state-recover))))))
 (define-syntax with-stty-direct
   (syntax-rules ()
     ((_ body ...)
-     (with-stty-saved
-       (dynamic-wind
-         stty-set-direct
-         (lambda () body ...)
-         stty-state-recover)))))
+     (with-stty (list "raw" "-echo") body ...))))
+(define-syntax with-stty-previous
+  (syntax-rules ()
+    ((_ body ...)
+     (with-stty (list (stty-state-saved)) body ...))))
 
 (module+ test
   (check-equal?
     (with-stty-direct
       (stty-state-saved))
+    (stty-state-current)
+    ))
+
+(module+ test
+  (check-equal?
+    (with-stty-direct
+      (with-stty-previous
+        (stty-state-current)))
     (stty-state-current)
     ))
 
