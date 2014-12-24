@@ -11,6 +11,7 @@
   screen-clear
   screen-save
   screen-restore
+  with-screen-fresh
   cursor-hide
   cursor-show
   )
@@ -34,6 +35,13 @@
 (define (screen-save) (tput "smcup"))
 ; \e[?47l
 (define (screen-restore) (tput "rmcup"))
+(define-syntax with-screen-fresh
+  (syntax-rules ()
+    ((_ body ...)
+     (dynamic-wind
+       (lambda () (screen-save) (screen-clear))
+       (lambda () body ...)
+       screen-restore))))
 
 ; \e[?25l
 (define (cursor-hide) (tput "civis"))
