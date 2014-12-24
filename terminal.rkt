@@ -8,6 +8,7 @@
   styled-string
   styled-block-fill
   styled-block-fill-blank
+  styled-block-sub
   styled-block-blit
   styled-block->string
   screen-clear
@@ -239,7 +240,7 @@
     (forl
       (sgrstr _ str) <- styled-line
       (string-length str))))
-(def (styled-line-extract styled-line start len)
+(def (styled-line-sub styled-line start len)
   (list _ styled-line) = (styled-line-split styled-line start)
   (list rstyled-line _) = (styled-line-split styled-line len)
   (reverse rstyled-line))
@@ -251,7 +252,7 @@
        (lets
          len = (sgrstr-length over)
          next = (if (sgrstr-blank? over)
-                  (styled-line-extract unders pos len)
+                  (styled-line-sub unders pos len)
                   (list over))
          (loop (cons next result) overs (+ pos len)))))))
 (def (styled-line-replace styled-line overlay start len)
@@ -259,14 +260,13 @@
   (list runderlay suffix) = (styled-line-split styled-line len)
   rline = (reverse (styled-line-overlay overlay (reverse runderlay)))
   (styled-line-revappend rprefix (styled-line-revappend rline suffix)))
-(def (styled-line-blit tgt tgt-start src src-start src-len)
-  len = (min (- (styled-line-length src) src-start) src-len)
-  line = (styled-line-extract src src-start len)
-  (styled-line-replace tgt line tgt-start len))
+(def (styled-line-blit tgt tgt-start src)
+  len = (styled-line-length src)
+  (styled-line-replace tgt src tgt-start len))
 
 (module+ test
   (check-equal?
-    (styled-line-blit (list test-ss-2) 5 (list test-ss-0 test-ss-1) 4 9)
+    (styled-line-blit (list test-ss-2) 5 (styled-line-sub (list test-ss-0 test-ss-1) 4 9))
     (list
       (sgrstr test-sgrs-2 "five ")
       (sgrstr test-sgrs-0 "two ")
@@ -290,7 +290,7 @@
                (styled-string style-2 "ghijklmnop")
                (styled-string style-1 "qrstuvwxyz"))
     (check-equal?
-      (styled-line-blit target 2 source 1 14)
+      (styled-line-blit target 2 (styled-line-sub source 1 14))
       (list
         (styled-string style-1 "ab234f")
         (styled-string style-2 "gh")
@@ -314,18 +314,15 @@
   y = (min y bh)
   h = (min h (- bh y))
   styled-block = (take (drop styled-block y) h)
-  (map (lambda (line) (styled-line-extract line x w)) styled-block))
-(def (styled-block-blit tgt (coord tx ty) src src-rect)
-  (rect (coord x y) w h) = src-rect
-  src = (styled-block-sub src src-rect)
-  h = (length src)
+  (map (lambda (line) (styled-line-sub line x w)) styled-block))
+(def (styled-block-blit tgt (coord tx ty) src)
   prefix = (take tgt ty)
   tgt = (drop tgt ty)
-  suffix = (drop tgt h)
+  suffix = (drop tgt (length src))
   blitted = (forl
               tgt-line <- tgt
               src-line <- src
-              (styled-line-blit tgt-line tx src-line 0 w))
+              (styled-line-blit tgt-line tx src-line))
   (append prefix blitted suffix))
 
 (module+ test
@@ -333,9 +330,10 @@
   (define test-block-1-0 (styled-block-fill-blank 15 18))
   (define test-block-1-1 (styled-block-fill test-style-1 #\o 10 12))
   (define test-block-1 (styled-block-blit test-block-1-0 (coord 2 3)
-                                          test-block-1-1 (rect (coord 0 0) 10 12)))
+                                          (styled-block-sub test-block-1-1 (rect (coord 0 0) 10 12))))
   (check-equal?
-    (styled-block-blit test-block-0 (coord 4 9) test-block-1 (rect (coord 1 2) 7 9))
+    (styled-block-blit test-block-0 (coord 4 9)
+                       (styled-block-sub test-block-1 (rect (coord 1 2) 7 9)))
     (list
       (list (sgrstr test-sgrs-0 "--------------------"))
       (list (sgrstr test-sgrs-0 "--------------------"))
@@ -411,7 +409,7 @@
   (define test-block-2 (styled-block-fill test-style-3 #\~ 30 20))
   (define test-block-3 (styled-block-fill test-style-4 #\, 10 12))
   (define test-block-4 (styled-block-blit test-block-2 (coord 10 5)
-                                      test-block-3 (rect (coord 1 2) 6 8)))
+                                          (styled-block-sub test-block-3 (rect (coord 1 2) 6 8))))
   (check-equal?
     (styled-block->string test-block-4)
     (string-append
