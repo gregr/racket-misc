@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   (struct-out coord)
+  (struct-out size)
   (struct-out rect)
   (struct-out style)
   style-empty
@@ -300,16 +301,17 @@
       )))
 
 (record coord x y)
-(record rect loc w h)
+(record size w h)
+(record rect loc sz)
 
-(define (styled-block-fill sty char w h)
-  (define sgrc (style->sgrcodes sty))
-  (define row (styled-line-fill sgrc char w))
+(def (styled-block-fill sty char (size w h))
+  sgrc = (style->sgrcodes sty)
+  row = (styled-line-fill sgrc char w)
   (build-list h (lambda _ row)))
-(define (styled-block-fill-blank w h)
-  (define row (list (blank-string w)))
+(def (styled-block-fill-blank (size w h))
+  row = (list (blank-string w))
   (build-list h (lambda _ row)))
-(def (styled-block-sub styled-block (rect (coord x y) w h))
+(def (styled-block-sub styled-block (rect (coord x y) (size w h)))
   bh = (length styled-block)
   y = (min y bh)
   h = (min h (- bh y))
@@ -326,14 +328,16 @@
   (append prefix blitted suffix))
 
 (module+ test
-  (define test-block-0 (styled-block-fill test-style-0 #\- 20 30))
-  (define test-block-1-0 (styled-block-fill-blank 15 18))
-  (define test-block-1-1 (styled-block-fill test-style-1 #\o 10 12))
+  (define test-block-0 (styled-block-fill test-style-0 #\- (size 20 30)))
+  (define test-block-1-0 (styled-block-fill-blank (size 15 18)))
+  (define test-block-1-1 (styled-block-fill test-style-1 #\o (size 10 12)))
   (define test-block-1 (styled-block-blit test-block-1-0 (coord 2 3)
-                                          (styled-block-sub test-block-1-1 (rect (coord 0 0) 10 12))))
+                                          (styled-block-sub test-block-1-1
+                                                            (rect (coord 0 0) (size 10 12)))))
   (check-equal?
     (styled-block-blit test-block-0 (coord 4 9)
-                       (styled-block-sub test-block-1 (rect (coord 1 2) 7 9)))
+                       (styled-block-sub test-block-1
+                                         (rect (coord 1 2) (size 7 9))))
     (list
       (list (sgrstr test-sgrs-0 "--------------------"))
       (list (sgrstr test-sgrs-0 "--------------------"))
@@ -406,10 +410,11 @@
 (module+ test
   (define test-style-3 (style 'white 'blue #t #f #f #f))
   (define test-style-4 (style 'yellow 'green #f #f #f #f))
-  (define test-block-2 (styled-block-fill test-style-3 #\~ 30 20))
-  (define test-block-3 (styled-block-fill test-style-4 #\, 10 12))
+  (define test-block-2 (styled-block-fill test-style-3 #\~ (size 30 20)))
+  (define test-block-3 (styled-block-fill test-style-4 #\, (size 10 12)))
   (define test-block-4 (styled-block-blit test-block-2 (coord 10 5)
-                                          (styled-block-sub test-block-3 (rect (coord 1 2) 6 8))))
+                                          (styled-block-sub test-block-3
+                                                            (rect (coord 1 2) (size 6 8)))))
   (check-equal?
     (styled-block->string test-block-4)
     (string-append
