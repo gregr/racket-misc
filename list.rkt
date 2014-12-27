@@ -1,5 +1,9 @@
 #lang racket/base
 (provide
+  cross
+  cross*
+  zip
+  zip*
   list-set
   list-has-key?
   list-ref-key
