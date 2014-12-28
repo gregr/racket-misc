@@ -7,6 +7,7 @@
   style-empty
   blank-string
   styled-string
+  styled-block-size
   styled-block-fill
   styled-block-fill-blank
   styled-block-sub
@@ -313,6 +314,10 @@
         (styled-string style-1 "8qrstuvwxyz"))
       )))
 
+(def (styled-block-size block)
+  height = (length block)
+  width = (if (= height 0) 0 (styled-line-length (car block)))
+  (size width height))
 (def (styled-block-fill sty char (size w h))
   sgrc = (style->sgrcodes sty)
   row = (styled-line-fill sgrc char w)
@@ -343,6 +348,18 @@
   (define test-block-1 (styled-block-blit test-block-1-0 (coord 2 3)
                                           (styled-block-sub test-block-1-1
                                                             (rect (coord 0 0) (size 10 12)))))
+  (check-equal?
+    (styled-block-size '())
+    (size 0 0)
+    )
+  (check-equal?
+    (styled-block-size '(()))
+    (size 0 1)
+    )
+  (check-equal?
+    (styled-block-size test-block-1)
+    (size 15 18)
+    )
   (check-equal?
     (styled-block-blit test-block-0 (coord 4 9)
                        (styled-block-sub test-block-1
