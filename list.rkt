@@ -14,6 +14,7 @@
   list-inits
   list-path
   iterate
+  sum
   )
 
 (require
@@ -58,6 +59,11 @@
 (define (iterate proc seed count)
   (if (<= count 0) (list seed)
     (cons seed (iterate proc (proc seed) (- count 1)))))
+
+(define (sum xs) (apply + xs))
+
+(module+ test
+  (check-equal? (sum (list 1 2 3)) 6))
 
 (define (zip-with f xss) (apply (curry map f) xss))
 (define (zip xss) (zip-with list xss))
