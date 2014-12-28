@@ -46,7 +46,9 @@
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    "test.rkt"
+    rackunit))
 
 (record coord x y)
 (record size w h)
@@ -543,7 +545,8 @@
   (define test-block-4 (styled-block-blit test-block-2 (coord 10 5)
                                           (styled-block-sub test-block-3
                                                             (rect (coord 1 2) (size 6 8)))))
-  (check-equal?
+  (visual-check-equal?
+    identity
     (styled-block->string test-block-4)
     (string-append
       "\e[0m\e[27;25;24;1;44;37m"
