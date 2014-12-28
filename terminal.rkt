@@ -28,6 +28,7 @@
   )
 
 (require
+  "list.rkt"
   "maybe.rkt"
   "record.rkt"
   "string.rkt"
@@ -315,10 +316,10 @@
 (def (styled-block-fill sty char (size w h))
   sgrc = (style->sgrcodes sty)
   row = (styled-line-fill sgrc char w)
-  (build-list h (lambda _ row)))
+  (replicate h row))
 (def (styled-block-fill-blank (size w h))
   row = (list (blank-string w))
-  (build-list h (lambda _ row)))
+  (replicate h row))
 (def (styled-block-sub styled-block (rect (coord x y) (size w h)))
   bh = (length styled-block)
   y = (min y bh)
