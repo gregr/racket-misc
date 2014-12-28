@@ -250,7 +250,8 @@
 
 (def (sgrstr-length (sgrstr _ str)) (string-length str))
 (define (styled-line-fill sgrc char count)
-  (list (sgrstr sgrc (make-immutable-string count char))))
+  (if (= count 0) (list)
+    (list (sgrstr sgrc (make-immutable-string count char)))))
 (define (styled-line-length styled-line)
   (apply +
     (forl
