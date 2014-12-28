@@ -3,6 +3,8 @@
   (struct-out doc-atom)
   (struct-out doc-chain)
   (struct-out doc-table)
+  table-styling-new
+  table-styling-empty
   attr-tight-aligned
   attr-tight-indented
   attr-loose-aligned
@@ -27,18 +29,73 @@
     rackunit
     ))
 
+(define indent-width 2)
+(define space-width 1)
+(define table-border-width 1)
+(define table-divider-width table-border-width)
+
+(record table-styling
+  make-top make-bottom make-hdiv
+  make-left make-right make-vdiv
+  )
+(def (table-styling-new
+       t b ih
+       l r iv
+       tl tr bl br
+       tj bj lj rj ij
+       ts bs ihs
+       ls rs ivs
+       tls trs bls brs
+       tjs bjs ljs rjs ijs
+       )
+  (list tl tr bl br tj bj lj rj ij) =
+  (forl
+    char <- (list tl tr bl br tj bj lj rj ij)
+    style <- (list tls trs bls brs tjs bjs ljs rjs ijs)
+    (styled-string style (make-immutable-string 1 char)))
+  hborder =
+  (lambda (style left right middle junc)
+    (fn (col-widths)
+      col-parts =
+      (forl
+        col-width <- col-widths
+        (styled-string style (make-immutable-string col-width middle)))
+      rmid =
+      (forf
+        prefix = (list (car col-parts))
+        col-part <- (cdr col-parts)
+        (cons col-part (cons junc prefix)))
+      (list (cons left (reverse (cons right rmid))))))
+  hspans =
+  (forl
+    args <- (list (list tl tr t tj) (list bl br b bj) (list lj rj ih ij))
+    style <- (list ts bs ihs)
+    (apply hborder style args))
+  vspans =
+  (forl
+    char <- (list l r iv)
+    style <- (list ls rs ivs)
+    (lambda (height)
+      (styled-block-fill style char (size table-border-width height))))
+  (apply table-styling (append hspans vspans)))
+(define table-styling-empty
+  (apply table-styling-new
+         (append (replicate 15 #\space) (replicate 15 style-empty))))
+
+(record styling style table)
+(define styling-empty (styling style-empty table-styling-empty))
+
 (record chain-attr spaced? indented?)
+(define attr-tight-aligned (chain-attr #f #f))
+(define attr-tight-indented (chain-attr #f #t))
+(define attr-loose-aligned (chain-attr #t #f))
+(define attr-loose-indented (chain-attr #t #t))
 
 (records doc
   (doc-atom style str)
   (doc-chain style attr items)
   (doc-table style rows)
   )
-
-(define attr-tight-aligned (chain-attr #f #f))
-(define attr-tight-indented (chain-attr #f #t))
-(define attr-loose-aligned (chain-attr #t #f))
-(define attr-loose-indented (chain-attr #t #t))
 
 (define (tight-pair style lhs rhs)
   (doc-chain style attr-tight-aligned (list lhs rhs)))
@@ -57,10 +114,6 @@
   suffix-chain = (doc-chain outer-style attr-tight-aligned (list elements suffix))
   (doc-chain outer-style attr-tight-indented (list prefix suffix-chain)))
 
-(define indent-width 2)
-(define space-width 1)
-(define table-border-width 1)
-(define table-divider-width 1)
 (define (separator-count xs) (max 0 (- (length xs) 1)))
 
 (define (widths-memo-new) (make-hasheq))
@@ -157,8 +210,17 @@
            (loop col-widths allocs avail)))))))
 
 (module+ test
+  (define table-styling-test
+    (apply table-styling-new
+           (append (list #\= #\= #\-
+                         #\# #\# #\|
+                         #\^ #\> #\< #\v
+                         #\+ #\+ #\+ #\+ #\+)
+                   (replicate 15 (style 'default 'default #f #f #f #t))))))
+
+(module+ test
   (lets
-    style = (void)
+    style = (styling style-empty table-styling-empty)
     memo = (widths-memo-new)
     items-0 = (list (doc-atom style "hello") (doc-atom style "world"))
     chain-0 = (bracketed-chain (doc-atom style "test(") (doc-atom style ")")
@@ -214,28 +276,14 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block memo style col-widths rows)
-  ; TODO: get border chars from style
-  ul = (styled-string style "^")
-  ur = (styled-string style ">")
-  br = (styled-string style "v")
-  bl = (styled-string style "<")
-  junc = (styled-string style "+")
-  rboundary =
-  (fn (char)
-    col-parts =
-    (forl
-      col-width <- col-widths
-      (styled-string style (make-immutable-string col-width char)))
-    (forf
-      prefix = (list (car col-parts))
-      col-part <- (cdr col-parts)
-      (cons col-part (cons junc prefix))))
-  hrinternal = (rboundary #\=)
-  top-border = (list (cons ul (reverse (cons ur hrinternal))))
-  bottom-border = (list (cons bl (reverse (cons br hrinternal))))
-  hrinternal = (rboundary #\-)
-  hdiv = (list (cons junc (reverse (cons junc hrinternal))))
+(def (table->styled-block
+       memo sty
+       col-widths rows)
+  (styling style (table-styling
+                   make-top make-bottom make-hdiv
+                   make-left make-right make-vdiv)) = sty
+  (list top-border bottom-border hdiv) =
+  (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
   rows =
   (forl
     row <- rows
@@ -243,20 +291,20 @@
     (forl
       col <- row
       col-width <- col-widths
-      (doc->styled-block memo style col-width col))
+      (doc->styled-block memo sty col-width col))
     sizes = (map styled-block-size blocks)
     max-height = (apply max (map (fn ((size _ h)) h) sizes))
-    vborder = (styled-block-fill style #\# (size 1 max-height))
-    vdiv = (styled-block-fill style #\| (size 1 max-height))
+    (list vleft vright vdiv) =
+    (map (lambda (f) (f max-height)) (list make-left make-right make-vdiv))
     new-sizes = (map size col-widths (replicate (length blocks) max-height))
     blocks = (map (curry block-expand style) blocks new-sizes)
     prefix =
     (forf
-      prefix = (block-append-horiz style vborder (car blocks))
+      prefix = (block-append-horiz style vleft (car blocks))
       block <- (cdr blocks)
       prefix = (block-append-horiz style prefix vdiv)
       (block-append-horiz style prefix block))
-    (block-append-horiz style prefix vborder))
+    (block-append-horiz style prefix vright))
   header =
   (forf
     header = (block-append-vert style top-border (car rows))
@@ -266,7 +314,8 @@
     )
   (block-append-vert style header bottom-border))
 
-(def (chain->blocks memo style (chain-attr spaced? indented?) full-width items)
+(def (chain->blocks
+       memo (styling style _) (chain-attr spaced? indented?) full-width items)
   space-new = (if spaced? (space-block style (size space-width 1)) '())
   prefix-new = (if indented? (space-block style (size indent-width 1)) '())
   (size space-width _) = (styled-block-size space-new)
@@ -305,7 +354,8 @@
 
 (define (doc->blocks memo full-width doc)
   (match doc
-    ((doc-atom sty str) (list (list (list (styled-string sty str)))))
+    ((doc-atom (styling sty _) str)
+     (list (list (list (styled-string sty str)))))
     ((doc-chain sty attr items)
      (chain->blocks memo sty attr full-width items))
     ((doc-table sty rows)
@@ -314,7 +364,7 @@
        col-widths = (table-col-widths full-width initial mins allocs)
        (list (table->styled-block memo sty col-widths rows))))))
 
-(def (doc->styled-block memo style full-width doc)
+(def (doc->styled-block memo (styling style _) full-width doc)
   blocks = (doc->blocks memo full-width doc)
   (forf
     result = (car blocks)
@@ -324,15 +374,15 @@
 (module+ test
   (lets
     memo = (widths-memo-new)
-    style-outer = (style 'black 'red #f #f #f #f)
-    style-0 = (style 'white 'blue #f #f #f #f)
-    style-1 = (style 'red 'black #t #t #t #f)
-    style-2 = (style 'white 'magenta #f #f #f #f)
-    style-3 = (style 'default 'green #f #f #f #f)
-    style-4 = (style 'default 'default #f #f #f #t)
-    style-5 = (style 'default 'default #f #f #f #f)
-    style-6 = (style 'cyan 'default #f #f #f #f)
-    style-7 = (style 'cyan 'default #f #f #f #t)
+    style-outer = (styling (style 'black 'red #f #f #f #f) table-styling-test)
+    style-0 = (styling (style 'white 'blue #f #f #f #f) table-styling-test)
+    style-1 = (styling (style 'red 'black #t #t #t #f) table-styling-test)
+    style-2 = (styling (style 'white 'magenta #f #f #f #f) table-styling-test)
+    style-3 = (styling (style 'default 'green #f #f #f #f) table-styling-test)
+    style-4 = (styling (style 'default 'default #f #f #f #t) table-styling-test)
+    style-5 = (styling (style 'default 'default #f #f #f #f) table-styling-test)
+    style-6 = (styling (style 'cyan 'default #f #f #f #f) table-styling-test)
+    style-7 = (styling (style 'cyan 'default #f #f #f #t) table-styling-test)
 
     atom-0 = (doc-atom style-0 "hello")
     atom-1 = (doc-atom style-0 "world")
@@ -381,7 +431,8 @@
         "\e[0m\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m^============================+======================================>\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m#\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m+----------------------------+--------------------------------------+\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          #\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;49;36mwith-a-table(\e[45;37m(nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<============================+======================================v\e[27;44;37m \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[0m")
       (list
         (list 160 chain-3)
-        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m                                                                                                                    \e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m^============================+======================================>\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m#\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m+----------------------------+--------------------------------------+\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          #\e[0m\n\e[27;25;24;22;45;37m  (nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<============================+======================================v\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m                                                                                        \e[0m"))
+        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m                                                                                                                    \e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m^============================+======================================>\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m#\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m+----------------------------+--------------------------------------+\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          #\e[0m\n\e[27;25;24;22;45;37m  (nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<============================+======================================v\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m                                                                                        \e[0m")
+      )
     _ = (forl
       (list (list width doc) expected) <- test-equalities
       (visual-check-equal?
