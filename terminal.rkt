@@ -30,6 +30,7 @@
 (require
   "maybe.rkt"
   "record.rkt"
+  "string.rkt"
   "sugar.rkt"
   racket/function
   racket/list
@@ -175,7 +176,7 @@
 (define (styled-string sty str) (sgrstr (style->sgrcodes sty) str))
 (define blank-codes (list 0 0 0 0 0 0))
 (define (blank-string len)
-  (sgrstr blank-codes (string->immutable-string (make-string len #\space))))
+  (sgrstr blank-codes (make-immutable-string len #\space)))
 (def (sgrstr-blank? (sgrstr codes _)) (equal? codes blank-codes))
 
 (define (styled-line-split styled-line idx)
@@ -246,7 +247,7 @@
 
 (def (sgrstr-length (sgrstr _ str)) (string-length str))
 (define (styled-line-fill sgrc char count)
-  (list (sgrstr sgrc (string->immutable-string (make-string count char)))))
+  (list (sgrstr sgrc (make-immutable-string count char))))
 (define (styled-line-length styled-line)
   (apply +
     (forl
