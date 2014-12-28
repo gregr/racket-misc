@@ -22,7 +22,10 @@
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    "test.rkt"
+    rackunit
+    ))
 
 (record chain-attr spaced? indented?)
 
@@ -317,3 +320,73 @@
     result = (car blocks)
     block <- (cdr blocks)
     (block-append-vert style block result)))  ; bottom to top
+
+(module+ test
+  (lets
+    memo = (widths-memo-new)
+    style-outer = (style 'black 'red #f #f #f #f)
+    style-0 = (style 'white 'blue #f #f #f #f)
+    style-1 = (style 'red 'black #t #t #t #f)
+    style-2 = (style 'white 'magenta #f #f #f #f)
+    style-3 = (style 'default 'green #f #f #f #f)
+    style-4 = (style 'default 'default #f #f #f #t)
+    style-5 = (style 'default 'default #f #f #f #f)
+    style-6 = (style 'cyan 'default #f #f #f #f)
+    style-7 = (style 'cyan 'default #f #f #f #t)
+
+    atom-0 = (doc-atom style-0 "hello")
+    atom-1 = (doc-atom style-0 "world")
+    atom-2 = (doc-atom style-1 "and")
+    atom-3 = (doc-atom style-0 "things")
+    items-0 = (list atom-0 atom-1 atom-2 atom-3)
+
+    chain-0 = (bracketed-chain (doc-atom style-2 "test(") (doc-atom style-2 ")")
+                               attr-loose-aligned style-3 style-4 items-0)
+
+    items-1 = (list (doc-atom style-5 "testing") chain-0)
+    chain-1 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
+                               attr-loose-aligned style-6 style-7 items-1)
+    table-0 = (doc-table style-4 (list (list chain-0 chain-1) (list chain-0 chain-0)))
+
+    items-2 = (list chain-1 atom-2 atom-3)
+    chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
+                               attr-loose-aligned style-3 style-4 items-2)
+
+    items-3 = (list chain-2 table-0 chain-1)
+    chain-3 = (bracketed-chain (doc-atom style-6 "with-a-table(") (doc-atom style-6 ")")
+                               attr-loose-aligned style-2 style-0 items-3)
+
+    test-equalities =
+    (list
+      (list
+        (list 16 chain-0)
+        "\e[0m\e[27;25;24;22;45;37mtest(\e[41;30m        \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[0m\n\e[27;25;24;22;42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[0m")
+      (list
+        (list 16 chain-1)
+        "\e[0m\e[27;25;24;22;49;39m[testing\e[41;30m       \e[0m\n\e[27;25;24;22;49;36m \e[45;37mtest(\e[41;30m         \e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[41;30m \e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[0m")
+      (list
+        (list 20 chain-1)
+        "\e[0m\e[27;25;24;22;49;39m[testing\e[41;30m          \e[0m\n\e[27;25;24;22;49;36m \e[45;37mtest(\e[41;30m            \e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[41;30m       \e[0m")
+      (list
+        (list 20 table-0)
+        "\e[0m\e[7;25;24;22;49;39m^========+=========>\e[0m\n\e[7;25;24;22;49;39m#\e[27;45;37mtest(\e[7;49;39m   |\e[27m[testing\e[7m #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mhello\e[7;49;39m |\e[27;36m \e[45;37mtest(\e[7;49;39m   #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mworld\e[7;49;39m |\e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   |\e[27;36m \e[42;39m  \e[44;37mworld\e[7;49;39m #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mthings\e[7;49;39m|\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[45;37m)\e[7;49;39m     |\e[27;36m \e[42;39m  \e[44;37mthings\e[7;49;39m#\e[0m\n\e[7;25;24;22;49;39m#        |\e[27;36m \e[42;39m  \e[45;37m)\e[49;39m]\e[7m    #\e[0m\n\e[7;25;24;22;49;39m+--------+---------+\e[0m\n\e[7;25;24;22;49;39m#\e[27;45;37mtest(\e[7;49;39m   |\e[27;45;37mtest(\e[7;49;39m    #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mhello\e[7;49;39m |\e[27;42m  \e[44;37mhello\e[7;49;39m  #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mworld\e[7;49;39m |\e[27;42m  \e[44;37mworld\e[7;49;39m  #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   |\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m    #\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[44;37mthings\e[7;49;39m|\e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m#\e[0m\n\e[7;25;24;22;49;39m#\e[27;42m  \e[45;37m)\e[7;49;39m     |         #\e[0m\n\e[7;25;24;22;49;39m<========+=========v\e[0m")
+      (list
+        (list 22 chain-2)
+        "\e[0m\e[27;25;24;22;45;37m(nested\e[41;30m             \e[0m\n\e[27;25;24;22;42;39m  \e[49m[testing\e[41;30m          \e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[45;37mtest(\e[41;30m            \e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m   \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[45m)\e[41;30m           \e[0m")
+      (list
+        (list 23 chain-3)
+        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m          \e[0m\n\e[27;25;24;22;45;37m  (nested\e[41;30m              \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49m[testing\e[41;30m           \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[45;37mtest(\e[41;30m             \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m    \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[44;37mthings\e[45m)\e[41;30m            \e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m^========+==========>\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;45;37mtest(\e[7;49;39m   |\e[27m[testing\e[7m  #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mhello\e[7;49;39m |\e[27;36m \e[45;37mtest(\e[7;49;39m    #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mworld\e[7;49;39m |\e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m  #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   |\e[27;36m \e[42;39m  \e[44;37mworld\e[7;49;39m  #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mthings\e[7;49;39m|\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m    #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[45;37m)\e[7;49;39m     |\e[27;36m \e[42;39m  \e[44;37mthings\e[45m)\e[7;49;39m#\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#        |\e[27;36m \e[39m]\e[7m        #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m+--------+----------+\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;45;37mtest(\e[7;49;39m   |\e[27;45;37mtest(\e[7;49;39m     #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mhello\e[7;49;39m |\e[27;42m  \e[44;37mhello\e[7;49;39m   #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mworld\e[7;49;39m |\e[27;42m  \e[44;37mworld\e[7;49;39m   #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   |\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m     #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[44;37mthings\e[7;49;39m|\e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m#\e[27;42m  \e[45;37m)\e[7;49;39m     |          #\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m<========+==========v\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[41;30m             \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[45;37mtest(\e[41;30m               \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m   \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m         \e[0m")
+      (list
+        (list 200 chain-3)
+        "\e[0m\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m^============================+======================================>\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m#\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m+----------------------------+--------------------------------------+\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          #\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;49;36mwith-a-table(\e[45;37m(nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<============================+======================================v\e[27;44;37m \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[0m")
+      (list
+        (list 160 chain-3)
+        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m                                                                                                                    \e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m^============================+======================================>\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m#\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m+----------------------------+--------------------------------------+\e[0m\n\e[27;25;24;22;45;37m  \e[44m                                                          \e[7;49;39m#\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m|\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          #\e[0m\n\e[27;25;24;22;45;37m  (nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<============================+======================================v\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m                                                                                        \e[0m"))
+    _ = (forl
+      (list (list width doc) expected) <- test-equalities
+      (visual-check-equal?
+        identity
+        (styled-block->string (doc->styled-block memo style-outer width doc))
+        expected))
+    (void)
+    ))
