@@ -4,6 +4,7 @@
   cross*
   zip
   zip*
+  zip-with
   list-set
   list-has-key?
   list-ref-key
@@ -58,7 +59,8 @@
   (if (<= count 0) (list seed)
     (cons seed (iterate proc (proc seed) (- count 1)))))
 
-(define (zip xss) (apply (curry map list) xss))
+(define (zip-with f xss) (apply (curry map f) xss))
+(define (zip xss) (zip-with list xss))
 (define (zip* . xss) (zip xss))
 
 (module+ test
