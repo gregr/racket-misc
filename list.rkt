@@ -5,6 +5,8 @@
   zip
   zip*
   zip-with
+  list->index-hash
+  index-hash->list
   list-set
   list-has-key?
   list-ref-key
@@ -94,3 +96,23 @@
     (cross* '(1 2) '(3 4) '(a b))
     '((1 3 a) (1 3 b) (1 4 a) (1 4 b) (2 3 a) (2 3 b) (2 4 a) (2 4 b))
     ))
+
+(define (list->index-hash xs)
+  (make-immutable-hash (map cons (range (length xs)) xs)))
+
+(define (index-hash->list hx)
+  (let loop ((result '()) (remaining (hash-count hx)))
+    (if (= 0 remaining) result
+      (let* ((idx (- remaining 1)) (value (hash-ref hx idx)))
+        (loop (cons value result) idx)))))
+
+(module+ test
+  (check-equal?
+    (list->index-hash '(a b c))
+    (hash 0 'a 1 'b 2 'c)
+    )
+  (check-equal?
+    (index-hash->list (list->index-hash (list 'a 'b 'c)))
+    '(a b c)
+    )
+  )
