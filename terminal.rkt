@@ -10,6 +10,7 @@
   styled-block-size
   styled-block-fill
   styled-block-fill-blank
+  styled-block-expand
   styled-block-sub
   styled-block-blit
   styled-block->string
@@ -325,6 +326,17 @@
 (def (styled-block-fill-blank (size w h))
   row = (list (blank-string w))
   (replicate h row))
+(def (styled-block-expand sty char block (size width height) down? right?)
+  fill = (lambda (sz) (styled-block-fill sty char sz))
+  (size bw bh) = (styled-block-size block)
+  width = (max bw width)
+  height = (max bh height)
+  w-ext = (fill (size (- width bw) bh))
+  h-ext = (fill (size width (- height bh)))
+  (list bl br) = (if right? (list block w-ext) (list w-ext block))
+  block = (map append bl br)
+  (list bt bb) = (if down? (list block h-ext) (list h-ext block))
+  (append bt bb))
 (def (styled-block-sub styled-block (rect (coord x y) (size w h)))
   bh = (length styled-block)
   y = (min y bh)
@@ -360,6 +372,25 @@
     (styled-block-size test-block-1)
     (size 15 18)
     )
+  (check-equal?
+    (styled-block-expand test-style-0 #\$ test-block-1-1 (size 12 15) #t #f)
+    (list
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$") (sgrstr test-sgrs-1 "oooooooooo"))
+      (list (styled-string test-style-0 "$$$$$$$$$$$$"))
+      (list (styled-string test-style-0 "$$$$$$$$$$$$"))
+      (list (styled-string test-style-0 "$$$$$$$$$$$$"))
+      ))
   (check-equal?
     (styled-block-blit test-block-0 (coord 4 9)
                        (styled-block-sub test-block-1
