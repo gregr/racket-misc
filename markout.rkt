@@ -202,3 +202,11 @@
         (list 10 17)
         )
       )))
+
+(define (space-block style sz) (styled-block-fill style #\space sz))
+(define (block-append-horiz style prefix block)
+  (styled-block-append-horizontal style #\space #f prefix block))
+(define (block-append-vert style header block)
+  (styled-block-append-vertical style #\space #t header block))
+(define (block-expand style block sz)
+  (styled-block-expand style #\space block sz #t #t))
