@@ -210,3 +210,110 @@
   (styled-block-append-vertical style #\space #t header block))
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
+
+(def (table->styled-block memo style col-widths rows)
+  ; TODO: get border chars from style
+  ul = (styled-string style "^")
+  ur = (styled-string style ">")
+  br = (styled-string style "v")
+  bl = (styled-string style "<")
+  junc = (styled-string style "+")
+  rboundary =
+  (fn (char)
+    col-parts =
+    (forl
+      col-width <- col-widths
+      (styled-string style (make-immutable-string col-width char)))
+    (forf
+      prefix = (list (car col-parts))
+      col-part <- (cdr col-parts)
+      (cons col-part (cons junc prefix))))
+  hrinternal = (rboundary #\=)
+  top-border = (list (cons ul (reverse (cons ur hrinternal))))
+  bottom-border = (list (cons bl (reverse (cons br hrinternal))))
+  hrinternal = (rboundary #\-)
+  hdiv = (list (cons junc (reverse (cons junc hrinternal))))
+  rows =
+  (forl
+    row <- rows
+    blocks =
+    (forl
+      col <- row
+      col-width <- col-widths
+      (doc->styled-block memo style col-width col))
+    sizes = (map styled-block-size blocks)
+    max-height = (apply max (map (fn ((size _ h)) h) sizes))
+    vborder = (styled-block-fill style #\# (size 1 max-height))
+    vdiv = (styled-block-fill style #\| (size 1 max-height))
+    new-sizes = (map size col-widths (replicate (length blocks) max-height))
+    blocks = (map (curry block-expand style) blocks new-sizes)
+    prefix =
+    (forf
+      prefix = (block-append-horiz style vborder (car blocks))
+      block <- (cdr blocks)
+      prefix = (block-append-horiz style prefix vdiv)
+      (block-append-horiz style prefix block))
+    (block-append-horiz style prefix vborder))
+  header =
+  (forf
+    header = (block-append-vert style top-border (car rows))
+    row <- (cdr rows)
+    header = (block-append-vert style header hdiv)
+    (block-append-vert style header row)
+    )
+  (block-append-vert style header bottom-border))
+
+(def (chain->blocks memo style (chain-attr spaced? indented?) full-width items)
+  space-new = (if spaced? (space-block style (size space-width 1)) '())
+  prefix-new = (if indented? (space-block style (size indent-width 1)) '())
+  (size space-width _) = (styled-block-size space-new)
+  (size prefix-width _) = (styled-block-size prefix-new)
+  after-indent-width = (- full-width prefix-width)
+  next-state =
+  (fn (prefix header avail-width item)
+    blocks = (doc->blocks memo avail-width item)
+    (list blocks first-block) = (list-init+last blocks)
+    (size align-width _) = (styled-block-size prefix)
+    alignment = (space-block style (size align-width 1))
+    prefix = (block-append-horiz style prefix first-block)
+    blocks =
+    (forl
+      block <- blocks
+      (block-append-horiz style alignment block))
+    blocks = (append blocks (list prefix))
+    (cons prefix sub-header) = blocks
+    header = (append sub-header header)
+    (size pw _) = (styled-block-size prefix)
+    (list prefix header (- full-width (+ pw space-width))))
+  (list prefix header _) =
+  (forf
+    (list prefix header avail-width) = (list '() '() full-width)
+    item <- items
+    (list _ max-width _ _) = (widths memo item)
+    (if (>= avail-width (min max-width after-indent-width))
+      (lets
+        prefix = (if (empty? prefix) prefix
+                   (block-append-horiz style prefix space-new))
+        (next-state prefix header avail-width item))
+      (lets
+        header = (cons prefix header)
+        (next-state prefix-new header after-indent-width item))))
+  (cons prefix header))
+
+(define (doc->blocks memo full-width doc)
+  (match doc
+    ((doc-atom sty str) (list (list (list (styled-string sty str)))))
+    ((doc-chain sty attr items)
+     (chain->blocks memo sty attr full-width items))
+    ((doc-table sty rows)
+     (lets
+       (list initial _ mins allocs) = (widths memo doc)
+       col-widths = (table-col-widths full-width initial mins allocs)
+       (list (table->styled-block memo sty col-widths rows))))))
+
+(def (doc->styled-block memo style full-width doc)
+  blocks = (doc->blocks memo full-width doc)
+  (forf
+    result = (car blocks)
+    block <- (cdr blocks)
+    (block-append-vert style block result)))  ; bottom to top
