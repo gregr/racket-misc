@@ -7,6 +7,7 @@
   forl
   forl*
   lets
+  letsn
   )
 
 (require
@@ -147,3 +148,29 @@
   (check-equal?
     (test-def (list 1 2) 3)
     9))
+
+(define-syntax letsn_-cont
+  (syntax-rules (=)
+    ((_ name (pattern ...) (init-value ...) () body ...)
+     ((lambda ()
+        (def (name pattern ...) body ...)
+        (name init-value ...))))
+    ((_ name (pattern ...) (init-value ...)
+        (next-pattern = next-value rest ...) body ...)
+     (letsn_-cont
+       name (pattern ... next-pattern) (init-value ... next-value) (rest ...)
+       body ...))))
+
+(define-syntax letsn
+  (syntax-rules ()
+    ((_ name (assignment ...) body ...)
+     (letsn_-cont name () () (assignment ...) body ...))))
+
+(module+ test
+  (check-equal?
+    (letsn loop (result = '() (cons x xs) = '(a b c d))
+      (match xs
+        ('() (cons x result))
+        (_ (loop (cons x result) xs))))
+    '(d c b a)
+    ))
