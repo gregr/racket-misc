@@ -29,10 +29,20 @@
     rackunit
     ))
 
-(define indent-width 2)
-(define space-width 1)
+(define indent-width-default 2)
+(define space-width-default 1)
 (define table-border-width 1)
 (define table-divider-width table-border-width)
+
+(define (widths-memo-new) (make-hasheq))
+(define (widths-memo-ref memo doc) (hash-ref memo doc (nothing)))
+(define (widths-memo-set! memo doc ws) (hash-set! memo doc (just ws)))
+
+(record sizing-context memo space-width indent-width)
+(define (sizing-context-new space-width indent-width)
+  (sizing-context (widths-memo-new) space-width indent-width))
+(define (sizing-context-new-default)
+  (sizing-context-new space-width-default indent-width-default))
 
 (record table-styling
   make-top make-bottom make-hdiv
@@ -116,10 +126,6 @@
 
 (define (separator-count xs) (max 0 (- (length xs) 1)))
 
-(define (widths-memo-new) (make-hasheq))
-(define (widths-memo-ref memo doc) (hash-ref memo doc (nothing)))
-(define (widths-memo-set! memo doc ws) (hash-set! memo doc (just ws)))
-
 (def (width-scored-deltas w-start ws)
   ws = (sort ws <)
   len = (length ws)
@@ -152,8 +158,9 @@
          (loop (cons (cons idx wdelta) choices)
                (cons (list idx rest) losers)))))))
 
-(define (widths memo doc)
-  (define (widths-grouped xs) (zip (map (curry widths memo) xs)))
+(def (widths ctx doc)
+  (sizing-context memo space-width indent-width) = ctx
+  widths-grouped = (lambda (xs) (zip (map (curry widths ctx) xs)))
   (match (widths-memo-ref memo doc)
     ((just result) result)
     ((nothing)
@@ -221,7 +228,7 @@
 (module+ test
   (lets
     style = (styling style-empty table-styling-empty)
-    memo = (widths-memo-new)
+    ctx = (sizing-context-new-default)
     items-0 = (list (doc-atom style "hello") (doc-atom style "world"))
     chain-0 = (bracketed-chain (doc-atom style "test(") (doc-atom style ")")
                                attr-loose-aligned style style items-0)
@@ -231,7 +238,7 @@
     table-0 = (doc-table style (list (list chain-0 chain-1) (list chain-0 chain-0)))
     d0 = (- 17 7)
     d1 = (- 27 9)
-    table-0-widths = (widths memo table-0)
+    table-0-widths = (widths ctx table-0)
     (list t0c-min t0c-snug t0c-extra t0c-meh) =
     (lets
       (list initial _ cmins callocs) = table-0-widths
@@ -239,11 +246,11 @@
       (list (calc 19) (calc 47) (calc 100) (calc 30)))
     (begin
       (check-equal?
-        (widths memo chain-0)
+        (widths ctx chain-0)
         (list 7 17 '() '())
         )
       (check-equal?
-        (widths memo chain-1)
+        (widths ctx chain-1)
         (list 9 27 '() '())
         )
       (check-equal?
@@ -276,9 +283,7 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block
-       memo sty
-       col-widths rows)
+(def (table->styled-block ctx sty col-widths rows)
   (styling style (table-styling
                    make-top make-bottom make-hdiv
                    make-left make-right make-vdiv)) = sty
@@ -291,7 +296,7 @@
     (forl
       col <- row
       col-width <- col-widths
-      (doc->styled-block memo sty col-width col))
+      (doc->styled-block ctx sty col-width col))
     sizes = (map styled-block-size blocks)
     max-height = (apply max (map (fn ((size _ h)) h) sizes))
     (list vleft vright vdiv) =
@@ -315,7 +320,9 @@
   (block-append-vert style header bottom-border))
 
 (def (chain->blocks
-       memo (styling style _) (chain-attr spaced? indented?) full-width items)
+       context
+       (styling style _) (chain-attr spaced? indented?) full-width items)
+  (sizing-context _ space-width indent-width) = context
   space-new = (if spaced? (space-block style (size space-width 1)) '())
   prefix-new = (if indented? (space-block style (size indent-width 1)) '())
   (size space-width _) = (styled-block-size space-new)
@@ -323,7 +330,7 @@
   after-indent-width = (- full-width prefix-width)
   next-state =
   (fn (prefix header avail-width item)
-    blocks = (doc->blocks memo avail-width item)
+    blocks = (doc->blocks context avail-width item)
     (list blocks first-block) = (list-init+last blocks)
     (size align-width _) = (styled-block-size prefix)
     alignment = (space-block style (size align-width 1))
@@ -341,7 +348,7 @@
   (forf
     (list prefix header avail-width) = (list '() '() full-width)
     item <- items
-    (list _ max-width _ _) = (widths memo item)
+    (list _ max-width _ _) = (widths context item)
     (if (>= avail-width (min max-width after-indent-width))
       (lets
         prefix = (if (empty? prefix) prefix
@@ -352,20 +359,20 @@
         (next-state prefix-new header after-indent-width item))))
   (cons prefix header))
 
-(define (doc->blocks memo full-width doc)
+(define (doc->blocks ctx full-width doc)
   (match doc
     ((doc-atom (styling sty _) str)
      (list (list (list (styled-string sty str)))))
     ((doc-chain sty attr items)
-     (chain->blocks memo sty attr full-width items))
+     (chain->blocks ctx sty attr full-width items))
     ((doc-table sty rows)
      (lets
-       (list initial _ mins allocs) = (widths memo doc)
+       (list initial _ mins allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
-       (list (table->styled-block memo sty col-widths rows))))))
+       (list (table->styled-block ctx sty col-widths rows))))))
 
-(def (doc->styled-block memo (styling style _) full-width doc)
-  blocks = (doc->blocks memo full-width doc)
+(def (doc->styled-block ctx (styling style _) full-width doc)
+  blocks = (doc->blocks ctx full-width doc)
   (forf
     result = (car blocks)
     block <- (cdr blocks)
@@ -373,7 +380,7 @@
 
 (module+ test
   (lets
-    memo = (widths-memo-new)
+    ctx = (sizing-context-new-default)
     style-outer = (styling (style 'black 'red #f #f #f #f) table-styling-test)
     style-0 = (styling (style 'white 'blue #f #f #f #f) table-styling-test)
     style-1 = (styling (style 'red 'black #t #t #t #f) table-styling-test)
@@ -437,7 +444,7 @@
       (list (list width doc) expected) <- test-equalities
       (visual-check-equal?
         identity
-        (styled-block->string (doc->styled-block memo style-outer width doc))
+        (styled-block->string (doc->styled-block ctx style-outer width doc))
         expected))
     (void)
     ))
