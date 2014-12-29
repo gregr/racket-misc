@@ -10,4 +10,6 @@ Miscellaneous Racket Enhancements
 * algebraic effects and handlers as in: [Eff](http://www.eff-lang.org/)
 * monads and do-notation
 * awkward syntactic sugar experiments
+* a terminal-oriented markup, layout and presentation system
+* a "blitting" interface for terminal graphics
 * other utilities
