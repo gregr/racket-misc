@@ -1,17 +1,22 @@
 #lang racket
 (provide
-  (struct-out doc-atom)
-  (struct-out doc-chain)
-  (struct-out doc-table)
-  table-styling-new
-  table-styling-empty
   attr-tight-aligned
   attr-tight-indented
   attr-loose-aligned
   attr-loose-indented
-  tight-pair
-  separated
   bracketed-chain
+  separated
+  tight-pair
+  (struct-out doc-atom)
+  (struct-out doc-chain)
+  (struct-out doc-table)
+  doc->styled-block
+  sizing-context-new
+  sizing-context-new-default
+  (struct-out styling)
+  styling-empty
+  table-styling-new
+  table-styling-empty
   )
 
 (require
