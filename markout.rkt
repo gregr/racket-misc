@@ -184,7 +184,7 @@
             min-width = (apply max
                                (car min-widths)  ; never indented
                                (map (curry + indent) (cdr min-widths)))
-            max-width = (+ spacing (apply + max-widths))
+            max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
          ((doc-table _ rows)
@@ -200,8 +200,8 @@
                    (list min-width max-width scored-deltas)))
             padding = (+ (* 2 table-border-width)
                          (* table-divider-width (separator-count cols)))
-            min-width = (+ padding (apply + min-widths))
-            max-width = (+ padding (apply + max-widths))
+            min-width = (+ padding (sum min-widths))
+            max-width = (+ padding (sum max-widths))
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list min-width max-width min-widths allocation-order))))

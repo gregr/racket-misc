@@ -257,10 +257,9 @@
   (if (= count 0) (list)
     (list (sgrstr sgrc (make-immutable-string count char)))))
 (define (styled-line-length styled-line)
-  (apply +
-    (forl
-      (sgrstr _ str) <- styled-line
-      (string-length str))))
+  (sum (forl
+         (sgrstr _ str) <- styled-line
+         (string-length str))))
 (def (styled-line-sub styled-line start len)
   (list _ styled-line) = (styled-line-split styled-line start)
   (list rstyled-line _) = (styled-line-split styled-line len)
