@@ -153,15 +153,14 @@
        (if (> l0 l1) #t
          (if (< l0 l1) #f
            (head-pair-> (list #f t0) (list #f t1)))))))
-  (let loop ((choices '()) (scores col-scores))
-    (lets
-      scores = (filter-not (compose1 empty? cadr) scores)
-      scores = (sort scores head-pair->)
-      (match scores
-        ('() (reverse choices))
-        ((cons (list idx (cons (cons _ wdelta) rest)) losers)
-         (loop (cons (cons idx wdelta) choices)
-               (cons (list idx rest) losers)))))))
+  (letsn loop (choices = '() scores = col-scores)
+    scores = (filter-not (compose1 empty? cadr) scores)
+    scores = (sort scores head-pair->)
+    (match scores
+      ('() (reverse choices))
+      ((cons (list idx (cons (cons _ wdelta) rest)) losers)
+      (loop (cons (cons idx wdelta) choices)
+            (cons (list idx rest) losers))))))
 
 (def (widths ctx doc)
   (sizing-context memo space-width indent-width) = ctx
