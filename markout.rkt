@@ -15,8 +15,8 @@
   sizing-context-new-default
   (struct-out styling)
   styling-empty
-  table-styling-new
-  table-styling-empty
+  table-style-basic-bordered
+  table-style-empty
   )
 
 (require
@@ -49,11 +49,43 @@
 (define (sizing-context-new-default)
   (sizing-context-new space-width-default indent-width-default))
 
-(record table-styling
+(record table-style border-width divider-width blocks->final-block)
+
+(record table-basic-border-maker
   make-top make-bottom make-hdiv
   make-left make-right make-vdiv
   )
-(def (table-styling-new
+(def (table-blocks->basic-bordered-block
+       (table-basic-border-maker make-top make-bottom make-hdiv
+                                 make-left make-right make-vdiv)
+       style col-widths rows)
+  (list top-border bottom-border hdiv) =
+  (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
+  rows =
+  (forl
+    blocks <- rows
+    sizes = (map styled-block-size blocks)
+    max-height = (apply max (map (fn ((size _ h)) h) sizes))
+    (list vleft vright vdiv) =
+    (map (lambda (f) (f max-height)) (list make-left make-right make-vdiv))
+    new-sizes = (map size col-widths (replicate (length blocks) max-height))
+    blocks = (map (curry block-expand style) blocks new-sizes)
+    prefix =
+    (forf
+      prefix = (block-append-horiz style vleft (car blocks))
+      block <- (cdr blocks)
+      prefix = (block-append-horiz style prefix vdiv)
+      (block-append-horiz style prefix block))
+    (block-append-horiz style prefix vright))
+  header =
+  (forf
+    header = (block-append-vert style top-border (car rows))
+    row <- (cdr rows)
+    header = (block-append-vert style header hdiv)
+    (block-append-vert style header row)
+    )
+  (block-append-vert style header bottom-border))
+(def (table-style-basic-bordered
        t b ih
        l r iv
        tl tr bl br
@@ -92,13 +124,16 @@
     style <- (list ls rs ivs)
     (lambda (height)
       (styled-block-fill style char (size table-border-width height))))
-  (apply table-styling (append hspans vspans)))
-(define table-styling-empty
-  (apply table-styling-new
-         (append (replicate 15 #\space) (replicate 15 style-empty))))
+  blocks->final-block =
+  (curry table-blocks->basic-bordered-block
+         (apply table-basic-border-maker (append hspans vspans)))
+  (table-style 1 1 blocks->final-block))
 
+(define table-style-empty
+  (apply table-style-basic-bordered
+         (append (replicate 15 #\space) (replicate 15 style-empty))))
 (record styling style table)
-(define styling-empty (styling style-empty table-styling-empty))
+(define styling-empty (styling style-empty table-style-empty))
 
 (record chain-attr spaced? indented?)
 (define attr-tight-aligned (chain-attr #f #f))
@@ -222,7 +257,7 @@
 
 (module+ test
   (define table-styling-test
-    (apply table-styling-new
+    (apply table-style-basic-bordered
            (append (list #\= #\= #\-
                          #\# #\# #\|
                          #\^ #\> #\< #\v
@@ -231,7 +266,7 @@
 
 (module+ test
   (lets
-    style = (styling style-empty table-styling-empty)
+    style = styling-empty
     ctx = (sizing-context-new-default)
     items-0 = (list (doc-atom style "hello") (doc-atom style "world"))
     chain-0 = (bracketed-chain (doc-atom style "test(") (doc-atom style ")")
@@ -287,38 +322,8 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table-blocks->basic-bordered-block
-       (table-styling make-top make-bottom make-hdiv
-                      make-left make-right make-vdiv) style col-widths rows)
-  (list top-border bottom-border hdiv) =
-  (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
-  rows =
-  (forl
-    blocks <- rows
-    sizes = (map styled-block-size blocks)
-    max-height = (apply max (map (fn ((size _ h)) h) sizes))
-    (list vleft vright vdiv) =
-    (map (lambda (f) (f max-height)) (list make-left make-right make-vdiv))
-    new-sizes = (map size col-widths (replicate (length blocks) max-height))
-    blocks = (map (curry block-expand style) blocks new-sizes)
-    prefix =
-    (forf
-      prefix = (block-append-horiz style vleft (car blocks))
-      block <- (cdr blocks)
-      prefix = (block-append-horiz style prefix vdiv)
-      (block-append-horiz style prefix block))
-    (block-append-horiz style prefix vright))
-  header =
-  (forf
-    header = (block-append-vert style top-border (car rows))
-    row <- (cdr rows)
-    header = (block-append-vert style header hdiv)
-    (block-append-vert style header row)
-    )
-  (block-append-vert style header bottom-border))
-
 (def (table->styled-block ctx sty col-widths rows)
-  (styling style table-sty) = sty
+  (styling style (table-style _ _ blocks->final-block)) = sty
   rows =
   (forl
     row <- rows
@@ -326,7 +331,7 @@
       col <- row
       col-width <- col-widths
       (doc->styled-block ctx sty col-width col)))
-  (table-blocks->basic-bordered-block table-sty style col-widths rows))
+  (blocks->final-block style col-widths rows))
 
 (def (chain->blocks
        context
