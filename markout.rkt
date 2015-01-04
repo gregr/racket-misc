@@ -35,8 +35,7 @@
 
 (define indent-width-default 2)
 (define space-width-default 1)
-(define table-border-width 1)
-(define table-divider-width table-border-width)
+(define table-border-width-default 1)
 
 (define (widths-memo-new) (make-hasheq))
 (define (widths-memo-ref memo doc) (hash-ref memo doc (nothing)))
@@ -85,6 +84,7 @@
     )
   (block-append-vert style header bottom-border))
 (def (table-style-basic-bordered
+       border-width divider-width
        t b ih
        l r iv
        tl tr bl br
@@ -94,11 +94,14 @@
        tls trs bls brs
        tjs bjs ljs rjs ijs
        )
+  bw = border-width
+  dw = divider-width
   (list tl tr bl br tj bj lj rj ij) =
   (forl
     char <- (list tl tr bl br tj bj lj rj ij)
     style <- (list tls trs bls brs tjs bjs ljs rjs ijs)
-    (styled-string style (make-immutable-string 1 char)))
+    width <- (list bw bw bw bw dw dw bw bw dw)
+    (styled-string style (make-immutable-string width char)))
   hborder =
   (lambda (style left right middle junc)
     (fn (col-widths)
@@ -121,15 +124,17 @@
   (forl
     char <- (list l r iv)
     style <- (list ls rs ivs)
+    width <- (list bw bw dw)
     (lambda (height)
-      (styled-block-fill style char (size table-border-width height))))
+      (styled-block-fill style char (size width height))))
   blocks->final-block =
   (curry table-blocks->basic-bordered-block
          (apply table-basic-border-maker (append hspans vspans)))
-  (table-style 1 1 blocks->final-block))
+  (table-style border-width divider-width blocks->final-block))
 
 (define table-style-empty
   (apply table-style-basic-bordered
+         1 1
          (append (replicate 15 #\space) (replicate 15 style-empty))))
 
 (record chain-attr spaced? indented?)
@@ -218,7 +223,7 @@
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
-         ((doc-table _ _ rows)
+         ((doc-table _ (table-style border-width divider-width _) rows)
           (lets
             cols = (zip rows)
             (list min-widths max-widths scores) =
@@ -229,8 +234,8 @@
                    max-width = (apply max max-widths)
                    scored-deltas = (width-scored-deltas min-width max-widths)
                    (list min-width max-width scored-deltas)))
-            padding = (+ (* 2 table-border-width)
-                         (* table-divider-width (separator-count cols)))
+            padding = (+ (* 2 border-width)
+                         (* divider-width (separator-count cols)))
             min-width = (+ padding (sum min-widths))
             max-width = (+ padding (sum max-widths))
             scores = (zip* (range (length scores)) scores)
@@ -255,6 +260,7 @@
 (module+ test
   (define table-style-test
     (apply table-style-basic-bordered
+           1 1
            (append (list #\= #\= #\-
                          #\# #\# #\|
                          #\^ #\> #\< #\v
