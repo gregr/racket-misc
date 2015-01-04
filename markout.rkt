@@ -13,8 +13,7 @@
   doc->styled-block
   sizing-context-new
   sizing-context-new-default
-  (struct-out styling)
-  styling-empty
+  (struct-out table-style)
   table-style-basic-bordered
   table-style-empty
   )
@@ -132,8 +131,6 @@
 (define table-style-empty
   (apply table-style-basic-bordered
          (append (replicate 15 #\space) (replicate 15 style-empty))))
-(record styling style table)
-(define styling-empty (styling style-empty table-style-empty))
 
 (record chain-attr spaced? indented?)
 (define attr-tight-aligned (chain-attr #f #f))
@@ -144,7 +141,7 @@
 (records doc
   (doc-atom style str)
   (doc-chain style attr items)
-  (doc-table style rows)
+  (doc-table style table-style rows)
   )
 
 (define (tight-pair style lhs rhs)
@@ -221,7 +218,7 @@
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
-         ((doc-table _ rows)
+         ((doc-table _ _ rows)
           (lets
             cols = (zip rows)
             (list min-widths max-widths scores) =
@@ -256,7 +253,7 @@
            (loop col-widths allocs avail)))))))
 
 (module+ test
-  (define table-styling-test
+  (define table-style-test
     (apply table-style-basic-bordered
            (append (list #\= #\= #\-
                          #\# #\# #\|
@@ -266,7 +263,7 @@
 
 (module+ test
   (lets
-    style = styling-empty
+    style = style-empty
     ctx = (sizing-context-new-default)
     items-0 = (list (doc-atom style "hello") (doc-atom style "world"))
     chain-0 = (bracketed-chain (doc-atom style "test(") (doc-atom style ")")
@@ -274,7 +271,8 @@
     items-1 = (list (doc-atom style "testing") chain-0)
     chain-1 = (bracketed-chain (doc-atom style "[") (doc-atom style "]")
                                attr-loose-aligned style style items-1)
-    table-0 = (doc-table style (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-0 = (doc-table style table-style-test
+                         (list (list chain-0 chain-1) (list chain-0 chain-0)))
     d0 = (- 17 7)
     d1 = (- 27 9)
     table-0-widths = (widths ctx table-0)
@@ -322,20 +320,19 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block ctx sty col-widths rows)
-  (styling style (table-style _ _ blocks->final-block)) = sty
+(def (table->styled-block
+       ctx style (table-style _ _ blocks->final-block) col-widths rows)
   rows =
   (forl
     row <- rows
     (forl
       col <- row
       col-width <- col-widths
-      (doc->styled-block ctx sty col-width col)))
+      (doc->styled-block ctx style col-width col)))
   (blocks->final-block style col-widths rows))
 
 (def (chain->blocks
-       context
-       (styling style _) (chain-attr spaced? indented?) full-width items)
+       context style (chain-attr spaced? indented?) full-width items)
   (sizing-context _ space-width indent-width) = context
   space-new = (if spaced? (space-block style (size space-width 1)) '())
   prefix-new = (if indented? (space-block style (size indent-width 1)) '())
@@ -375,17 +372,17 @@
 
 (define (doc->blocks ctx full-width doc)
   (match doc
-    ((doc-atom (styling sty _) str)
+    ((doc-atom sty str)
      (list (list (list (styled-string sty str)))))
     ((doc-chain sty attr items)
      (chain->blocks ctx sty attr full-width items))
-    ((doc-table sty rows)
+    ((doc-table sty table-sty rows)
      (lets
        (list initial _ mins allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
-       (list (table->styled-block ctx sty col-widths rows))))))
+       (list (table->styled-block ctx sty table-sty col-widths rows))))))
 
-(def (doc->styled-block ctx (styling style _) full-width doc)
+(def (doc->styled-block ctx style full-width doc)
   blocks = (doc->blocks ctx full-width doc)
   (forf
     result = (car blocks)
@@ -395,15 +392,15 @@
 (module+ test
   (lets
     ctx = (sizing-context-new-default)
-    style-outer = (styling (style 'black 'red #f #f #f #f) table-styling-test)
-    style-0 = (styling (style 'white 'blue #f #f #f #f) table-styling-test)
-    style-1 = (styling (style 'red 'black #t #t #t #f) table-styling-test)
-    style-2 = (styling (style 'white 'magenta #f #f #f #f) table-styling-test)
-    style-3 = (styling (style 'default 'green #f #f #f #f) table-styling-test)
-    style-4 = (styling (style 'default 'default #f #f #f #t) table-styling-test)
-    style-5 = (styling (style 'default 'default #f #f #f #f) table-styling-test)
-    style-6 = (styling (style 'cyan 'default #f #f #f #f) table-styling-test)
-    style-7 = (styling (style 'cyan 'default #f #f #f #t) table-styling-test)
+    style-outer = (style 'black 'red #f #f #f #f)
+    style-0 = (style 'white 'blue #f #f #f #f)
+    style-1 = (style 'red 'black #t #t #t #f)
+    style-2 = (style 'white 'magenta #f #f #f #f)
+    style-3 = (style 'default 'green #f #f #f #f)
+    style-4 = (style 'default 'default #f #f #f #t)
+    style-5 = (style 'default 'default #f #f #f #f)
+    style-6 = (style 'cyan 'default #f #f #f #f)
+    style-7 = (style 'cyan 'default #f #f #f #t)
 
     atom-0 = (doc-atom style-0 "hello")
     atom-1 = (doc-atom style-0 "world")
@@ -417,7 +414,8 @@
     items-1 = (list (doc-atom style-5 "testing") chain-0)
     chain-1 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
                                attr-loose-aligned style-6 style-7 items-1)
-    table-0 = (doc-table style-4 (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-0 = (doc-table style-4 table-style-test
+                         (list (list chain-0 chain-1) (list chain-0 chain-0)))
 
     items-2 = (list chain-1 atom-2 atom-3)
     chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
