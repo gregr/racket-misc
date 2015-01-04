@@ -246,7 +246,8 @@
 
 (def (table-col-widths available initial mins allocs)
   cols = (list->index-hash mins)
-  (let loop ((col-widths cols) (allocs allocs) (avail (- available initial)))
+  (let loop
+    ((col-widths cols) (allocs allocs) (avail (max 0 (- available initial))))
     (if (= 0 avail) (index-hash->list col-widths)
       (match allocs
         ('() (loop col-widths '() 0))
