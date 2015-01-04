@@ -287,20 +287,14 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block ctx sty col-widths rows)
-  (styling style (table-styling
-                   make-top make-bottom make-hdiv
-                   make-left make-right make-vdiv)) = sty
+(def (table-blocks->basic-bordered-block
+       (table-styling make-top make-bottom make-hdiv
+                      make-left make-right make-vdiv) style col-widths rows)
   (list top-border bottom-border hdiv) =
   (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
   rows =
   (forl
-    row <- rows
-    blocks =
-    (forl
-      col <- row
-      col-width <- col-widths
-      (doc->styled-block ctx sty col-width col))
+    blocks <- rows
     sizes = (map styled-block-size blocks)
     max-height = (apply max (map (fn ((size _ h)) h) sizes))
     (list vleft vright vdiv) =
@@ -322,6 +316,17 @@
     (block-append-vert style header row)
     )
   (block-append-vert style header bottom-border))
+
+(def (table->styled-block ctx sty col-widths rows)
+  (styling style table-sty) = sty
+  rows =
+  (forl
+    row <- rows
+    (forl
+      col <- row
+      col-width <- col-widths
+      (doc->styled-block ctx sty col-width col)))
+  (table-blocks->basic-bordered-block table-sty style col-widths rows))
 
 (def (chain->blocks
        context
