@@ -66,25 +66,26 @@
   (forl
     blocks <- rows
     sizes = (map styled-block-size blocks)
-    max-height = (apply max (map (fn ((size _ h)) h) sizes))
+    max-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
     (list vleft vright vdiv) =
     (map (lambda (f) (f max-height)) (list make-left make-right make-vdiv))
     new-sizes = (map size col-widths (replicate (length blocks) max-height))
     blocks = (map (curry block-expand style) blocks new-sizes)
-    prefix =
-    (forf
-      prefix = (block-append-horiz style vleft (car blocks))
-      block <- (cdr blocks)
-      prefix = (block-append-horiz style prefix vdiv)
-      (block-append-horiz style prefix block))
+    internal = (if (empty? blocks) '()
+                 (forf
+                   prefix = (car blocks)
+                   block <- (cdr blocks)
+                   prefix = (block-append-horiz style prefix vdiv)
+                   (block-append-horiz style prefix block)))
+    prefix = (block-append-horiz style vleft internal)
     (block-append-horiz style prefix vright))
-  header =
-  (forf
-    header = (block-append-vert style top-border (car rows))
-    row <- (cdr rows)
-    header = (block-append-vert style header hdiv)
-    (block-append-vert style header row)
-    )
+  rows = (if (empty? rows) '()
+           (forf
+             header = (car rows)
+             row <- (cdr rows)
+             header = (block-append-vert style header hdiv)
+             (block-append-vert style header row)))
+  header = (block-append-vert style top-border rows)
   (block-append-vert style header bottom-border))
 (def (table-style-basic-bordered
        border-width divider-width
@@ -113,10 +114,11 @@
         col-width <- col-widths
         (styled-string style (make-immutable-string col-width middle)))
       rmid =
-      (forf
-        prefix = (list (car col-parts))
-        col-part <- (cdr col-parts)
-        (cons col-part (cons junc prefix)))
+      (if (empty? col-parts) '()
+        (forf
+          prefix = (list (car col-parts))
+          col-part <- (cdr col-parts)
+          (cons col-part (cons junc prefix))))
       (list (cons left (reverse (cons right rmid))))))
   hspans =
   (forl
@@ -238,13 +240,15 @@
           (lets
             cols = (zip rows)
             (list min-widths max-widths scores) =
-            (zip (forl
-                   col <- cols
-                   (list min-widths max-widths _ _) = (widths-grouped col)
-                   min-width = (apply max min-widths)
-                   max-width = (apply max max-widths)
-                   scored-deltas = (width-scored-deltas min-width max-widths)
-                   (list min-width max-width scored-deltas)))
+            (zip-default
+              (forl
+                col <- cols
+                (list min-widths max-widths _ _) = (widths-grouped col)
+                min-width = (apply max min-widths)
+                max-width = (apply max max-widths)
+                scored-deltas = (width-scored-deltas min-width max-widths)
+                (list min-width max-width scored-deltas))
+              '(() () ()))
             padding = (+ (* 2 border-width)
                          (* divider-width (separator-count cols)))
             min-width = (+ padding (sum min-widths))
@@ -459,6 +463,8 @@
                                attr-loose-aligned style-6 style-7 items-1)
     table-0 = (doc-table style-4 table-style-test
                          (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-1 = (doc-table style-4 table-style-test '())
+    table-2 = (doc-table style-4 table-style-test (list '() '()))
 
     items-2 = (list chain-1 atom-2 atom-3)
     chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
@@ -487,6 +493,12 @@
 
     test-equalities =
     (list
+      (list
+        (list 10 table-1)
+        "\e[0m\e[7;25;24;22;49;39m^^^>>>\e[0m\n\e[7;25;24;22;49;39m<<<vvv\e[0m")
+      (list
+        (list 10 table-2)
+        "\e[0m\e[7;25;24;22;49;39m^^^>>>\e[0m\n\e[7;25;24;22;49;39m++++++\e[0m\n\e[7;25;24;22;49;39m<<<vvv\e[0m")
       (list
         (list 20 frame-0)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[43;30m        \e[0m\n\e[27;25;24;22;43;30m                    \e[0m")
