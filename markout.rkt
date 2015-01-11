@@ -52,7 +52,7 @@
 
 (record table-style border-width divider-width blocks->final-block)
 
-(def (table-blocks->plain-block style col-widths rows)
+(def (table-blocks->plain-block style _ _ rows)
   (forf
     header = '()
     row <- rows
@@ -68,18 +68,15 @@
 (def (table-blocks->basic-bordered-block
        (table-basic-border-maker make-top make-bottom make-hdiv
                                  make-left make-right make-vdiv)
-       style col-widths rows)
+       style row-heights col-widths rows)
   (list top-border bottom-border hdiv) =
   (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
   rows =
   (forl
     blocks <- rows
-    sizes = (map styled-block-size blocks)
-    max-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
+    row-height <- row-heights
     (list vleft vright vdiv) =
-    (map (lambda (f) (f max-height)) (list make-left make-right make-vdiv))
-    new-sizes = (map size col-widths (replicate (length blocks) max-height))
-    blocks = (map (curry block-expand style) blocks new-sizes)
+    (map (lambda (f) (f row-height)) (list make-left make-right make-vdiv))
     internal = (if (empty? blocks) '()
                  (forf
                    prefix = (car blocks)
@@ -358,20 +355,23 @@
 
 (def (table->styled-block
        ctx style (table-style _ _ blocks->final-block) col-widths rows)
-  rows =
-  (forl
-    row <- rows
-    cols = (forl
-             col <- row
-             col-width <- col-widths
-             (doc->styled-block ctx style col-width col))
-    sizes = (map styled-block-size cols)
-    max-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
+  (list row-heights rows) =
+  (zip-default
     (forl
-      col <- cols
-      col-width <- col-widths
-      (block-expand style col (size col-width max-height))))
-  (blocks->final-block style col-widths rows))
+      row <- rows
+      cols = (forl
+               col <- row
+               col-width <- col-widths
+               (doc->styled-block ctx style col-width col))
+      sizes = (map styled-block-size cols)
+      row-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
+      cols = (forl
+               col <- cols
+               col-width <- col-widths
+               (block-expand style col (size col-width row-height)))
+      (list row-height cols))
+    '(() ()))
+  (blocks->final-block style row-heights col-widths rows))
 
 (def (chain->blocks
        context style (chain-attr spaced? indented?) full-width items)
