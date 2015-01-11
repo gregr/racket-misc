@@ -52,6 +52,15 @@
 
 (record table-style border-width divider-width blocks->final-block)
 
+(def (table-blocks->plain-block style col-widths rows)
+  (forf
+    header = '()
+    row <- rows
+    row = (forf
+            prefix = '()
+            col <- row
+            (block-append-horiz style prefix col))
+    (block-append-vert style header row)))
 (record table-basic-border-maker
   make-top make-bottom make-hdiv
   make-left make-right make-vdiv
@@ -137,10 +146,7 @@
          (apply table-basic-border-maker (append hspans vspans)))
   (table-style border-width divider-width blocks->final-block))
 
-(define table-style-empty
-  (apply table-style-basic-bordered
-         1 1
-         (append (replicate 15 #\space) (replicate 15 style-empty))))
+(define table-style-empty (table-style 0 0 table-blocks->plain-block))
 
 (record chain-attr spaced? indented?)
 (define attr-tight-aligned (chain-attr #f #f))
@@ -355,10 +361,16 @@
   rows =
   (forl
     row <- rows
+    cols = (forl
+             col <- row
+             col-width <- col-widths
+             (doc->styled-block ctx style col-width col))
+    sizes = (map styled-block-size cols)
+    max-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
     (forl
-      col <- row
+      col <- cols
       col-width <- col-widths
-      (doc->styled-block ctx style col-width col)))
+      (block-expand style col (size col-width max-height))))
   (blocks->final-block style col-widths rows))
 
 (def (chain->blocks
@@ -465,6 +477,8 @@
                          (list (list chain-0 chain-1) (list chain-0 chain-0)))
     table-1 = (doc-table style-4 table-style-test '())
     table-2 = (doc-table style-4 table-style-test (list '() '()))
+    table-3 = (doc-table style-4 table-style-empty
+                         (list (list chain-0 chain-1) (list preformatted-0 chain-0)))
 
     items-2 = (list chain-1 atom-2 atom-3)
     chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
@@ -499,6 +513,9 @@
       (list
         (list 10 table-2)
         "\e[0m\e[7;25;24;22;49;39m^^^>>>\e[0m\n\e[7;25;24;22;49;39m++++++\e[0m\n\e[7;25;24;22;49;39m<<<vvv\e[0m")
+      (list
+        (list 25 table-3)
+        "\e[0m\e[27;25;24;22;45;37mtest(\e[7;49;39m   \e[27m[testing\e[7m         \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m \e[27;36m \e[45;37mtest(\e[7;49;39m           \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mworld\e[7;49;39m \e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m   \e[0m\n\e[27;25;24;22;42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   \e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m  \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[7;49;39m                 \e[0m\n\e[27;25;24;22;42;39m  \e[45;37m)\e[7;49;39m                      \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;45;37mtest(\e[7;49;39m            \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m        \e[0m")
       (list
         (list 20 frame-0)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[43;30m        \e[0m\n\e[27;25;24;22;43;30m                    \e[0m")
