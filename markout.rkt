@@ -7,6 +7,7 @@
   bracketed-chain
   separated
   tight-pair
+  (struct-out doc-preformatted)
   (struct-out doc-atom)
   (struct-out doc-chain)
   (struct-out doc-table)
@@ -144,6 +145,7 @@
 (define attr-loose-indented (chain-attr #t #t))
 
 (records doc
+  (doc-preformatted block)
   (doc-atom style str)
   (doc-chain style attr items)
   (doc-table style table-style rows)
@@ -208,6 +210,10 @@
      (lets
        result =
        (match doc
+         ((doc-preformatted block)
+          (lets
+            (size width _) = (styled-block-size block)
+            (list width width '() '())))
          ((doc-atom _ str)
           (lets
             len = (string-length str)
@@ -385,6 +391,7 @@
 
 (define (doc->blocks ctx full-width doc)
   (match doc
+    ((doc-preformatted block) (list block))
     ((doc-atom sty str)
      (list (list (list (styled-string sty str)))))
     ((doc-chain sty attr items)
@@ -415,6 +422,8 @@
     style-6 = (style 'cyan 'default #f #f #f #f)
     style-7 = (style 'cyan 'default #f #f #f #t)
 
+    preformatted-0 = (doc-preformatted (styled-block-fill style-2 #\$ (size 4 3)))
+
     atom-0 = (doc-atom style-0 "hello")
     atom-1 = (doc-atom style-0 "world")
     atom-2 = (doc-atom style-1 "and")
@@ -438,8 +447,18 @@
     chain-3 = (bracketed-chain (doc-atom style-6 "with-a-table(") (doc-atom style-6 ")")
                                attr-loose-aligned style-2 style-0 items-3)
 
+    items-4 = (list atom-0 atom-1 preformatted-0)
+    chain-4 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
+                               attr-loose-aligned style-3 style-7 items-4)
+
     test-equalities =
     (list
+      (list
+        (list 18 chain-4)
+        "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[0m")
+      (list
+        (list 16 chain-4)
+        "\e[0m\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;44;37mworld\e[0m\n\e[27;25;24;22;42;39m \e[45;37m$$$$\e[42;39m \e[41;30m      \e[0m\n\e[27;25;24;22;42;39m \e[45;37m$$$$\e[42;39m \e[41;30m      \e[0m\n\e[27;25;24;22;42;39m \e[45;37m$$$$\e[49;39m]\e[41;30m      \e[0m")
       (list
         (list 16 chain-0)
         "\e[0m\e[27;25;24;22;45;37mtest(\e[41;30m        \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[0m\n\e[27;25;24;22;42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[0m")
