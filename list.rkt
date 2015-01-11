@@ -3,8 +3,10 @@
   cross
   cross*
   zip
+  zip-default
   zip*
   zip-with
+  zip-with-default
   list->index-hash
   index-hash->list
   list-set
@@ -73,14 +75,23 @@
 (module+ test
   (check-equal? (replicate 4 'x) '(x x x x)))
 
-(define (zip-with f xss) (if (empty? xss) '() (apply map f xss)))
-(define (zip xss) (zip-with list xss))
+(define (zip-with-default f xss default)
+  (if (empty? xss) default (apply map f xss)))
+(define (zip-with f xss) (zip-with-default f xss '()))
+(define (zip-default xss default) (zip-with-default list xss default))
+(define (zip xss) (zip-default xss '()))
 (define (zip* . xss) (zip xss))
 
 (module+ test
   (check-equal?
     (zip* '(1 2) '(3 4) '(a b))
-    '((1 3 a) (2 4 b))))
+    '((1 3 a) (2 4 b)))
+  (check-equal?
+    (zip-default '(()) '(() ()))
+    '())
+  (check-equal?
+    (zip-default '() '(() ()))
+    '(() ())))
 
 (define (cross xss)
   (match/cata xss
