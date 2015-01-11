@@ -73,7 +73,7 @@
 (module+ test
   (check-equal? (replicate 4 'x) '(x x x x)))
 
-(define (zip-with f xss) (apply (curry map f) xss))
+(define (zip-with f xss) (if (empty? xss) '() (apply map f xss)))
 (define (zip xss) (zip-with list xss))
 (define (zip* . xss) (zip xss))
 
