@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 (provide
   attr-tight-aligned
   attr-tight-indented
@@ -28,6 +28,9 @@
   "string.rkt"
   "sugar.rkt"
   "terminal.rkt"
+  racket/function
+  racket/list
+  racket/match
   )
 
 (module+ test
