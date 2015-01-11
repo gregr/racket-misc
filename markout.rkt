@@ -11,6 +11,8 @@
   (struct-out doc-atom)
   (struct-out doc-chain)
   (struct-out doc-table)
+  (struct-out doc-frame)
+  (struct-out frame-attr)
   doc->styled-block
   sizing-context-new
   sizing-context-new-default
@@ -144,11 +146,14 @@
 (define attr-loose-aligned (chain-attr #t #f))
 (define attr-loose-indented (chain-attr #t #t))
 
+(record frame-attr rect)
+
 (records doc
   (doc-preformatted block)
   (doc-atom style str)
   (doc-chain style attr items)
   (doc-table style table-style rows)
+  (doc-frame style attr doc)
   )
 
 (define (tight-pair style lhs rhs)
@@ -246,7 +251,9 @@
             max-width = (+ padding (sum max-widths))
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
-            (list min-width max-width min-widths allocation-order))))
+            (list min-width max-width min-widths allocation-order)))
+         ((doc-frame _ (frame-attr (rect _ (size width height))) doc)
+          (list width width '() '())))
        _ = (widths-memo-set! memo doc result)
        result))))
 
@@ -389,6 +396,17 @@
         (next-state prefix-new header after-indent-width item))))
   (cons prefix header))
 
+(def (frame->blocks
+       context style (frame-attr (rect (coord x y) sz)) full-width doc)
+  (size width height) = sz
+  block = (doc->styled-block context style width doc)
+  (size bw bh) = (styled-block-size block)
+  block = (block-expand style block sz)
+  pos = (coord (min x (max 0 (- bw width)))
+               (min y (max 0 (- bh height))))
+  block = (styled-block-sub block (rect pos sz))
+  (list block))
+
 (define (doc->blocks ctx full-width doc)
   (match doc
     ((doc-preformatted block) (list block))
@@ -400,7 +418,8 @@
      (lets
        (list initial _ mins allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
-       (list (table->styled-block ctx sty table-sty col-widths rows))))))
+       (list (table->styled-block ctx sty table-sty col-widths rows))))
+    ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))))
 
 (def (doc->styled-block ctx style full-width doc)
   blocks = (doc->blocks ctx full-width doc)
@@ -421,8 +440,10 @@
     style-5 = (style 'default 'default #f #f #f #f)
     style-6 = (style 'cyan 'default #f #f #f #f)
     style-7 = (style 'cyan 'default #f #f #f #t)
+    style-8 = (style 'black 'yellow #f #f #f #f)
 
     preformatted-0 = (doc-preformatted (styled-block-fill style-2 #\$ (size 4 3)))
+    preformatted-1 = (doc-preformatted (styled-block-fill style-1 #\* (size 10 2)))
 
     atom-0 = (doc-atom style-0 "hello")
     atom-1 = (doc-atom style-0 "world")
@@ -451,8 +472,33 @@
     chain-4 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
                                attr-loose-aligned style-3 style-7 items-4)
 
+    items-5 = (list atom-0 preformatted-1 atom-1 preformatted-0)
+    chain-5 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
+                               attr-loose-aligned style-3 style-7 items-5)
+
+    frame-attr-0 = (frame-attr (rect (coord 0 0) (size 20 6)))
+    frame-0 = (doc-frame style-8 frame-attr-0 chain-5)
+    frame-attr-1 = (frame-attr (rect (coord 0 0) (size 8 6)))
+    frame-1 = (doc-frame style-8 frame-attr-1 chain-5)
+    frame-attr-2 = (frame-attr (rect (coord 2 1) (size 8 6)))
+    frame-2 = (doc-frame style-8 frame-attr-2 chain-5)
+    frame-attr-3 = (frame-attr (rect (coord 200 100) (size 8 6)))
+    frame-3 = (doc-frame style-8 frame-attr-3 chain-5)
+
     test-equalities =
     (list
+      (list
+        (list 20 frame-0)
+        "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[43;30m        \e[0m\n\e[27;25;24;22;43;30m                    \e[0m")
+      (list
+        (list 20 frame-1)
+        "\e[0m\e[27;25;24;22;49;39m[\e[44;37mhello\e[43;30m  \e[0m\n\e[27;25;24;22;42;39m \e[5;4;1;40;31m*******\e[0m\n\e[27;25;24;22;42;39m \e[5;4;1;40;31m*******\e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[43;30m  \e[0m\n\e[27;25;24;22;42;39m \e[45;37m$$$$\e[42;39m \e[43;30m  \e[0m\n\e[27;25;24;22;42;39m \e[45;37m$$$$\e[42;39m \e[43;30m  \e[0m")
+      (list
+        (list 20 frame-2)
+        "\e[0m\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37morld\e[43;30m    \e[0m\n\e[27;25;24;22;45;37m$$$\e[42;39m \e[43;30m    \e[0m\n\e[27;25;24;22;45;37m$$$\e[42;39m \e[43;30m    \e[0m\n\e[27;25;24;22;45;37m$$$\e[49;39m]\e[43;30m    \e[0m")
+      (list
+        (list 20 frame-3)
+        "\e[0m\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37mrld\e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[42;39m \e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[42;39m \e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[49;39m]\e[43;30m     \e[0m")
       (list
         (list 18 chain-4)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[0m")
