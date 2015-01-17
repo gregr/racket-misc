@@ -1,5 +1,7 @@
 #lang racket/base
 (provide
+  apply-map
+  apply-map*
   cross
   cross*
   zip
@@ -74,6 +76,15 @@
 
 (module+ test
   (check-equal? (replicate 4 'x) '(x x x x)))
+
+(define (apply-map f0 f1 xs) (apply f0 (map f1 xs)))
+(define (apply-map* f0 f1 . xs) (apply-map f0 f1 xs))
+
+(module+ test
+  (check-equal?
+    (apply-map* cons (curry * 3) 3 5)
+    (cons 9 15)
+    ))
 
 (define (zip-with-default f xss default)
   (if (empty? xss) default (apply map f xss)))
