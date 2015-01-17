@@ -2,6 +2,7 @@
 (provide
   apply-map
   apply-map*
+  map*
   cross
   cross*
   zip
@@ -76,6 +77,14 @@
 
 (module+ test
   (check-equal? (replicate 4 'x) '(x x x x)))
+
+(define (map* f . xs) (map f xs))
+
+(module+ test
+  (check-equal?
+    (map* list 1 2 3)
+    '((1) (2) (3))
+    ))
 
 (define (apply-map f0 f1 xs) (apply f0 (map f1 xs)))
 (define (apply-map* f0 f1 . xs) (apply-map f0 f1 xs))
