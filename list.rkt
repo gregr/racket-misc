@@ -10,6 +10,8 @@
   zip*
   zip-with
   zip-with-default
+  list-index
+  list-index-equal
   list->index-hash
   index-hash->list
   list-set
@@ -34,6 +36,22 @@
 
 (module+ test
   (require rackunit))
+
+(define (list-index xs matches?)
+  (let loop ((idx 0) (xs xs))
+    (match xs
+      ('() -1)
+      ((cons x xs) (if (matches? x) idx (loop (+ 1 idx) xs))))))
+(define (list-index-equal xs element) (list-index xs (curry equal? element)))
+
+(module+ test
+  (check-equal?
+    (list-index-equal '(a b c) 'b)
+    1)
+  (check-equal?
+    (list-index-equal '(a b c) 'd)
+    -1)
+  )
 
 (define (list-set xs idx val)
   (let-values (((start end) (split-at xs idx)))
