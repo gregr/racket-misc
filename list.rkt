@@ -23,7 +23,6 @@
   list-inits
   list-path
   iterate
-  replicate
   sum
   )
 
@@ -90,11 +89,6 @@
 
 (module+ test
   (check-equal? (sum (list 1 2 3)) 6))
-
-(define (replicate k v) (build-list k (lambda _ v)))
-
-(module+ test
-  (check-equal? (replicate 4 'x) '(x x x x)))
 
 (define (map* f . xs) (map f xs))
 

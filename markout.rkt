@@ -291,7 +291,7 @@
                          #\# #\# #\|
                          #\^ #\> #\< #\v
                          #\+ #\+ #\+ #\+ #\+)
-                   (replicate 15 (style 'default 'default #f #f #f #t))))))
+                   (make-list 15 (style 'default 'default #f #f #f #t))))))
 
 (module+ test
   (lets
