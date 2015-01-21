@@ -9,9 +9,11 @@
   either-map
   either-monad
   either-or
+  maybe->either
   )
 
 (require
+  "maybe.rkt"
   "monad.rkt"
   "record.rkt"
   racket/function
@@ -56,3 +58,6 @@
   (match (f arg)
     ((left _)    arg)
     ((right arg) (either-iterate f arg))))
+
+(define (maybe->either left-arg maybe)
+  (maybe-fold (left left-arg) right maybe))
