@@ -13,6 +13,7 @@
   let/with-monad
   begin/monad
   begin/with-monad
+  monad-map
   )
 
 (require
@@ -86,3 +87,17 @@
       x <- (pure 4)
       y = 3
       (+ x y))))
+
+(define (monad-map monad proc xs)
+  (match xs
+    ('() (begin/with-monad monad (pure '())))
+    ((cons y ys)
+      (begin/with-monad monad
+        y0 <- (proc y)
+        ys0 <- (monad-map monad proc ys)
+        (pure (cons y0 ys0))))))
+
+(module+ test
+  (check-equal?
+    (monad-map ident-monad ident '(a b c))
+    (ident '(a b c))))
