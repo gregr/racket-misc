@@ -22,8 +22,8 @@
   (left x)
   (right x))
 
-(define (either-from default maybe-value)
-  (match maybe-value
+(define (either-from default either-value)
+  (match either-value
     ((left _)  default)
     ((right x) x)))
 
