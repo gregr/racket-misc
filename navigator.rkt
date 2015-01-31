@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 (provide
   list-navigator-keys
   navigator-new
@@ -11,11 +11,13 @@
   )
 
 (require
-  gregr-misc/cursor
-  gregr-misc/list
-  gregr-misc/maybe
-  gregr-misc/record
-  gregr-misc/sugar
+  "cursor.rkt"
+  "list.rkt"
+  "maybe.rkt"
+  "record.rkt"
+  "sugar.rkt"
+  racket/list
+  racket/match
   )
 
 (module+ test
