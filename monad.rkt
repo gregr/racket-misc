@@ -14,6 +14,7 @@
   begin/monad
   begin/with-monad
   monad-map
+  monad-foldl
   )
 
 (require
@@ -88,16 +89,30 @@
       y = 3
       (+ x y))))
 
-(define (monad-map monad proc xs)
+(define (monad-foldl monad proc seed xs)
   (match xs
-    ('() (begin/with-monad monad (pure '())))
+    ('() (begin/with-monad monad (pure seed)))
     ((cons y ys)
       (begin/with-monad monad
-        y0 <- (proc y)
-        ys0 <- (monad-map monad proc ys)
-        (pure (cons y0 ys0))))))
+        next-seed <- (proc seed y)
+        (monad-foldl monad proc next-seed ys)))))
 
 (module+ test
   (check-equal?
-    (monad-map ident-monad ident '(a b c))
-    (ident '(a b c))))
+    (monad-foldl ident-monad (lambda (a b) (ident (+ a b)))
+                 0 '(1 2 3))
+    (ident 6)))
+
+(define (monad-map monad proc xs)
+  (begin/with-monad monad
+    ys <- (monad-foldl monad
+            (lambda (ys x)
+              (begin/with-monad monad
+                y <- (proc x)
+                (pure (cons y ys)))) '() xs)
+    (pure (reverse ys))))
+
+(module+ test
+  (check-equal?
+    (monad-map ident-monad (compose1 ident add1) '(1 2 3))
+    (ident '(2 3 4))))
