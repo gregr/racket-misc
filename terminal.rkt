@@ -29,6 +29,7 @@
   with-stty-direct
   with-stty-previous
   maybe-read-char
+  read-chars-ready
   )
 
 (require
@@ -132,6 +133,10 @@
     ))
 
 (define (maybe-read-char) (if (char-ready?) (just (read-char)) (nothing)))
+(define (read-chars-ready)
+  (match (maybe-read-char)
+    ((nothing) '())
+    ((just ch) (list* ch (read-chars-ready)))))
 
 (define colors
   (make-immutable-hash
