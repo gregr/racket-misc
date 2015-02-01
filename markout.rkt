@@ -13,7 +13,8 @@
   (struct-out doc-chain)
   (struct-out doc-table)
   (struct-out doc-frame)
-  (struct-out frame-attr)
+  (struct-out frame-fixed)
+  (struct-out frame-fixed-height)
   doc->styled-block
   sizing-context-new
   sizing-context-new-default
@@ -155,7 +156,9 @@
 (define attr-loose-aligned (chain-attr #t #f))
 (define attr-loose-indented (chain-attr #t #t))
 
-(record frame-attr rect)
+(records frame-attr
+  (frame-fixed rect)
+  (frame-fixed-height coord height))
 
 (records doc
   (doc-preformatted block)
@@ -263,8 +266,14 @@
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list min-width max-width min-widths allocation-order)))
-         ((doc-frame _ (frame-attr (rect _ (size width height))) doc)
-          (list width width '() '())))
+         ((doc-frame _ fattr doc)
+          (match fattr
+            ((frame-fixed (rect _ (size width height)))
+             (list width width '() '()))
+            ((frame-fixed-height _ height)
+             (lets
+               (list _ max-width _ _) = (widths ctx doc)
+               (list 0 max-width '() '()))))))
        _ = (widths-memo-set! memo doc result)
        result))))
 
@@ -416,8 +425,15 @@
         (next-state prefix-new header after-indent-width item))))
   (cons prefix header))
 
-(def (frame->blocks
-       context style (frame-attr (rect (coord x y) sz)) full-width doc)
+(def (frame->blocks context style fattr full-width doc)
+  (rect (coord x y) sz) =
+  (match fattr
+    ((frame-fixed rct) rct)
+    ((frame-fixed-height crd height)
+     (lets
+       (list _ max-width _ _) = (widths context doc)
+       width = (min max-width full-width)
+       (rect crd (size width height)))))
   (size width height) = sz
   block = (doc->styled-block context style width doc)
   (size bw bh) = (styled-block-size block)
@@ -500,14 +516,18 @@
     chain-5 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
                                attr-loose-aligned style-3 style-7 items-5)
 
-    frame-attr-0 = (frame-attr (rect (coord 0 0) (size 20 6)))
+    frame-attr-0 = (frame-fixed (rect (coord 0 0) (size 20 6)))
     frame-0 = (doc-frame style-8 frame-attr-0 chain-5)
-    frame-attr-1 = (frame-attr (rect (coord 0 0) (size 8 6)))
+    frame-attr-1 = (frame-fixed (rect (coord 0 0) (size 8 6)))
     frame-1 = (doc-frame style-8 frame-attr-1 chain-5)
-    frame-attr-2 = (frame-attr (rect (coord 2 1) (size 8 6)))
+    frame-attr-2 = (frame-fixed (rect (coord 2 1) (size 8 6)))
     frame-2 = (doc-frame style-8 frame-attr-2 chain-5)
-    frame-attr-3 = (frame-attr (rect (coord 200 100) (size 8 6)))
+    frame-attr-3 = (frame-fixed (rect (coord 200 100) (size 8 6)))
     frame-3 = (doc-frame style-8 frame-attr-3 chain-5)
+    frame-attr-4 = (frame-fixed-height (coord 0 0) 6)
+    frame-4 = (doc-frame style-8 frame-attr-4 chain-5)
+    frame-attr-5 = (frame-fixed-height (coord 1 1) 6)
+    frame-5 = (doc-frame style-8 frame-attr-5 chain-5)
 
     test-equalities =
     (list
@@ -532,6 +552,12 @@
       (list
         (list 20 frame-3)
         "\e[0m\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37mrld\e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[42;39m \e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[42;39m \e[43;30m     \e[0m\n\e[27;25;24;22;45;37m$$\e[49;39m]\e[43;30m     \e[0m")
+      (list
+        (list 20 frame-4)
+        "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[43;30m        \e[0m\n\e[27;25;24;22;43;30m                    \e[0m")
+      (list
+        (list 8 frame-5)
+        "\e[0m\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37mworld\e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[49;39m]\e[43;30m   \e[0m")
       (list
         (list 18 chain-4)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[0m")
