@@ -111,7 +111,7 @@
 (define-syntax with-stty-direct
   (syntax-rules ()
     ((_ body ...)
-     (with-stty (list "raw" "-echo") body ...))))
+     (with-stty (list "raw" "opost" "-echo") body ...))))
 (define-syntax with-stty-previous
   (syntax-rules ()
     ((_ body ...)
