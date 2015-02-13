@@ -34,6 +34,7 @@
 
 (require
   "either.rkt"
+  "function.rkt"
   "list.rkt"
   "record.rkt"
   racket/dict
@@ -84,8 +85,6 @@
      (if (datum-has-key? (cursor-focus cur) key)
        (cursor-descend*/either (cursor-descend cur key) keys)
        (left (cons key keys))))))
-
-(define ((flip proc) x y) (proc y x))
 
 (define :o (curry apply append))
 
