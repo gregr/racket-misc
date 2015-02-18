@@ -177,7 +177,7 @@
       init-items = (forl
                      item <- init-items
                      (tight-pair style item separator))
-      (append init-items last-item))))
+      (append init-items (list last-item)))))
 (def (bracketed-chain prefix suffix attr outer-style inner-style items)
   elements = (doc-chain inner-style attr items)
   suffix-chain = (doc-chain outer-style attr-tight-aligned (list elements suffix))
