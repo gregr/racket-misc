@@ -220,7 +220,8 @@
 
 (def (widths ctx doc)
   (sizing-context memo space-width indent-width) = ctx
-  widths-grouped = (lambda (xs) (zip (map (curry widths ctx) xs)))
+  widths-grouped = (lambda (xs) (zip-default (map (curry widths ctx) xs)
+                                             '(() () () ())))
   (match (widths-memo-ref memo doc)
     ((just result) result)
     ((nothing)
@@ -240,9 +241,10 @@
             (list min-widths max-widths _ _) = (widths-grouped items)
             spacing = (if spaced? (* space-width (separator-count items)) 0)
             indent = (if indented? indent-width 0)
-            min-width = (apply max
-                               (car min-widths)  ; never indented
-                               (map (curry + indent) (cdr min-widths)))
+            min-width = (if (empty? items) 0
+                          (apply max
+                                 (car min-widths)  ; never indented
+                                 (map (curry + indent) (cdr min-widths))))
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
@@ -307,6 +309,8 @@
   (lets
     style = style-empty
     ctx = (sizing-context-new-default)
+    chain-empty = (bracketed-chain (doc-atom style "[") (doc-atom style "]")
+                                   attr-loose-aligned style style '())
     items-0 = (list (doc-atom style "hello") (doc-atom style "world"))
     chain-0 = (bracketed-chain (doc-atom style "test(") (doc-atom style ")")
                                attr-loose-aligned style style items-0)
@@ -326,6 +330,10 @@
       calc = (lambda (avail) (table-col-widths avail initial cmins callocs))
       (list (calc 19) (calc max-width) (calc 100) (calc 35)))
     (begin
+      (check-equal?
+        (widths ctx chain-empty)
+        (list 2 2 '() '())
+        )
       (check-equal?
         (widths ctx chain-0)
         (list 7 17 '() '())
