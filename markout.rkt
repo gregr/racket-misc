@@ -241,10 +241,13 @@
             (list min-widths max-widths _ _) = (widths-grouped items)
             spacing = (if spaced? (* space-width (separator-count items)) 0)
             indent = (if indented? indent-width 0)
-            min-width = (if (empty? items) 0
-                          (apply max
-                                 (car min-widths)  ; never indented
-                                 (map (curry + indent) (cdr min-widths))))
+            (list _ min-width) =
+            (forf
+              (list prefix-width final-min-width) = (list 0 0)
+              min-width <- min-widths
+              min-prefix = (min prefix-width indent)
+              width = (+ min-prefix min-width)
+              (list (+ spacing width) (max width final-min-width)))
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
