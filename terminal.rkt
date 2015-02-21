@@ -16,6 +16,7 @@
   styled-block-sub
   styled-block-blit
   styled-block->string
+  styled-block->string-unstyled
   screen-size
   screen-clear
   screen-save
@@ -540,6 +541,12 @@
                 (string-append (sgrcodes->string delta) str))))
   (string-append str-reset (string-join block str-eol) str-reset))
 
+(def (styled-block->string-unstyled sb)
+  block = (forl
+            sline <- sb
+            (string-append* (map sgrstr-str sline)))
+  (string-join block "\n"))
+
 (module+ test
   (define test-style-3 (style 'white 'blue #t #f #f #f))
   (define test-style-4 (style 'yellow 'green #f #f #f #f))
@@ -573,4 +580,29 @@
       "\e[27;25;24;1;44;37m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\e[0m\n"
       "\e[27;25;24;1;44;37m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\e[0m\n"
       "\e[27;25;24;1;44;37m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\e[0m")
+    )
+  (visual-check-equal?
+    identity
+    (styled-block->string-unstyled test-block-4)
+    (string-append
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~,,,,,,~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     ))
