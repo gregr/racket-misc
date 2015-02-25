@@ -57,11 +57,16 @@
 (def (navigator-focus-set (navigator f->k cursor keys trail) focus)
   (navigator-from-cursor f->k (::=* cursor focus) trail))
 
-(def (navigator-ascend (navigator f->k cursor keys trail))
+(def (navigator-reset (navigator f->k cursor _ trail))
+  (navigator-from-cursor f->k cursor trail))
+(def (navigator-previous (navigator f->k cursor keys trail))
   (match trail
     ('() (nothing))
     ((cons (navigator-frame steps index keys) trail)
      (just (navigator f->k (last (iterate ::^ cursor steps)) keys trail)))))
+(define (navigator-ascend nav)
+  (maybe-fold
+    (nothing) (compose1 just navigator-reset) (navigator-previous nav)))
 (define (navigator-descend nav (idx 0))
   (lets
     (navigator f->k cursor keys trail) = nav
@@ -80,7 +85,7 @@
     ((cons (navigator-frame steps index keys) trail)
      (lets
        index = (+ index offset)
-       (just nav) = (navigator-ascend nav)
+       (just nav) = (navigator-previous nav)
        (navigator-descend nav index)))))
 
 (def (navigator-path nav)
@@ -90,7 +95,7 @@
   (forf
     (list nav path) = (list nav (list (list focus (nothing))))
     (navigator-frame steps index keys) <- trail
-    (just nav) = (navigator-ascend nav)
+    (just nav) = (navigator-previous nav)
     (navigator _ _ keys _) = nav
     key = (list-ref keys index)
     next = (list (navigator-focus nav) (just (list index key)))
