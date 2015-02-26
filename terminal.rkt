@@ -341,12 +341,19 @@
   (size bw bh) = (styled-block-size block)
   width = (max bw width)
   height = (max bh height)
-  w-ext = (fill (size (- width bw) bh))
-  h-ext = (fill (size width (- height bh)))
-  (list bl br) = (if right? (list block w-ext) (list w-ext block))
-  block = (map append bl br)
-  (list bt bb) = (if down? (list block h-ext) (list h-ext block))
-  (append bt bb))
+  dw = (- width bw)
+  dh = (- height bh)
+  block =
+  (if (= dw 0) block
+    (lets
+      w-ext = (fill (size dw bh))
+      (list bl br) = (if right? (list block w-ext) (list w-ext block))
+      (map append bl br)))
+  (if (= dh 0) block
+    (lets
+      h-ext = (fill (size width dh))
+      (list bt bb) = (if down? (list block h-ext) (list h-ext block))
+      (append bt bb))))
 (def (styled-block-append-horizontal sty char down? prefix suffix)
   (size pw ph) = (styled-block-size prefix)
   (size sw sh) = (styled-block-size suffix)
