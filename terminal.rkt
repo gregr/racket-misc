@@ -8,6 +8,7 @@
   blank-string
   styled-string
   styled-line
+  styled-line-empty
   styled-block
   styled-block-size
   styled-block-fill
@@ -199,6 +200,7 @@
          (sgrstr _ str) <- sstrs
          (string-length str))))
 (define (styled-line sstrs) sstrs)
+(define styled-line-empty (styled-line '()))
 (define (styled-line-strings line) line)
 (define styled-line-append append)
 (define styled-line-append* append*)
