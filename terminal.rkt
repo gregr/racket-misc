@@ -195,13 +195,23 @@
 (def (sgrstr-blank? (sgrstr codes _)) (equal? codes blank-codes))
 
 (define (styled-line sstrs) sstrs)
+(define (styled-line-strings line) line)
 (define styled-line-append append)
 (define styled-line-append* append*)
 (define styled-line-reverse reverse)
+(define (styled-line-length styled-line)
+  (sum (forl
+         (sgrstr _ str) <- styled-line
+         (string-length str))))
+(define (styled-line-fill sgrc char count)
+  (styled-line
+    (if (= count 0) '()
+      (list (sgrstr sgrc (make-immutable-string count char))))))
+
 (define (styled-line-split line idx)
-  (let loop ((lhs '()) (line line) (idx idx))
+  (let loop ((lhs '()) (line (styled-line-strings line)) (idx idx))
     (if (= 0 idx)
-      (list lhs line)
+      (list (styled-line lhs) (styled-line line))
       (match line
         ('() (loop lhs '() 0))
         ((cons ss rhs)
@@ -212,15 +222,15 @@
              (loop (cons (sgrstr sgrcs (substring str 0 idx)) lhs)
                    (cons (sgrstr sgrcs (substring str idx)) rhs)
                    0))))))))
-
 (define (styled-line-revappend lhs rhs)
-  (match* (lhs rhs)
-    (('() _) rhs)
-    (((cons (sgrstr llc lls) lhs) (cons (sgrstr rfc rfs) rhs))
-     #:when (empty? (sgrcodes-delta llc rfc))
-     (styled-line-revappend lhs (cons (sgrstr rfc (string-append lls rfs)) rhs)))
-    (((cons llast lhs) rhs)
-     (styled-line-revappend lhs (cons llast rhs)))))
+  (let loop ((lhs (styled-line-strings lhs)) (rhs (styled-line-strings rhs)))
+    (match* (lhs rhs)
+      (('() _) (styled-line rhs))
+      (((cons (sgrstr llc lls) lhs) (cons (sgrstr rfc rfs) rhs))
+       #:when (empty? (sgrcodes-delta llc rfc))
+       (loop lhs (cons (sgrstr rfc (string-append lls rfs)) rhs)))
+      (((cons llast lhs) rhs)
+       (loop lhs (cons llast rhs))))))
 
 (module+ test
   (define test-style-0 (style 'green 'white #t #f #f #f))
@@ -266,20 +276,12 @@
   )
 
 (def (sgrstr-length (sgrstr _ str)) (string-length str))
-(define (styled-line-fill sgrc char count)
-  (styled-line
-    (if (= count 0) '()
-      (list (sgrstr sgrc (make-immutable-string count char))))))
-(define (styled-line-length styled-line)
-  (sum (forl
-         (sgrstr _ str) <- styled-line
-         (string-length str))))
 (def (styled-line-sub styled-line start len)
   (list _ styled-line) = (styled-line-split styled-line start)
   (list rstyled-line _) = (styled-line-split styled-line len)
   (styled-line-reverse rstyled-line))
 (def (styled-line-overlay overs unders)
-  (let loop ((result '()) (overs overs) (pos 0))
+  (let loop ((result '()) (overs (styled-line-strings overs)) (pos 0))
     (match overs
       ('() (styled-line-append* (reverse result)))
       ((cons over overs)
@@ -568,6 +570,7 @@
   ss-empty = (blank-string 0)
   block = (forl
             sline <- (styled-block-lines sb)
+            sline = (styled-line-strings sline)
             (string-append*
               (forl
                 (sgrstr codes-prev _) <- (cons ss-empty sline)
@@ -579,7 +582,7 @@
 (def (styled-block->string-unstyled sb)
   block = (forl
             sline <- (styled-block-lines sb)
-            (string-append* (map sgrstr-str sline)))
+            (string-append* (map sgrstr-str (styled-line-strings sline))))
   (string-join block "\n"))
 
 (module+ test
