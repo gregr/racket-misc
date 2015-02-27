@@ -129,8 +129,9 @@
         (forf
           prefix = (list (car col-parts))
           col-part <- (cdr col-parts)
-          (cons col-part (cons junc prefix))))
-      (list (cons left (reverse (cons right rmid))))))
+          (list* col-part (list* junc prefix))))
+      (styled-block
+        (list (styled-line (list* left (reverse (list* right rmid))))))))
   hspans =
   (forl
     args <- (list (list tl tr t tj) (list bl br b bj) (list lj rj ih ij))
@@ -503,7 +504,7 @@
   (match doc
     ((doc-preformatted block) (list block))
     ((doc-atom sty str)
-     (list (list (list (styled-string sty str)))))
+     (list (styled-block (list (styled-line (list (styled-string sty str)))))))
     ((doc-chain sty attr items)
      (chain->blocks ctx sty attr full-width items))
     ((doc-table sty table-sty rows)
