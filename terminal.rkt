@@ -199,16 +199,20 @@
   (sum (forl
          (sgrstr _ str) <- sstrs
          (string-length str))))
-(define (styled-line sstrs) sstrs)
+(record sized-styled-line len sstrs)
+(define (styled-line sstrs)
+  (sized-styled-line (styled-strings->length sstrs) sstrs))
 (define styled-line-empty (styled-line '()))
-(define (styled-line-strings line) line)
-(define styled-line-append append)
-(define styled-line-append* append*)
-(define styled-line-reverse reverse)
-(define (styled-line-length sline)
-  (styled-strings->length (styled-line-strings sline)))
+(define styled-line-strings sized-styled-line-sstrs)
+(def (styled-line-append (sized-styled-line ll lhs) (sized-styled-line rl rhs))
+  (sized-styled-line (+ ll rl) (append lhs rhs)))
+(define (styled-line-append* slines)
+  (foldr styled-line-append styled-line-empty slines))
+(def (styled-line-reverse (sized-styled-line len sstrs))
+  (sized-styled-line len (reverse sstrs)))
+(define styled-line-length sized-styled-line-len)
 (define (styled-line-fill sgrc char count)
-  (styled-line
+  (sized-styled-line count
     (if (= count 0) '()
       (list (sgrstr sgrc (make-immutable-string count char))))))
 
