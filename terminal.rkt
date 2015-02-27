@@ -203,7 +203,7 @@
     (if (= 0 idx)
       (list lhs line)
       (match line
-        ('() (cons lhs '()))
+        ('() (loop lhs '() 0))
         ((cons ss rhs)
          (match-let* (((sgrstr sgrcs str) ss)
                       (len (string-length str)))
