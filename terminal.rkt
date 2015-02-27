@@ -340,6 +340,7 @@
   width = (if (= height 0) 0 (styled-line-length (car lines)))
   (size width height))
 (define (styled-block lines) lines)
+(define (styled-block-lines block) block)
 (define (styled-block-size lines) (styled-lines->block-size lines))
 (def (styled-block-fill sty char (size w h))
   sgrc = (style->sgrcodes sty)
@@ -380,20 +381,23 @@
   prefix = (styled-block-expand sty char prefix (size sw ph) #t right?)
   suffix = (styled-block-expand sty char suffix (size pw sh) #t right?)
   (styled-block-concat-v prefix suffix))
-(def (styled-block-sub styled-block (rect (coord x y) (size w h)))
-  bh = (length styled-block)
+(def (styled-block-sub block (rect (coord x y) (size w h)))
+  lines = (styled-block-lines block)
+  bh = (length lines)
   y = (min y bh)
   h = (min h (- bh y))
-  styled-block = (take (drop styled-block y) h)
-  (map (lambda (line) (styled-line-sub line x w)) styled-block))
+  lines = (take (drop lines y) h)
+  (styled-block (map (lambda (line) (styled-line-sub line x w)) lines)))
 (def (styled-block-blit tgt (coord tx ty) src)
-  prefix = (take tgt ty)
+  tgt = (styled-block-lines tgt)
+  src = (styled-block-lines src)
+  prefix = (styled-block (take tgt ty))
   tgt = (drop tgt ty)
-  suffix = (drop tgt (length src))
-  blitted = (forl
-              tgt-line <- tgt
-              src-line <- src
-              (styled-line-blit tgt-line tx src-line))
+  suffix = (styled-block (drop tgt (length src)))
+  blitted = (styled-block (forl
+                            tgt-line <- tgt
+                            src-line <- src
+                            (styled-line-blit tgt-line tx src-line)))
   (styled-block-concat-v prefix (styled-block-concat-v blitted suffix)))
 
 (module+ test
@@ -561,7 +565,7 @@
   str-eol = (string-append str-reset "\n")
   ss-empty = (blank-string 0)
   block = (forl
-            sline <- sb
+            sline <- (styled-block-lines sb)
             (string-append*
               (forl
                 (sgrstr codes-prev _) <- (cons ss-empty sline)
@@ -572,7 +576,7 @@
 
 (def (styled-block->string-unstyled sb)
   block = (forl
-            sline <- sb
+            sline <- (styled-block-lines sb)
             (string-append* (map sgrstr-str sline)))
   (string-join block "\n"))
 
