@@ -336,6 +336,8 @@
 (def (styled-block-fill-blank (size w h))
   row = (list (blank-string w))
   (make-list h row))
+(define (styled-block-concat-v t b) (append t b))
+(define (styled-block-concat-h l r) (map append l r))
 (def (styled-block-expand sty char block (size width height) down? right?)
   fill = (lambda (sz) (styled-block-fill sty char sz))
   (size bw bh) = (styled-block-size block)
@@ -348,24 +350,24 @@
     (lets
       w-ext = (fill (size dw bh))
       (list bl br) = (if right? (list block w-ext) (list w-ext block))
-      (map append bl br)))
+      (styled-block-concat-h bl br)))
   (if (= dh 0) block
     (lets
       h-ext = (fill (size width dh))
       (list bt bb) = (if down? (list block h-ext) (list h-ext block))
-      (append bt bb))))
+      (styled-block-concat-v bt bb))))
 (def (styled-block-append-horizontal sty char down? prefix suffix)
   (size pw ph) = (styled-block-size prefix)
   (size sw sh) = (styled-block-size suffix)
   prefix = (styled-block-expand sty char prefix (size pw sh) down? #t)
   suffix = (styled-block-expand sty char suffix (size sw ph) down? #t)
-  (map append prefix suffix))
+  (styled-block-concat-h prefix suffix))
 (def (styled-block-append-vertical sty char right? prefix suffix)
   (size pw ph) = (styled-block-size prefix)
   (size sw sh) = (styled-block-size suffix)
   prefix = (styled-block-expand sty char prefix (size sw ph) #t right?)
   suffix = (styled-block-expand sty char suffix (size pw sh) #t right?)
-  (append prefix suffix))
+  (styled-block-concat-v prefix suffix))
 (def (styled-block-sub styled-block (rect (coord x y) (size w h)))
   bh = (length styled-block)
   y = (min y bh)
@@ -380,7 +382,7 @@
               tgt-line <- tgt
               src-line <- src
               (styled-line-blit tgt-line tx src-line))
-  (append prefix blitted suffix))
+  (styled-block-concat-v prefix (styled-block-concat-v blitted suffix)))
 
 (module+ test
   (define test-block-0 (styled-block-fill test-style-0 #\- (size 20 30)))
