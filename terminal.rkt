@@ -194,15 +194,17 @@
   (sgrstr blank-codes (make-immutable-string len #\space)))
 (def (sgrstr-blank? (sgrstr codes _)) (equal? codes blank-codes))
 
+(define (styled-strings->length sstrs)
+  (sum (forl
+         (sgrstr _ str) <- sstrs
+         (string-length str))))
 (define (styled-line sstrs) sstrs)
 (define (styled-line-strings line) line)
 (define styled-line-append append)
 (define styled-line-append* append*)
 (define styled-line-reverse reverse)
-(define (styled-line-length styled-line)
-  (sum (forl
-         (sgrstr _ str) <- styled-line
-         (string-length str))))
+(define (styled-line-length sline)
+  (styled-strings->length (styled-line-strings sline)))
 (define (styled-line-fill sgrc char count)
   (styled-line
     (if (= count 0) '()
