@@ -195,6 +195,8 @@
 (def (sgrstr-blank? (sgrstr codes _)) (equal? codes blank-codes))
 
 (define (styled-line sstrs) sstrs)
+(define styled-line-append append)
+(define styled-line-append* append*)
 (define styled-line-reverse reverse)
 (define (styled-line-split line idx)
   (let loop ((lhs '()) (line line) (idx idx))
@@ -279,7 +281,7 @@
 (def (styled-line-overlay overs unders)
   (let loop ((result '()) (overs overs) (pos 0))
     (match overs
-      ('() (append* (styled-line (reverse result))))
+      ('() (styled-line-append* (reverse result)))
       ((cons over overs)
        (lets
          len = (sgrstr-length over)
@@ -350,7 +352,7 @@
   row = (styled-line (list (blank-string w)))
   (styled-block (make-list h row)))
 (define (styled-block-concat-v t b) (append t b))
-(define (styled-block-concat-h l r) (map append l r))
+(define (styled-block-concat-h l r) (map styled-line-append l r))
 (def (styled-block-expand sty char block (size width height) down? right?)
   fill = (lambda (sz) (styled-block-fill sty char sz))
   (size bw bh) = (styled-block-size block)
