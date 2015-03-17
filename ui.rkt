@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  const-controller
   dispatch-event-sources
   dispatch-events
   dispatch-react-loop
@@ -7,6 +8,7 @@
   event-keypress
   event-terminate
   event-tick
+  identity-controller
   keycount-controller
   keycountmap-controller
   keypress-event-source
@@ -14,6 +16,7 @@
   markout-dispatch-react-loop
   note-terminated
   note-view
+  fn->controller
   terminal-event-sources
   tick-event-source
   )
@@ -26,6 +29,7 @@
   "record.rkt"
   "sugar.rkt"
   "terminal.rkt"
+  racket/function
   racket/list
   racket/match
   )
@@ -81,6 +85,18 @@
     (dispatch-event-sources
       tick-ctrl (list tick-event-source tick-event-source) 12)
     (list tick-ctrl (list (note-view 12) (note-view 12)))
+    ))
+
+(define ((fn->controller fn) event)
+  (list (fn->controller fn) (fn event)))
+
+(define identity-controller (fn->controller identity))
+(define const-controller (compose1 fn->controller const))
+
+(module+ test
+  (check-equal?
+    (cadr ((const-controller 8) (void)))
+    8
     ))
 
 (define (keycount-controller sub-ctrl)
