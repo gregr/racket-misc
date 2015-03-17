@@ -8,7 +8,7 @@
   event-terminate
   event-tick
   keycount-controller
-  keymap-controller
+  keycountmap-controller
   keypress-event-source
   latency-default
   markout-dispatch-react-loop
@@ -99,7 +99,7 @@
       (list (keycount-controller-new digits sub-ctrl) notes)))
   (keycount-controller-new '() sub-ctrl))
 
-(define (keymap-controller keymap sub-ctrl)
+(define (keycountmap-controller keymap sub-ctrl)
   (fn (event)
     (list sub-ctrl notes) =
     (match event
@@ -108,7 +108,7 @@
          ((just action) (dispatch-events sub-ctrl (action count)))
          ((nothing) (sub-ctrl event))))
       (_ (sub-ctrl event)))
-    (list (keymap-controller keymap sub-ctrl) notes)))
+    (list (keycountmap-controller keymap sub-ctrl) notes)))
 
 (module+ test
   (def (identity-ctrl event) (list identity-ctrl (list event)))
@@ -117,7 +117,7 @@
       #\v (lambda (count) (list (note-view count)))
       #\q (lambda (_) (list (event-terminate)))))
   (define key-ctrl
-    (keycount-controller (keymap-controller test-keymap identity-ctrl)))
+    (keycount-controller (keycountmap-controller test-keymap identity-ctrl)))
   (define (test-key-source dt)
     (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
           (event-keypress #\q)))
@@ -175,6 +175,6 @@
     sty = (style 'yellow 'blue #f #f #f #f)
     doc = (doc-preformatted (styled-block-fill sty #\x (size 10 20)))
     doc = (doc-append doc (doc-str "Press 'q' to quit this test."))
-    ctrl = (keymap-controller keymap (ctrl doc))
+    ctrl = (keycountmap-controller keymap (ctrl doc))
     (markout-dispatch-react-loop doc (keycount-controller ctrl))
     ))
