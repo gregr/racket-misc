@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  compose-controller
   const-controller
   dispatch-event-sources
   dispatch-events
@@ -92,6 +93,12 @@
 
 (define identity-controller (fn->controller identity))
 (define const-controller (compose1 fn->controller const))
+
+(define (compose-controller outer inner)
+  (fn (event)
+    (list outer next-event) = (outer event)
+    (list inner result) = (inner next-event)
+    (list (compose-controller outer inner) result)))
 
 (module+ test
   (check-equal?
