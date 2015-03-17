@@ -20,7 +20,6 @@
 
 (require
   "dict.rkt"
-  "either.rkt"
   "markout.rkt"
   "maybe.rkt"
   "monad.rkt"
@@ -35,13 +34,13 @@
   (require rackunit))
 
 (records base-event
-  (event-terminate signal)
+  (event-terminate)
   (event-tick dt)
   (event-keypress char)
   (event-keycount char count))
 
 (records base-note
-  (note-terminated result)
+  (note-terminated)
   (note-view view))
 
 (define latency-default 0.1)
@@ -67,13 +66,13 @@
     dt = (- start prev-start)
     (list ctrl notes) = (dispatch-event-sources ctrl sources dt)
     (match (react notes)
-      ((right react)
+      ((just react)
        (lets
          overhead = (- (current-milliseconds) start)
          sleep-duration = (/ (max 0 (- (* latency 1000) overhead)) 1000)
          _ = (sleep sleep-duration)
          (loop react ctrl start)))
-      ((left result) result)))
+      ((nothing) (void))))
   (loop react ctrl (current-milliseconds)))
 
 (module+ test
@@ -112,16 +111,19 @@
     (list (keymap-controller keymap sub-ctrl) notes)))
 
 (module+ test
-  (def (identity-ctrl event) (list identity-ctrl (list (note-view event))))
+  (def (identity-ctrl event) (list identity-ctrl (list event)))
   (define test-keymap
-    (hash #\q (lambda (count) (list (event-terminate count)))))
+    (hash
+      #\v (lambda (count) (list (note-view count)))
+      #\q (lambda (_) (list (event-terminate)))))
   (define key-ctrl
     (keycount-controller (keymap-controller test-keymap identity-ctrl)))
   (define (test-key-source dt)
-    (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\q)))
+    (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
+          (event-keypress #\q)))
   (check-equal?
     (cadr (dispatch-event-sources key-ctrl (list test-key-source) 12))
-    (list (note-view (event-terminate 42)))
+    (list (note-view 42) (event-terminate))
     ))
 
 (def (display-doc doc)
@@ -135,11 +137,11 @@
 (define ((markout-reactor doc) notes)
   (define (handle-note doc note)
     (match note
-      ((note-terminated result) (left result))
-      ((note-view next-doc) (right next-doc))
-      (_ (right doc))))
-  (begin/with-monad either-monad
-    next-doc <- (monad-foldl either-monad handle-note doc notes)
+      ((note-terminated) (nothing))
+      ((note-view next-doc) (just next-doc))
+      (_ (just doc))))
+  (begin/with-monad maybe-monad
+    next-doc <- (monad-foldl maybe-monad handle-note doc notes)
     _ = (unless (eq? doc next-doc) (display-doc next-doc))
     (pure (markout-reactor next-doc))))
 
@@ -159,7 +161,7 @@
       new-doc = (doc-append doc doc-tail)
       (list (ctrl new-doc) (list (note-view new-doc))))
     (match event
-      ((event-terminate _) (list (ctrl doc) (list (note-terminated (void)))))
+      ((event-terminate) (list (ctrl doc) (list (note-terminated))))
       ((event-tick dt)
        (note-doc-append (doc-str (format "time-delta: ~ams" dt))))
       ((event-keycount char count)
@@ -167,7 +169,7 @@
       (_ (list (ctrl doc) '()))))
   (define keymap
     (hash
-      #\q (fn (_) (list (event-terminate (void))))
+      #\q (fn (_) (list (event-terminate)))
       ))
   (lets
     sty = (style 'yellow 'blue #f #f #f #f)
