@@ -11,6 +11,7 @@
   event-terminate
   event-tick
   identity-controller
+  keycount->events
   keycount-controller
   keycountmap-controller
   keypress-event-source
@@ -139,6 +140,17 @@
          ((nothing) (sub-ctrl event))))
       (_ (sub-ctrl event)))
     (list (keycountmap-controller keymap sub-ctrl) notes)))
+
+(define ((keycount->events keymap) event)
+  (match event
+    ((nothing) '())
+    ((just event)
+     (match event
+       ((event-keycount char count)
+        (match (dict-get keymap char)
+          ((just action) (action count))
+          ((nothing) (list event))))
+       (_ (list event))))))
 
 (module+ test
   (def (identity-ctrl event) (list identity-ctrl (list event)))
