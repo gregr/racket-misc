@@ -19,6 +19,7 @@
   note-terminated
   note-view
   fn->controller
+  sleep-remaining
   sources->source
   terminal-event-source
   tick-event-source
@@ -60,6 +61,11 @@
     dt = (- next start)
     (list (timer-new next) dt)))
 (define (timer-now) (timer-new (current-milliseconds)))
+(define (sleep-remaining total timer)
+  (lets
+    (list _ overhead) = (timer)
+    sleep-duration = (/ (max 0 (- (* total 1000) overhead)) 1000)
+    (sleep sleep-duration)))
 
 (define ((sources->source sources) dt)
   (append* (map (lambda (source) (source dt)) sources)))
@@ -82,10 +88,8 @@
     (list ctrl notes) = (dispatch-events ctrl (source dt))
     (match (react notes)
       ((just react)
-       (lets
-         (list _ overhead) = (timer)
-         sleep-duration = (/ (max 0 (- (* latency 1000) overhead)) 1000)
-         _ = (sleep sleep-duration)
+       (begin
+         (sleep-remaining latency timer)
          (loop react ctrl timer)))
       ((nothing) (void))))
   (loop react ctrl (timer-now)))
