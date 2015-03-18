@@ -2,6 +2,7 @@
 (provide
   compose-controller
   const-controller
+  decorate-controller
   dispatch-event-sources
   dispatch-events
   dispatch-react-loop
@@ -99,6 +100,12 @@
     (list outer next-event) = (outer event)
     (list inner result) = (inner next-event)
     (list (compose-controller outer inner) result)))
+
+(define (decorate-controller dec ctrl)
+  (define dctrl (dec ctrl))
+  (fn (event)
+    (list ctrl result) = (dctrl event)
+    (list (decorate-controller dec ctrl) result)))
 
 (module+ test
   (check-equal?
