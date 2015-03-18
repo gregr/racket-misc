@@ -3,7 +3,6 @@
   compose-controller
   const-controller
   decorate-controller
-  dispatch-event-sources
   dispatch-events
   dispatch-react-loop
   event-keycount
@@ -20,7 +19,8 @@
   note-terminated
   note-view
   fn->controller
-  terminal-event-sources
+  sources->source
+  terminal-event-source
   tick-event-source
   )
 
@@ -52,9 +52,12 @@
 
 (define latency-default 0.1)
 
+(define ((sources->source sources) dt)
+  (append* (map (lambda (source) (source dt)) sources)))
 (define (tick-event-source dt) (list (event-tick dt)))
 (define (keypress-event-source dt) (map event-keypress (read-chars-ready)))
-(define terminal-event-sources (list tick-event-source keypress-event-source))
+(define terminal-event-source
+  (sources->source (list keypress-event-source tick-event-source)))
 
 (define (dispatch-fold f ctrl xs)
   (forf
@@ -64,14 +67,11 @@
     (list ctrl (append notes new-notes))))
 (define (dispatch-events ctrl events)
   (dispatch-fold (lambda (ctrl event) (ctrl event)) ctrl events))
-(define (dispatch-event-sources ctrl sources dt)
-  (dispatch-fold (lambda (ctrl source) (dispatch-events ctrl (source dt)))
-                 ctrl sources))
-(define (dispatch-react-loop react ctrl sources (latency latency-default))
+(define (dispatch-react-loop react ctrl source (latency latency-default))
   (def (loop react ctrl prev-start)
     start = (current-milliseconds)
     dt = (- start prev-start)
-    (list ctrl notes) = (dispatch-event-sources ctrl sources dt)
+    (list ctrl notes) = (dispatch-events ctrl (source dt))
     (match (react notes)
       ((just react)
        (lets
@@ -85,8 +85,9 @@
 (module+ test
   (def (tick-ctrl (event-tick dt)) (list tick-ctrl (list (note-view dt))))
   (check-equal?
-    (dispatch-event-sources
-      tick-ctrl (list tick-event-source tick-event-source) 12)
+    (dispatch-events
+      tick-ctrl ((sources->source
+                   (list tick-event-source tick-event-source)) 12))
     (list tick-ctrl (list (note-view 12) (note-view 12)))
     ))
 
@@ -159,7 +160,7 @@
     (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
           (event-keypress #\q)))
   (check-equal?
-    (cadr (dispatch-event-sources key-ctrl (list test-key-source) 12))
+    (cadr (dispatch-events key-ctrl (test-key-source 12)))
     (list (note-view 42) (event-terminate))
     ))
 
@@ -188,7 +189,7 @@
       (with-screen-fresh
         (display-doc doc-0)
         (dispatch-react-loop (markout-reactor doc-0)
-                             ctrl terminal-event-sources latency)))))
+                             ctrl terminal-event-source latency)))))
 
 (module+ main
   (define (doc-str str) (doc-atom style-empty str))
