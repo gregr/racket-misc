@@ -16,6 +16,7 @@
   keypress-event-source
   latency-default
   markout-dispatch-react-loop
+  maybe-controller
   note-terminated
   note-view
   fn->controller
@@ -107,6 +108,14 @@
     (list ctrl result) = (dctrl event)
     (list (decorate-controller dec ctrl) result)))
 
+(define ((maybe-controller on-nothing ctrl) event)
+  (lets
+    (list ctrl result) =
+    (match event
+      ((nothing) (list ctrl on-nothing))
+      ((just event) (ctrl event)))
+    (list (maybe-controller on-nothing ctrl) result)))
+
 (module+ test
   (check-equal?
     (cadr ((const-controller 8) (void)))
@@ -131,14 +140,11 @@
 
 (define ((keycount->events keymap) event)
   (match event
-    ((nothing) '())
-    ((just event)
-     (match event
-       ((event-keycount char count)
-        (match (dict-get keymap char)
-          ((just action) (action count))
-          ((nothing) (list event))))
-       (_ (list event))))))
+    ((event-keycount char count)
+     (match (dict-get keymap char)
+       ((just action) (action count))
+       ((nothing) (list event))))
+    (_ (list event))))
 
 (module+ test
   (define test-keymap
@@ -147,7 +153,8 @@
       #\q (lambda (_) (list (event-terminate)))))
   (define key-ctrl
     (compose-controller keycount-controller
-                        (fn->controller (keycount->events test-keymap))))
+                        (maybe-controller '()
+                          (fn->controller (keycount->events test-keymap)))))
   (define (test-key-source dt)
     (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
           (event-keypress #\q)))
@@ -206,8 +213,8 @@
     doc = (doc-preformatted (styled-block-fill sty #\x (size 10 20)))
     doc = (doc-append doc (doc-str "Press 'q' to quit this test."))
     ctrl = (compose-controller
-             (fn->controller (keycount->events keymap))
-             (decorate-controller (lambda (ctrl) (curry dispatch-events ctrl)) (ctrl doc)))
+             (maybe-controller '() (fn->controller (keycount->events keymap)))
+             (decorate-controller (curry dispatch-events) (ctrl doc)))
     ctrl = (compose-controller keycount-controller ctrl)
     (markout-dispatch-react-loop doc ctrl)
     ))
