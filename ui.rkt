@@ -22,6 +22,8 @@
   sources->source
   terminal-event-source
   tick-event-source
+  timer-new
+  timer-now
   )
 
 (require
@@ -52,6 +54,13 @@
 
 (define latency-default 0.1)
 
+(define ((timer-new start))
+  (lets
+    next = (current-milliseconds)
+    dt = (- next start)
+    (list (timer-new next) dt)))
+(define (timer-now) (timer-new (current-milliseconds)))
+
 (define ((sources->source sources) dt)
   (append* (map (lambda (source) (source dt)) sources)))
 (define (tick-event-source dt) (list (event-tick dt)))
@@ -68,19 +77,18 @@
 (define (dispatch-events ctrl events)
   (dispatch-fold (lambda (ctrl event) (ctrl event)) ctrl events))
 (define (dispatch-react-loop react ctrl source (latency latency-default))
-  (def (loop react ctrl prev-start)
-    start = (current-milliseconds)
-    dt = (- start prev-start)
+  (def (loop react ctrl timer)
+    (list timer dt) = (timer)
     (list ctrl notes) = (dispatch-events ctrl (source dt))
     (match (react notes)
       ((just react)
        (lets
-         overhead = (- (current-milliseconds) start)
+         (list _ overhead) = (timer)
          sleep-duration = (/ (max 0 (- (* latency 1000) overhead)) 1000)
          _ = (sleep sleep-duration)
-         (loop react ctrl start)))
+         (loop react ctrl timer)))
       ((nothing) (void))))
-  (loop react ctrl (current-milliseconds)))
+  (loop react ctrl (timer-now)))
 
 (module+ test
   (def (tick-ctrl (event-tick dt)) (list tick-ctrl (list (note-view dt))))
