@@ -4,8 +4,11 @@
 (provide
   (struct-out gen-result)
   (struct-out gen-susp)
+  const-gen
+  fn->gen
   gen->list
   gen->stream
+  gen-compose
   gen-fold
   gen-for
   gen-for/fold
@@ -13,6 +16,7 @@
   gen-response?
   generator
   generator*
+  identity-gen
   in-gen
   sequence->gen
   run
@@ -196,4 +200,28 @@
   (check-equal?
     (for/list ((val (gen->stream (sequence->gen (in-range 10 16))))) val)
     (range 10 16)
+    ))
+
+(define ((fn->gen fn) input)
+  (gen-susp (fn input) (fn->gen fn)))
+(define identity-gen (fn->gen identity))
+(define const-gen (compose1 fn->gen const))
+
+(define (gen-compose inner outer)
+  (lambda (v0)
+    (match (outer v0)
+      ((gen-result r) (gen-result r))
+      ((gen-susp v1 k0)
+       (match (inner v1)
+         ((gen-result r)   (gen-result r))
+         ((gen-susp v2 k1) (gen-susp v2 (gen-compose k1 k0))))))))
+
+(module+ test
+  (check-equal?
+    (match-let* ((gen (gen-compose (fn->gen (curry + 3)) (const-gen 5)))
+                 ((gen-susp v0 gen) (gen 0))
+                 ((gen-susp v1 gen) (gen 1))
+                 ((gen-susp v2 gen) (gen 2)))
+      (list v0 v1 v2))
+    (list 8 8 8)
     ))
