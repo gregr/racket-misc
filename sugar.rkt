@@ -7,12 +7,14 @@
   forf*
   forl
   forl*
+  gn
   lets
   letsn
   )
 
 (require
   (for-syntax racket/base)
+  "generator.rkt"
   "match.rkt"
   racket/match
   )
@@ -164,6 +166,25 @@
   (check-equal?
     (test-def (list 1 2) 3)
     9))
+
+(define-syntax gn
+  (syntax-rules ()
+    ((_ yield (pattern ...) body ...)
+     (lambda/destruct (pattern ...) (run* yield (lets body ...))))))
+
+(module+ test
+  (check-equal?
+    (lets
+      gen = (gn yield (arg0)
+              arg1 = (yield (+ 10 arg0))
+              arg2 = (yield (+ 20 arg1))
+              arg2)
+      (gen-susp v0 gen) = (gen 0)
+      (gen-susp v1 gen) = (gen 1)
+      (gen-result r) = (gen 2)
+      (list v0 v1 r))
+    (list 10 21 2)
+    ))
 
 (define-syntax letsn_-cont
   (syntax-rules (=)
