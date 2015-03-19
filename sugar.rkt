@@ -139,8 +139,7 @@
 (define-syntax fnr
   (syntax-rules ()
     ((_ (name pattern ...) body ...)
-     (letrec ((name (lambda/destruct (pattern ...) (lets body ...))))
-       name))))
+     (letrec ((name (fn (pattern ...) body ...))) name))))
 
 (module+ test
   (check-equal?
