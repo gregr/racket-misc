@@ -1,7 +1,5 @@
 #lang racket/base
 (provide
-  compose-controller
-  const-controller
   decorate-controller
   dispatch-events
   dispatch-react-loop
@@ -9,16 +7,13 @@
   event-keypress
   event-terminate
   event-tick
-  identity-controller
   keycount->events
   keycount-controller
   keypress-event-source
   latency-default
   markout-dispatch-react-loop
-  maybe-controller
   note-terminated
   note-view
-  fn->controller
   sleep-remaining
   sources->source
   terminal-event-source
@@ -29,7 +24,6 @@
 
 (require
   "dict.rkt"
-  "either.rkt"
   "generator.rkt"
   "markout.rkt"
   "maybe.rkt"
@@ -78,16 +72,16 @@
 
 (define (dispatch-fold f ctrl xs)
   (forf
-    (list ctrl notes) = (list ctrl '())
+    (gen-susp notes ctrl) = (gen-susp '() ctrl)
     x <- xs
-    (list ctrl new-notes) = (f ctrl x)
-    (list ctrl (append notes new-notes))))
+    (gen-susp new-notes ctrl) = (f ctrl x)
+    (gen-susp(append notes new-notes) ctrl)))
 (define (dispatch-events ctrl events)
   (dispatch-fold (lambda (ctrl event) (ctrl event)) ctrl events))
 (define (dispatch-react-loop react ctrl source (latency latency-default))
   (def (loop react ctrl timer)
     (list timer dt) = (timer)
-    (list ctrl notes) = (dispatch-events ctrl (source dt))
+    (gen-susp notes ctrl) = (dispatch-events ctrl (source dt))
     (match (react notes)
       ((just react)
        (begin
@@ -97,12 +91,12 @@
   (loop react ctrl (timer-now)))
 
 (module+ test
-  (def (tick-ctrl (event-tick dt)) (list tick-ctrl (list (note-view dt))))
+  (def (tick-ctrl (event-tick dt)) (gen-susp (list (note-view dt)) tick-ctrl))
   (check-equal?
     (dispatch-events
       tick-ctrl ((sources->source
                    (list tick-event-source tick-event-source)) 12))
-    (list tick-ctrl (list (note-view 12) (note-view 12)))
+    (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)
     ))
 
 (record model event-source command-sink)
@@ -132,37 +126,11 @@
       '(c b a)
       )))
 
-(define ((fn->controller fn) event)
-  (list (fn->controller fn) (fn event)))
-
-(define identity-controller (fn->controller identity))
-(define const-controller (compose1 fn->controller const))
-
-(define (compose-controller outer inner)
-  (fn (event)
-    (list outer next-event) = (outer event)
-    (list inner result) = (inner next-event)
-    (list (compose-controller outer inner) result)))
-
 (define (decorate-controller dec ctrl)
   (define dctrl (dec ctrl))
   (fn (event)
-    (list ctrl result) = (dctrl event)
-    (list (decorate-controller dec ctrl) result)))
-
-(define ((maybe-controller on-nothing ctrl) event)
-  (lets
-    (list ctrl result) =
-    (match event
-      ((nothing) (list ctrl on-nothing))
-      ((just event) (ctrl event)))
-    (list (maybe-controller on-nothing ctrl) result)))
-
-(module+ test
-  (check-equal?
-    (cadr ((const-controller 8) (void)))
-    8
-    ))
+    (gen-susp result ctrl) = (dctrl event)
+    (gen-susp result (decorate-controller dec ctrl))))
 
 (define keycount-controller
   ((lambda ()
@@ -177,7 +145,7 @@
              (list (list* char digits) (nothing))
              (list '() (just (event-keycount char (digits->count digits))))))
           (_ (list digits (just event))))
-        (list (new digits) mevent)))
+        (gen-susp mevent (new digits))))
      (new '()))))
 
 (define ((keycount->events keymap) event)
@@ -194,14 +162,15 @@
       #\v (lambda (count) (list (note-view count)))
       #\q (lambda (_) (list (event-terminate)))))
   (define key-ctrl
-    (compose-controller keycount-controller
-                        (maybe-controller '()
-                          (fn->controller (keycount->events test-keymap)))))
+    (gen-compose (maybe-gen '() (fn->gen (keycount->events test-keymap)))
+                 keycount-controller))
   (define (test-key-source dt)
     (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
           (event-keypress #\q)))
   (check-equal?
-    (cadr (dispatch-events key-ctrl (test-key-source 12)))
+    (lets
+      (gen-susp result _) = (dispatch-events key-ctrl (test-key-source 12))
+      result)
     (list (note-view 42) (event-terminate))
     ))
 
@@ -238,14 +207,14 @@
   (define ((ctrl doc) event)
     (def (note-doc-append doc-tail)
       new-doc = (doc-append doc doc-tail)
-      (list (ctrl new-doc) (list (note-view new-doc))))
+      (gen-susp (list (note-view new-doc)) (ctrl new-doc)))
     (match event
-      ((event-terminate) (list (ctrl doc) (list (note-terminated))))
+      ((event-terminate) (gen-susp (list (note-terminated)) (ctrl doc)))
       ((event-tick dt)
        (note-doc-append (doc-str (format "time-delta: ~ams" dt))))
       ((event-keycount char count)
        (note-doc-append (doc-str (format "keycount: ~v,~a" char count))))
-      (_ (list (ctrl doc) '()))))
+      (_ (gen-susp '() (ctrl doc)))))
   (define keymap
     (hash
       #\q (fn (_) (list (event-terminate)))
@@ -254,9 +223,9 @@
     sty = (style 'yellow 'blue #f #f #f #f)
     doc = (doc-preformatted (styled-block-fill sty #\x (size 10 20)))
     doc = (doc-append doc (doc-str "Press 'q' to quit this test."))
-    ctrl = (compose-controller
-             (maybe-controller '() (fn->controller (keycount->events keymap)))
-             (decorate-controller (curry dispatch-events) (ctrl doc)))
-    ctrl = (compose-controller keycount-controller ctrl)
+    ctrl = (gen-compose
+             (decorate-controller (curry dispatch-events) (ctrl doc))
+             (maybe-gen '() (fn->gen (keycount->events keymap))))
+    ctrl = (gen-compose ctrl keycount-controller)
     (markout-dispatch-react-loop doc ctrl)
     ))
