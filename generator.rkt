@@ -63,10 +63,7 @@
     ((_ args body ...) (lambda args (run body ...)))))
 (define-syntax generator*
   (syntax-rules ()
-    ((_ yield args body ...)
-     (let* ((tag (make-continuation-prompt-tag))
-            (yield (curry yield-at tag)))
-       (lambda args (run-at tag body ...))))))
+    ((_ yield args body ...) (lambda args (run* yield body ...)))))
 
 (module+ test
   (check-equal?
