@@ -2,6 +2,7 @@
 (provide
   def
   fn
+  fnr
   forf
   forf*
   forl
@@ -134,6 +135,22 @@
         (* z w))
      (list 1 2) 3)
     9))
+
+(define-syntax fnr
+  (syntax-rules ()
+    ((_ (name pattern ...) body ...)
+     (letrec ((name (lambda/destruct (pattern ...) (lets body ...))))
+       name))))
+
+(module+ test
+  (check-equal?
+    ((fnr (len xs)
+        (match xs
+          ('() 0)
+          ((cons _ xs) (+ 1 (len xs)))))
+     '(a b c))
+    3
+    ))
 
 (define-syntax def
   (syntax-rules ()
