@@ -2,24 +2,24 @@
 ; generalized yield-run as described in:
 ; http://www.cs.indiana.edu/~sabry/papers/yield.pdf
 (provide
-  in-gen
-  run-at
-  run
-  run*
-  yield-at
-  yield
-  gen-response?
   (struct-out gen-result)
   (struct-out gen-susp)
-  generator
-  generator*
+  gen->list
+  gen->stream
   gen-fold
   gen-for
   gen-for/fold
   gen-iterate
-  gen->list
-  gen->stream
+  gen-response?
+  generator
+  generator*
+  in-gen
   sequence->gen
+  run
+  run-at
+  run*
+  yield
+  yield-at
   )
 
 (require
