@@ -5,6 +5,7 @@
   (struct-out gen-result)
   (struct-out gen-susp)
   const-gen
+  either-gen
   fn->gen
   gen->list
   gen->stream
@@ -18,6 +19,7 @@
   generator*
   identity-gen
   in-gen
+  maybe-gen
   sequence->gen
   run
   run-at
@@ -27,7 +29,9 @@
   )
 
 (require
+  "either.rkt"
   "match.rkt"
+  "maybe.rkt"
   "record.rkt"
   racket/control
   racket/function
@@ -224,4 +228,26 @@
                  ((gen-susp v2 gen) (gen 2)))
       (list v0 v1 v2))
     (list 8 8 8)
+    ))
+
+(define ((either-gen gen) input)
+  (define (susp v k) (gen-susp v (either-gen k)))
+  (match input
+    ((left l) (susp l gen))
+    ((right r)
+     (match (gen r)
+       ((gen-result r) (gen-result r))
+       ((gen-susp v k) (susp v k))))))
+
+(define (maybe-gen on-nothing gen)
+  (gen-compose (either-gen gen) (fn->gen (curry maybe->either on-nothing))))
+
+(module+ test
+  (check-equal?
+    (match-let* ((gen (maybe-gen 'x identity-gen))
+                 ((gen-susp v0 gen) (gen (just 'a)))
+                 ((gen-susp v1 gen) (gen (nothing)))
+                 ((gen-susp v2 gen) (gen (just 'b))))
+      (list v0 v1 v2))
+    '(a x b)
     ))
