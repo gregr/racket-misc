@@ -109,31 +109,24 @@
 
 (def (model-control-loop ctrl (model event-source command-sink))
   event = (event-source)
-  (list ctrl command) = (ctrl event)
-  (match (command-sink command)
-    ((left result) result)
-    ((right next-model) (model-control-loop ctrl next-model))))
-
-(define ((gen->controller gen) event)
-  (match (gen event)
-    ((gen-result r) (list (const-controller r) r))
-    ((gen-susp v k) (list (gen->ctrl k) v))))
+  (match (ctrl event)
+    ((gen-result r) r)
+    ((gen-susp command ctrl)
+     (lets
+       next-model = (command-sink command)
+       (model-control-loop ctrl next-model)))))
 
 (module+ test
   (lets
     ctrl =
-    (gen->controller (gn yield (e0)
-      e1 = (yield (nothing))
-      e2 = (yield (nothing))
-      (just (list e2 e1 e0))))
+    (gn yield (e0)
+      e1 = (yield (void))
+      e2 = (yield (void))
+      (list e2 e1 e0))
     events = (map (lambda (ev) (thunk ev)) '(a b c))
     react = (fnr (react events)
-      (lambda (command)
-        (match command
-          ((nothing) (right (model (first events)
-                                   (react (rest events)))))
-          ((just result) (left result)))))
-    mdl = (right-x ((react events) (nothing)))
+      (lambda (command) (model (first events) (react (rest events)))))
+    mdl = ((react events) (void))
     (check-equal?
       (model-control-loop ctrl mdl)
       '(c b a)
