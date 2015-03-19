@@ -29,6 +29,7 @@
 
 (require
   "dict.rkt"
+  "either.rkt"
   "markout.rkt"
   "maybe.rkt"
   "monad.rkt"
@@ -102,6 +103,36 @@
                    (list tick-event-source tick-event-source)) 12))
     (list tick-ctrl (list (note-view 12) (note-view 12)))
     ))
+
+(record model event-source command-sink)
+
+(def (model-control-loop ctrl (model event-source command-sink))
+  event = (event-source)
+  (list ctrl command) = (ctrl event)
+  (match (command-sink command)
+    ((left result) result)
+    ((right next-model) (model-control-loop ctrl next-model))))
+
+(module+ test
+  (lets
+    ctrl = (fn (e0)
+      ctrl1 = (fn (e1)
+        ctrl2 = (fn (e2)
+          (list (void) (just (list e2 e1 e0))))
+        (list ctrl2 (nothing)))
+      (list ctrl1 (nothing)))
+    events = (map (lambda (ev) (thunk ev)) '(a b c))
+    react = (fnr (react events)
+      (lambda (command)
+        (match command
+          ((nothing) (right (model (first events)
+                                   (react (rest events)))))
+          ((just result) (left result)))))
+    mdl = (right-x ((react events) (nothing)))
+    (check-equal?
+      (model-control-loop ctrl mdl)
+      '(c b a)
+      )))
 
 (define ((fn->controller fn) event)
   (list (fn->controller fn) (fn event)))
