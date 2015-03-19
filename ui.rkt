@@ -30,6 +30,7 @@
 (require
   "dict.rkt"
   "either.rkt"
+  "generator.rkt"
   "markout.rkt"
   "maybe.rkt"
   "monad.rkt"
@@ -113,14 +114,18 @@
     ((left result) result)
     ((right next-model) (model-control-loop ctrl next-model))))
 
+(define ((gen->controller gen) event)
+  (match (gen event)
+    ((gen-result r) (list (const-controller r) r))
+    ((gen-susp v k) (list (gen->ctrl k) v))))
+
 (module+ test
   (lets
-    ctrl = (fn (e0)
-      ctrl1 = (fn (e1)
-        ctrl2 = (fn (e2)
-          (list (void) (just (list e2 e1 e0))))
-        (list ctrl2 (nothing)))
-      (list ctrl1 (nothing)))
+    ctrl =
+    (gen->controller (gn yield (e0)
+      e1 = (yield (nothing))
+      e2 = (yield (nothing))
+      (just (list e2 e1 e0))))
     events = (map (lambda (ev) (thunk ev)) '(a b c))
     react = (fnr (react events)
       (lambda (command)
