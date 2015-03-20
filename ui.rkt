@@ -2,7 +2,6 @@
 (provide
   decorate-controller
   dispatch-events
-  dispatch-react-loop
   event-keycount
   event-keypress
   event-terminate
@@ -11,7 +10,6 @@
   keycount-controller
   keypress-event-source
   latency-default
-  markout-dispatch-react-loop
   markout-model-control-loop
   model-control-loop
   note-terminated
@@ -80,17 +78,6 @@
     (gen-susp(append notes new-notes) ctrl)))
 (define (dispatch-events ctrl events)
   (dispatch-fold (lambda (ctrl event) (ctrl event)) ctrl events))
-(define (dispatch-react-loop react ctrl source (latency latency-default))
-  (def (loop react ctrl timer)
-    (list timer dt) = (timer)
-    (gen-susp notes ctrl) = (dispatch-events ctrl (source dt))
-    (match (react notes)
-      ((just react)
-       (begin
-         (sleep-remaining latency timer)
-         (loop react ctrl timer)))
-      ((nothing) (void))))
-  (loop react ctrl (timer-now)))
 
 (module+ test
   (def (tick-ctrl (event-tick dt)) (gen-susp (list (note-view dt)) tick-ctrl))
@@ -183,25 +170,6 @@
   doc-str = (styled-block->string block)
   _ = (screen-clear)
   (displayln doc-str))
-
-(define ((markout-reactor doc) notes)
-  (define (handle-note doc note)
-    (match note
-      ((note-terminated) (nothing))
-      ((note-view next-doc) (just next-doc))
-      (_ (just doc))))
-  (begin/with-monad maybe-monad
-    next-doc <- (monad-foldl maybe-monad handle-note doc notes)
-    _ = (unless (eq? doc next-doc) (display-doc next-doc))
-    (pure (markout-reactor next-doc))))
-
-(define (markout-dispatch-react-loop doc-0 ctrl (latency latency-default))
-  (with-cursor-hidden
-    (with-stty-direct
-      (with-screen-fresh
-        (display-doc doc-0)
-        (dispatch-react-loop (markout-reactor doc-0)
-                             ctrl terminal-event-source latency)))))
 
 (def (markout-model latency doc)
   loop = (fnr (loop doc timer prev-events)
