@@ -15,6 +15,7 @@
   gen-for
   gen-for/fold
   gen-iterate
+  gen-loop
   gen-response?
   generator
   generator*
@@ -233,6 +234,23 @@
                  ((gen-susp v2 gen) (gen 2)))
       (list v0 v1 v2))
     (list 8 8 8)
+    ))
+
+(define (gen-loop gen input)
+  (match (gen input)
+    ((gen-result r) r)
+    ((gen-susp v k) (gen-loop k v))))
+
+(module+ test
+  (check-equal?
+    (gen-loop
+      (gen-compose*
+        (generator* yield (val)
+          (let loop ((val val))
+            (if (> val 10) val (loop (yield val)))))
+        (fn->gen (curry * 2)))
+      1)
+    16
     ))
 
 (define ((either-gen gen) input)
