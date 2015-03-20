@@ -12,6 +12,7 @@
   keypress-event-source
   latency-default
   markout-dispatch-react-loop
+  markout-model-control-loop
   model-control-loop
   note-terminated
   note-view
@@ -202,6 +203,33 @@
         (dispatch-react-loop (markout-reactor doc-0)
                              ctrl terminal-event-source latency)))))
 
+(def (markout-model latency doc)
+  loop = (fnr (loop doc timer prev-events)
+    (list timer events) =
+    (if (empty? prev-events)
+      (begin
+        (sleep-remaining latency timer)
+        (list (timer-now) (terminal-event-source (cadr (timer)))))
+      (list timer prev-events))
+    source = (fn () (first events))
+    sink = (fn (notes)
+      handle-note = (lambda (note doc)
+        (match note
+          ((note-view next-doc) next-doc)
+          (_ doc)))
+      next-doc = (foldl handle-note doc notes)
+      _ = (unless (eq? doc next-doc) (display-doc next-doc))
+      (loop next-doc timer (rest events)))
+    (model source sink))
+  (loop doc (timer-now) (terminal-event-source 0)))
+
+(define (markout-model-control-loop doc ctrl)
+  (with-cursor-hidden
+    (with-stty-direct
+      (with-screen-fresh
+        (display-doc doc)
+        (model-control-loop ctrl (markout-model latency-default doc))))))
+
 (module+ main
   (define (doc-str str) (doc-atom style-empty str))
   (define (doc-append . docs) (vertical-list style-empty docs))
@@ -210,7 +238,7 @@
       new-doc = (doc-append doc doc-tail)
       (gen-susp (list (note-view new-doc)) (ctrl new-doc)))
     (match event
-      ((event-terminate) (gen-susp (list (note-terminated)) (ctrl doc)))
+      ((event-terminate) (gen-result 'quitting))
       ((event-tick dt)
        (note-doc-append (doc-str (format "time-delta: ~ams" dt))))
       ((event-keycount char count)
@@ -224,9 +252,12 @@
     sty = (style 'yellow 'blue #f #f #f #f)
     doc = (doc-preformatted (styled-block-fill sty #\x (size 10 20)))
     doc = (doc-append doc (doc-str "Press 'q' to quit this test."))
-    ctrl = (gen-compose
-             (decorate-controller (curry dispatch-events) (ctrl doc))
-             (maybe-gen '() (fn->gen (keycount->events keymap))))
-    ctrl = (gen-compose ctrl keycount-controller)
-    (markout-dispatch-react-loop doc ctrl)
+    ctrl = (gen-compose*
+             (maybe-gen '()
+                (gen-compose*
+                  (ctrl doc)
+                  (fn->gen (lambda (events) (first events)))
+                  (fn->gen (keycount->events keymap))))
+             keycount-controller)
+    (markout-model-control-loop doc ctrl)
     ))
