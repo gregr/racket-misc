@@ -88,16 +88,8 @@
     (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)
     ))
 
-(record model event-source command-sink)
-
-(def (model-control-loop ctrl (model event-source command-sink))
-  event = (event-source)
-  (match (ctrl event)
-    ((gen-result r) r)
-    ((gen-susp command ctrl)
-     (lets
-       next-model = (command-sink command)
-       (model-control-loop ctrl next-model)))))
+(define (model-control-loop ctrl model)
+  (gen-loop (gen-compose ctrl (fn (_) model)) (void)))
 
 (module+ test
   (lets
@@ -106,12 +98,13 @@
       e1 = (yield (void))
       e2 = (yield (void))
       (list e2 e1 e0))
-    events = (map (lambda (ev) (thunk ev)) '(a b c))
-    react = (fnr (react events)
-      (lambda (command) (model (first events) (react (rest events)))))
-    mdl = ((react events) (void))
+    events = '(a b c)
+    react = (gn yield (events)
+      (letsn loop ((cons enext erest) = events)
+        command = (yield enext)
+        (loop erest)))
     (check-equal?
-      (model-control-loop ctrl mdl)
+      (model-control-loop ctrl (react events))
       '(c b a)
       )))
 
@@ -171,25 +164,23 @@
   _ = (screen-clear)
   (displayln doc-str))
 
-(def (markout-model latency doc)
-  loop = (fnr (loop doc timer prev-events)
-    (list timer events) =
-    (if (empty? prev-events)
-      (begin
-        (sleep-remaining latency timer)
-        (list (timer-now) (terminal-event-source (cadr (timer)))))
-      (list timer prev-events))
-    source = (fn () (first events))
-    sink = (fn (notes)
-      handle-note = (lambda (note doc)
-        (match note
-          ((note-view next-doc) next-doc)
-          (_ doc)))
+(define markout-model (gn yield (latency doc)
+  handle-note = (lambda (note doc)
+    (match note
+      ((note-view next-doc) next-doc)
+      (_ doc)))
+  (letsn outer-loop (doc = doc dt = 0)
+    events = (terminal-event-source dt)
+    timer = (timer-now)
+    (letsn loop (doc = doc (cons enext erest) = events)
+      notes = (yield enext)
       next-doc = (foldl handle-note doc notes)
-      _ = (unless (eq? doc next-doc) (display-doc next-doc))
-      (loop next-doc timer (rest events)))
-    (model source sink))
-  (loop doc (timer-now) (terminal-event-source 0)))
+      (if (empty? erest)
+        (begin
+          (unless (eq? doc next-doc) (display-doc next-doc))
+          (sleep-remaining latency timer)
+          (outer-loop next-doc (cadr (timer))))
+        (loop next-doc erest))))))
 
 (define (markout-model-control-loop doc ctrl)
   (with-cursor-hidden
