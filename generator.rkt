@@ -10,6 +10,7 @@
   gen->list
   gen->stream
   gen-compose
+  gen-compose*
   gen-fold
   gen-for
   gen-for/fold
@@ -219,10 +220,14 @@
        (match (inner v1)
          ((gen-result r)   (gen-result r))
          ((gen-susp v2 k1) (gen-susp v2 (gen-compose k1 k0))))))))
+(define (gen-compose* gen . gens)
+  (foldl (lambda (outer inner) (gen-compose inner outer)) gen gens))
 
 (module+ test
   (check-equal?
-    (match-let* ((gen (gen-compose (fn->gen (curry + 3)) (const-gen 5)))
+    (match-let* ((gen (gen-compose* (fn->gen (curry * 2))
+                                    (fn->gen (curry + 3))
+                                    (const-gen 1)))
                  ((gen-susp v0 gen) (gen 0))
                  ((gen-susp v1 gen) (gen 1))
                  ((gen-susp v2 gen) (gen 2)))
