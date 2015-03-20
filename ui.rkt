@@ -12,6 +12,7 @@
   keypress-event-source
   latency-default
   markout-dispatch-react-loop
+  model-control-loop
   note-terminated
   note-view
   sleep-remaining
