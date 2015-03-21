@@ -236,8 +236,8 @@
     (list 8 8 8)
     ))
 
-(define (gen-loop gen input)
-  (match (gen input)
+(define (gen-loop gen . args)
+  (match (apply gen args)
     ((gen-result r) r)
     ((gen-susp v k) (gen-loop k v))))
 
