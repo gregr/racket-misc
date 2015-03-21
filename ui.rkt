@@ -72,15 +72,7 @@
   (sources->source (list keypress-event-source tick-event-source)))
 
 (def (model-control-loop ctrl model)
-  mc-loop = (gn yield ()
-    (letsn loop (ctrl = ctrl model = model)
-      (match model
-        ((gen-result r) (gen-result (right (gen-susp r ctrl))))
-        ((gen-susp event ready-model)
-         (match (ctrl event)
-           ((gen-result r) (gen-result (left (gen-susp r ready-model))))
-           ((gen-susp command ctrl) (loop ctrl (ready-model command))))))))
-  (gen-loop mc-loop))
+  (gen-coloop ctrl (thunk model)))
 
 (module+ test
   (lets
