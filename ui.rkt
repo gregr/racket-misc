@@ -71,24 +71,6 @@
 (define terminal-event-source
   (sources->source (list keypress-event-source tick-event-source)))
 
-(define (dispatch-fold f ctrl xs)
-  (forf
-    (gen-susp notes ctrl) = (gen-susp '() ctrl)
-    x <- xs
-    (gen-susp new-notes ctrl) = (f ctrl x)
-    (gen-susp(append notes new-notes) ctrl)))
-(define (dispatch-events ctrl events)
-  (dispatch-fold (lambda (ctrl event) (ctrl event)) ctrl events))
-
-(module+ test
-  (def (tick-ctrl (event-tick dt)) (gen-susp (list (note-view dt)) tick-ctrl))
-  (check-equal?
-    (dispatch-events
-      tick-ctrl ((sources->source
-                   (list tick-event-source tick-event-source)) 12))
-    (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)
-    ))
-
 (def (model-control-loop ctrl model)
   mc-loop = (gn yield ()
     (letsn loop (ctrl = ctrl model = model)
@@ -117,6 +99,20 @@
         (model-control-loop ctrl (react events)))))
       '(c b a)
       )))
+
+(define (dispatch-events ctrl events)
+  (model-control-loop ctrl
+    (run* yield (forl event <- events
+                      (yield event)))))
+
+(module+ test
+  (def (tick-ctrl (event-tick dt)) (gen-susp (note-view dt) tick-ctrl))
+  (check-equal?
+    (dispatch-events
+      tick-ctrl ((sources->source
+                   (list tick-event-source tick-event-source)) 12))
+    (gen-result (right (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)))
+    ))
 
 (define (decorate-controller dec ctrl)
   (define dctrl (dec ctrl))
@@ -161,8 +157,9 @@
           (event-keypress #\q)))
   (check-equal?
     (lets
-      (gen-susp result _) = (dispatch-events key-ctrl (test-key-source 12))
-      result)
+      (gen-result (right (gen-susp result _))) =
+      (dispatch-events key-ctrl (test-key-source 12))
+      (append* result))
     (list (note-view 42) (event-terminate))
     ))
 
