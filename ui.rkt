@@ -56,13 +56,12 @@
   (lets
     next = (current-milliseconds)
     dt = (- next start)
-    (list (timer-new next) dt)))
+    (gen-susp dt (timer-new next))))
 (define (timer-now) (timer-new (current-milliseconds)))
-(define (sleep-remaining total timer)
-  (lets
-    (list _ overhead) = (timer)
-    sleep-duration = (/ (max 0 (- (* total 1000) overhead)) 1000)
-    (sleep sleep-duration)))
+(def (sleep-remaining total timer)
+  (gen-susp overhead _) = (timer)
+  sleep-duration = (/ (max 0 (- (* total 1000) overhead)) 1000)
+  (sleep sleep-duration))
 
 (define ((sources->source sources) dt)
   (append* (map (lambda (source) (source dt)) sources)))
@@ -178,7 +177,7 @@
         (begin
           (unless (eq? doc next-doc) (display-doc next-doc))
           (sleep-remaining latency timer)
-          (outer-loop next-doc (cadr (timer))))
+          (outer-loop next-doc (gen-susp-v (timer))))
         (loop next-doc erest))))))
 
 (define (markout-model-control-loop doc ctrl)
