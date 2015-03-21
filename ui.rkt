@@ -86,8 +86,8 @@
         command = (yield enext)
         (loop erest)))
     (check-equal?
-      (gen-susp-v (left-x (gen-result-r
-        (model-control-loop ctrl (react events)))))
+      (gen-susp-v (left-x
+        (model-control-loop ctrl (react events))))
       '(c b a)
       )))
 
@@ -102,7 +102,7 @@
     (dispatch-events
       tick-ctrl ((sources->source
                    (list tick-event-source tick-event-source)) 12))
-    (gen-result (right (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)))
+    (right (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl))
     ))
 
 (define (decorate-controller dec ctrl)
@@ -148,7 +148,7 @@
           (event-keypress #\q)))
   (check-equal?
     (lets
-      (gen-result (right (gen-susp result _))) =
+      (right (gen-susp result _)) =
       (dispatch-events key-ctrl (test-key-source 12))
       (append* result))
     (list (note-view 42) (event-terminate))

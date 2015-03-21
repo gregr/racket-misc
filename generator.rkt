@@ -258,20 +258,20 @@
   (gen-loop (generator* yield ()
     (let loop ((inner inner) (outer-next (apply outer args)))
       (match outer-next
-        ((gen-result r) (gen-result (right (gen-susp r inner))))
+        ((gen-result r) (right (gen-susp r inner)))
         ((gen-susp v outer)
          (match (inner v)
-           ((gen-result r) (gen-result (left (gen-susp r outer))))
+           ((gen-result r) (left (gen-susp r outer)))
            ((gen-susp v inner) (loop inner (outer v))))))))))
 
 (module+ test
   (check-equal?
-    (gen-susp-v (right-x (gen-result-r
+    (gen-susp-v (right-x
       (gen-coloop
         (fn->gen (curry * 2))
         (generator* yield (start)
                     (yield (+ 100 (yield start))))
-        4))))
+        4)))
     216
     ))
 
