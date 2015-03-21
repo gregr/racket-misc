@@ -9,6 +9,7 @@
   fn->gen
   gen->list
   gen->stream
+  gen-coloop
   gen-compose
   gen-compose*
   gen-fold
@@ -251,6 +252,27 @@
         (fn->gen (curry * 2)))
       1)
     16
+    ))
+
+(define (gen-coloop inner outer . args)
+  (gen-loop (generator* yield ()
+    (let loop ((inner inner) (outer-next (apply outer args)))
+      (match outer-next
+        ((gen-result r) (gen-result (right (gen-susp r inner))))
+        ((gen-susp v outer)
+         (match (inner v)
+           ((gen-result r) (gen-result (left (gen-susp r outer))))
+           ((gen-susp v inner) (loop inner (outer v))))))))))
+
+(module+ test
+  (check-equal?
+    (gen-susp-v (right-x (gen-result-r
+      (gen-coloop
+        (fn->gen (curry * 2))
+        (generator* yield (start)
+                    (yield (+ 100 (yield start))))
+        4))))
+    216
     ))
 
 (define ((either-gen gen) input)
