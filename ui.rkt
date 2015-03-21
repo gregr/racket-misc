@@ -24,6 +24,7 @@
 
 (require
   "dict.rkt"
+  "either.rkt"
   "generator.rkt"
   "markout.rkt"
   "maybe.rkt"
@@ -88,8 +89,16 @@
     (gen-susp (list (note-view 12) (note-view 12)) tick-ctrl)
     ))
 
-(define (model-control-loop ctrl model)
-  (gen-loop (gen-compose ctrl (fn (_) model)) (void)))
+(def (model-control-loop ctrl model)
+  mc-loop = (gn yield ()
+    (letsn loop (ctrl = ctrl model = model)
+      (match model
+        ((gen-result r) (gen-result (right (gen-susp r ctrl))))
+        ((gen-susp event ready-model)
+         (match (ctrl event)
+           ((gen-result r) (gen-result (left (gen-susp r ready-model))))
+           ((gen-susp command ctrl) (loop ctrl (ready-model command))))))))
+  (gen-loop mc-loop))
 
 (module+ test
   (lets
@@ -104,7 +113,8 @@
         command = (yield enext)
         (loop erest)))
     (check-equal?
-      (model-control-loop ctrl (react events))
+      (gen-susp-v (left-x (gen-result-r
+        (model-control-loop ctrl (react events)))))
       '(c b a)
       )))
 
