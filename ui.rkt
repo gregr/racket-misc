@@ -70,6 +70,26 @@
 (define terminal-event-source
   (sources->source (list keypress-event-source tick-event-source)))
 
+(define (keypress-thread chan)
+  (define (loop)
+    (channel-put chan (event-keypress (read-char)))
+    (loop))
+  (thread loop))
+
+(define (tick-thread duration chan)
+  (def (loop timer)
+    _ = (sleep-remaining duration timer)
+    (gen-susp dt timer) = (timer)
+    _ = (channel-put chan (event-tick dt))
+    (loop timer))
+  (thread (thunk (loop (timer-now)))))
+
+(define (start-terminal-event-threads latency)
+  (define chan (make-channel))
+  (keypress-thread chan)
+  (tick-thread latency chan)
+  chan)
+
 (def (model-control-loop ctrl model)
   (gen-coloop ctrl (thunk model)))
 
@@ -163,22 +183,17 @@
   (displayln doc-str))
 
 (define markout-model (gn yield (latency doc)
+  chan-events = (start-terminal-event-threads latency)
   handle-note = (lambda (note doc)
     (match note
       ((note-view next-doc) next-doc)
       (_ doc)))
-  (letsn outer-loop (doc = doc dt = 0)
-    events = (terminal-event-source dt)
-    timer = (timer-now)
-    (letsn loop (doc = doc (cons enext erest) = events)
-      notes = (yield enext)
-      next-doc = (foldl handle-note doc notes)
-      (if (empty? erest)
-        (begin
-          (unless (eq? doc next-doc) (display-doc next-doc))
-          (sleep-remaining latency timer)
-          (outer-loop next-doc (gen-susp-v (timer))))
-        (loop next-doc erest))))))
+  _ = (display-doc doc)
+  (letsn loop (doc = doc)
+    notes = (yield (channel-get chan-events))
+    next-doc = (foldl handle-note doc notes)
+    _ = (unless (eq? doc next-doc) (display-doc next-doc))
+    (loop next-doc))))
 
 (define (markout-model-control-loop doc ctrl)
   (with-cursor-hidden
