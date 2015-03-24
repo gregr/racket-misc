@@ -215,12 +215,12 @@
 (define const-gen (compose1 fn->gen const))
 
 (define (gen-compose inner outer)
-  (lambda (v0)
-    (match (outer v0)
-      ((gen-result r) (gen-result r))
+  (lambda args
+    (match (apply outer args)
+      ((gen-result r) (gen-result (right (gen-susp r inner))))
       ((gen-susp v1 k0)
        (match (inner v1)
-         ((gen-result r)   (gen-result r))
+         ((gen-result r)   (gen-result (left (gen-susp r k0))))
          ((gen-susp v2 k1) (gen-susp v2 (gen-compose k1 k0))))))))
 (define (gen-compose* gen . gens)
   (foldl (lambda (outer inner) (gen-compose inner outer)) gen gens))
@@ -244,25 +244,18 @@
 
 (module+ test
   (check-equal?
-    (gen-loop
+    (gen-susp-v (left-x (gen-loop
       (gen-compose*
         (generator* yield (val)
           (let loop ((val val))
             (if (> val 10) val (loop (yield val)))))
         (fn->gen (curry * 2)))
-      1)
+      1)))
     16
     ))
 
 (define (gen-coloop inner outer . args)
-  (gen-loop (generator* yield ()
-    (let loop ((inner inner) (outer-next (apply outer args)))
-      (match outer-next
-        ((gen-result r) (right (gen-susp r inner)))
-        ((gen-susp v outer)
-         (match (inner v)
-           ((gen-result r) (left (gen-susp r outer)))
-           ((gen-susp v inner) (loop inner (outer v))))))))))
+  (apply gen-loop (gen-compose inner outer) args))
 
 (module+ test
   (check-equal?
