@@ -214,14 +214,18 @@
 (define identity-gen (fn->gen identity))
 (define const-gen (compose1 fn->gen const))
 
-(define (gen-compose inner outer)
+(define (gen-compose-resumable resume? inner outer)
   (lambda args
     (match (apply outer args)
-      ((gen-result r) (gen-result (right (gen-susp r inner))))
+      ((gen-result r)
+       (gen-result (if resume? (right (gen-susp r inner)) r)))
       ((gen-susp v1 k0)
        (match (inner v1)
-         ((gen-result r)   (gen-result (left (gen-susp r k0))))
-         ((gen-susp v2 k1) (gen-susp v2 (gen-compose k1 k0))))))))
+         ((gen-result r)
+          (gen-result (if resume? (left (gen-susp r k0)) r)))
+         ((gen-susp v2 k1)
+          (gen-susp v2 (gen-compose-resumable resume? k1 k0))))))))
+(define (gen-compose inner outer) (gen-compose-resumable #f inner outer))
 (define (gen-compose* gen . gens)
   (foldl (lambda (outer inner) (gen-compose inner outer)) gen gens))
 
@@ -244,18 +248,18 @@
 
 (module+ test
   (check-equal?
-    (gen-susp-v (left-x (gen-loop
+    (gen-loop
       (gen-compose*
         (generator* yield (val)
           (let loop ((val val))
             (if (> val 10) val (loop (yield val)))))
         (fn->gen (curry * 2)))
-      1)))
+      1)
     16
     ))
 
 (define (gen-coloop inner outer . args)
-  (apply gen-loop (gen-compose inner outer) args))
+  (apply gen-loop (gen-compose-resumable #t inner outer) args))
 
 (module+ test
   (check-equal?
