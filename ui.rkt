@@ -2,6 +2,10 @@
 (provide
   decorate-controller
   dispatch-events
+  event-multi-add
+  event-multi-remove
+  event-multi-dispatch
+  event-multi-broadcast
   event-keycount
   event-keypress
   event-terminate
@@ -12,6 +16,7 @@
   latency-default
   markout-model-control-loop
   model-control-loop
+  multi-controller
   note-terminated
   note-view
   sleep-remaining
@@ -32,6 +37,7 @@
   "record.rkt"
   "sugar.rkt"
   "terminal.rkt"
+  racket/dict
   racket/function
   racket/list
   racket/match
@@ -172,6 +178,51 @@
       (dispatch-events key-ctrl (test-key-source 12))
       (append* result))
     (list (note-view 42) (event-terminate))
+    ))
+
+(records multi-event
+  (event-multi-add key ctrl)
+  (event-multi-remove key)
+  (event-multi-dispatch key event)
+  (event-multi-broadcast event))
+
+(define multi-controller (gn yield (event)
+  dispatch = (fn (cdict key event)
+    ctrl = (dict-ref cdict key)
+    (match (ctrl event)
+      ((gen-susp v k) (list (dict-set cdict key k) (list (cons key v))))
+      ((gen-result r) (list (dict-remove cdict key) (list (cons key r))))))
+  (letn loop (list cdict event) = (list (hash) event)
+    (list cdict kcmds) =
+    (match event
+      ((event-multi-add key ctrl) (list (dict-set cdict key ctrl) '()))
+      ((event-multi-remove key) (list (dict-remove cdict key) '()))
+      ((event-multi-dispatch key event) (dispatch cdict key event))
+      ((event-multi-broadcast event)
+       (forf (list cdict kcmds) = (list cdict '())
+             key <- (dict-keys cdict)
+             (list cdict (list kcmd)) = (dispatch cdict key event)
+             (list cdict (list* kcmd kcmds)))))
+    event = (yield kcmds)
+    (loop (list cdict event)))))
+
+(module+ test
+  (check-equal?
+    (lets
+      mc = multi-controller
+      (gen-susp _ mc) = (mc (event-multi-add 'one (const-gen 'c1)))
+      (gen-susp _ mc) = (mc (event-multi-add 'two (gn _ (ev) (list 'c2 ev))))
+      (gen-susp _ mc) = (mc (event-multi-add 'three (gn y (ev) ev = (y (list 'c3 ev)) (y (list 'c4 ev)))))
+      (gen-susp cmds0 mc) = (mc (event-multi-broadcast 't0))
+      (gen-susp cmds1 mc) = (mc (event-multi-dispatch 'one 't1))
+      (gen-susp _ mc) = (mc (event-multi-remove 'one))
+      (gen-susp cmds2 mc) = (mc (event-multi-broadcast 't2))
+      (map make-immutable-hash (list cmds0 cmds1 cmds2)))
+    (list (hash 'one 'c1
+                'two (list 'c2 't0)
+                'three (list 'c3 't0))
+          (hash 'one 'c1)
+          (hash 'three (list 'c4 't2)))
     ))
 
 (def (display-doc doc)
