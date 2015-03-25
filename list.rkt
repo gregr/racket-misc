@@ -107,11 +107,11 @@
     (cons 9 15)
     ))
 
-(define (zip-with-default f xss default)
+(define (zip-with-default default f xss)
   (if (empty? xss) default (apply map f xss)))
-(define (zip-with f xss) (zip-with-default f xss '()))
-(define (zip-default xss default) (zip-with-default list xss default))
-(define (zip xss) (zip-default xss '()))
+(define (zip-with f xss) (zip-with-default '() f xss))
+(define (zip-default default xss) (zip-with-default default list xss))
+(define (zip xss) (zip-default '() xss))
 (define (zip* . xss) (zip xss))
 
 (module+ test
@@ -119,10 +119,10 @@
     (zip* '(1 2) '(3 4) '(a b))
     '((1 3 a) (2 4 b)))
   (check-equal?
-    (zip-default '(()) '(() ()))
+    (zip-default '(() ()) '(()))
     '())
   (check-equal?
-    (zip-default '() '(() ()))
+    (zip-default '(() ()) '())
     '(() ())))
 
 (define (cross xss)

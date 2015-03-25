@@ -221,8 +221,8 @@
 
 (def (widths ctx doc)
   (sizing-context memo space-width indent-width) = ctx
-  widths-grouped = (lambda (xs) (zip-default (map (curry widths ctx) xs)
-                                             '(() () () ())))
+  widths-grouped = (lambda (xs) (zip-default '(() () () ())
+                                             (map (curry widths ctx) xs)))
   (match (widths-memo-ref memo doc)
     ((just result) result)
     ((nothing)
@@ -256,15 +256,14 @@
           (lets
             cols = (zip rows)
             (list min-widths max-widths scores) =
-            (zip-default
+            (zip-default '(() () ())
               (forl
                 col <- cols
                 (list min-widths max-widths _ _) = (widths-grouped col)
                 min-width = (apply max min-widths)
                 max-width = (apply max max-widths)
                 scored-deltas = (width-scored-deltas min-width max-widths)
-                (list min-width max-width scored-deltas))
-              '(() () ()))
+                (list min-width max-width scored-deltas)))
             padding = (+ (* 2 border-width)
                          (* divider-width (separator-count cols)))
             min-width = (+ padding (sum min-widths))
@@ -426,7 +425,7 @@
 (def (table->styled-block
        ctx style (table-style _ _ blocks->final-block) col-widths rows)
   (list row-heights rows) =
-  (zip-default
+  (zip-default '(() ())
     (forl
       row <- rows
       cols = (forl
@@ -439,8 +438,7 @@
                col <- cols
                col-width <- col-widths
                (block-expand style col (size col-width row-height)))
-      (list row-height cols))
-    '(() ()))
+      (list row-height cols)))
   (blocks->final-block style row-heights col-widths rows))
 
 (def (chain->blocks
