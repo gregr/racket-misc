@@ -8,6 +8,7 @@
   forl
   forl*
   gn
+  letn
   lets
   letsn
   )
@@ -209,5 +210,21 @@
       (match xs
         ('() (cons x result))
         (_ (loop (cons x result) xs))))
+    '(d c b a)
+    ))
+
+(define-syntax letn
+  (syntax-rules (=)
+    ((_ name pattern = init-value body ...)
+     ((lambda ()
+        (def (name pattern) body ...)
+        (name init-value))))))
+
+(module+ test
+  (check-equal?
+    (letn loop (list result (cons x xs)) = (list '() '(a b c d))
+      (match xs
+        ('() (cons x result))
+        (_ (loop (list (cons x result) xs)))))
     '(d c b a)
     ))
