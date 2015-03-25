@@ -15,6 +15,7 @@
   keypress-event-source
   latency-default
   markout-model-control-loop
+  markout-view-model
   model-control-loop
   multi-controller
   note-terminated
@@ -233,33 +234,44 @@
   _ = (screen-clear)
   (displayln doc-str))
 
-(define (display-doc-thread latency doc chan)
-  (define display-chan (make-channel))
+(define (display-doc-thread latency doc)
+  (define chan (make-channel))
+  (define fetch-chan (make-channel))
   (define current-doc (box doc))
   (def (fetch-loop doc)
-    evt = (sync chan (channel-put-evt display-chan doc))
+    evt = (sync chan (channel-put-evt fetch-chan doc))
     (if (channel-put-evt? evt)
       (fetch-loop (channel-get chan))
       (fetch-loop evt)))
-  (thread (thunk (fetch-loop doc)))
   (define (display-loop timer)
-    (display-doc (channel-get display-chan))
+    (display-doc (channel-get fetch-chan))
     (sleep-remaining latency timer)
     (display-loop (gen-susp-k (timer))))
-  (thread (thunk (display-loop (timer-now)))))
+  (define ts (list (thread (thunk (fetch-loop doc)))
+                   (thread (thunk (display-loop (timer-now))))))
+  (list chan (thunk (map kill-thread ts))))
+
+(def (markout-view-model latency doc submodel)
+  (list chan-display kill-threads) = (display-doc-thread latency doc)
+  (gn yield (note)
+    result = (letn loop (list submodel note) = (list submodel note)
+      (match note
+        ((note-view next-doc)
+         (channel-put chan-display next-doc)
+         (loop (list submodel (yield (nothing)))))
+        (_ (match (submodel note)
+             ((gen-susp v k) (loop (list k (yield v))))
+             (r r)))))
+    _ = (kill-threads)
+    result))
 
 (define markout-model (gn yield (latency doc)
-  chan-display = (make-channel)
-  _ = (display-doc-thread latency doc chan-display)
   chan-events = (start-terminal-event-threads latency)
-  handle-note = (lambda (note _)
-    (match note
-      ((note-view next-doc) (channel-put chan-display next-doc))
-      (_ (void))))
-  (letsn loop ()
+  model = (markout-view-model latency doc (const-gen (nothing)))
+  (letn loop model = model
     notes = (yield (channel-get chan-events))
-    _ = (foldl handle-note (void) notes)
-    (loop))))
+    (right (gen-susp events model)) = (dispatch-events model notes)
+    (loop model))))
 
 (define (markout-model-control-loop doc ctrl)
   (with-cursor-hidden
