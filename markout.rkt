@@ -13,6 +13,7 @@
   (struct-out doc-chain)
   (struct-out doc-table)
   (struct-out doc-frame)
+  (struct-out frame-flexible)
   (struct-out frame-fixed)
   (struct-out frame-fixed-height)
   doc->styled-block
@@ -158,6 +159,7 @@
 (define attr-loose-indented (chain-attr #t #t))
 
 (records frame-attr
+  (frame-flexible coord)
   (frame-fixed rect)
   (frame-fixed-height coord height))
 
@@ -272,13 +274,14 @@
             allocation-order = (width-allocation-order scores)
             (list min-width max-width min-widths allocation-order)))
          ((doc-frame _ fattr doc)
-          (match fattr
-            ((frame-fixed (rect _ (size width height)))
-             (list width width '() '()))
-            ((frame-fixed-height _ height)
-             (lets
-               (list _ max-width _ _) = (widths ctx doc)
-               (list 0 max-width '() '()))))))
+          (lets
+            (list _ max-width _ _) = (widths ctx doc)
+            flexible = (list 0 max-width '() '())
+            (match fattr
+              ((frame-flexible _) flexible)
+              ((frame-fixed (rect _ (size width height)))
+               (list width width '() '()))
+              ((frame-fixed-height _ _) flexible)))))
        _ = (widths-memo-set! memo doc result)
        result))))
 
@@ -481,17 +484,20 @@
   (cons prefix header))
 
 (def (frame->blocks context style fattr full-width doc)
+  frame-rect = (fn (crd height)
+    (list _ max-width _ _) = (widths context doc)
+    width = (min max-width full-width)
+    (rect crd (size width height)))
   (rect (coord x y) sz) =
   (match fattr
+    ((frame-flexible crd) (frame-rect crd (void)))
     ((frame-fixed rct) rct)
-    ((frame-fixed-height crd height)
-     (lets
-       (list _ max-width _ _) = (widths context doc)
-       width = (min max-width full-width)
-       (rect crd (size width height)))))
+    ((frame-fixed-height crd height) (frame-rect crd height)))
   (size width height) = sz
   block = (doc->styled-block context style width doc)
   (size bw bh) = (styled-block-size block)
+  height = (if (void? height) bh height)
+  sz = (size width height)
   block = (block-expand style block sz)
   pos = (coord (min x (max 0 (- bw width)))
                (min y (max 0 (- bh height))))
@@ -599,6 +605,8 @@
     frame-4 = (doc-frame style-8 frame-attr-4 chain-5)
     frame-attr-5 = (frame-fixed-height (coord 1 1) 6)
     frame-5 = (doc-frame style-8 frame-attr-5 chain-5)
+    frame-attr-6 = (frame-flexible (coord 1 1))
+    frame-6 = (doc-frame style-8 frame-attr-6 chain-5)
 
     test-equalities =
     (list
@@ -638,6 +646,9 @@
       (list
         (list 8 frame-5)
         "\e[0m\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37mworld\e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[49;39m]\e[43;30m   \e[0m")
+      (list
+        (list 8 frame-6)
+        "\e[0m\e[27;25;24;22;44;37mhello\e[43;30m   \e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;5;4;1;40;31m********\e[0m\n\e[27;25;24;22;44;37mworld\e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[42;39m \e[43;30m   \e[0m\n\e[27;25;24;22;45;37m$$$$\e[49;39m]\e[43;30m   \e[0m")
       (list
         (list 18 chain-4)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m            \e[27;45;37m$$$$\e[42;39m \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[0m")
