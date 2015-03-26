@@ -12,6 +12,7 @@
   gen-coloop
   gen-compose
   gen-compose*
+  gen-delegate
   gen-fold
   gen-for
   gen-for/fold
@@ -270,6 +271,22 @@
                     (yield (+ 100 (yield start))))
         4)))
     216
+    ))
+
+(define (gen-delegate yield gen input)
+  (let loop ((gen gen) (input input))
+    (match (gen input)
+      ((gen-result r) r)
+      ((gen-susp v k) (loop k (yield v))))))
+
+(module+ test
+  (check-equal?
+    (gen->list
+      (generator* yield (_)
+        (yield 0)
+        (gen-delegate yield (sequence->gen (range 1 4)) (void))
+        (yield 4)))
+    (list 0 1 2 3 4)
     ))
 
 (define ((either-gen gen) input)
