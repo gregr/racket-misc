@@ -93,9 +93,8 @@
 
 (define (start-terminal-event-threads latency)
   (define chan (make-channel))
-  (keypress-thread chan)
-  (tick-thread latency chan)
-  chan)
+  (define ts (list (keypress-thread chan) (tick-thread latency chan)))
+  (list chan (thunk (map kill-thread ts))))
 
 (def (model-control-loop ctrl model)
   (gen-coloop ctrl (thunk model)))
@@ -266,7 +265,7 @@
     result))
 
 (define markout-model (gn yield (latency doc)
-  chan-events = (start-terminal-event-threads latency)
+  (list chan-events kill-threads) = (start-terminal-event-threads latency)
   model = (markout-view-model latency doc (const-gen (nothing)))
   (letn loop model = model
     notes = (yield (channel-get chan-events))
