@@ -2,6 +2,7 @@
 (provide
   decorate-controller
   dispatch-events
+  dispatch-notes
   event-multi-add
   event-multi-remove
   event-multi-dispatch
@@ -22,6 +23,7 @@
   note-view
   sleep-remaining
   sources->source
+  terminal-event-model
   terminal-event-source
   tick-event-source
   timer-new
@@ -96,8 +98,7 @@
   (define ts (list (keypress-thread chan) (tick-thread latency chan)))
   (list chan (thunk (map kill-thread ts))))
 
-(def (model-control-loop ctrl model)
-  (gen-coloop ctrl (thunk model)))
+(define (model-control-loop ctrl model) (gen-coloop ctrl model))
 
 (module+ test
   (lets
@@ -113,14 +114,14 @@
         (loop erest)))
     (check-equal?
       (gen-susp-v (left-x
-        (model-control-loop ctrl (react events))))
+        (model-control-loop ctrl (thunk (react events)))))
       '(c b a)
       )))
 
 (define (dispatch-events ctrl events)
   (model-control-loop ctrl
-    (run* yield (forl event <- events
-                      (yield event)))))
+    (gn yield () (forl event <- events
+                       (yield event)))))
 
 (module+ test
   (def (tick-ctrl (event-tick dt)) (gen-susp (note-view dt) tick-ctrl))
@@ -264,13 +265,36 @@
     _ = (kill-threads)
     result))
 
-(define markout-model (gn yield (latency doc)
+(def (dispatch-notes yield model notes)
+  (match (dispatch-events model notes)
+    ((right (gen-susp mevents model))
+     (lets
+       events = (maybe-filter mevents)
+       (if (empty? events) (right model)
+         (forf
+           emodel = (right model)
+           event <- events
+           #:break (left? emodel)
+           (right model) = emodel
+           notes = (yield event)
+           (dispatch-notes yield model notes)))))
+    ((left (gen-susp r _)) (left r))))
+
+(def (terminal-event-model latency submodel)
   (list chan-events kill-threads) = (start-terminal-event-threads latency)
-  model = (markout-view-model latency doc (const-gen (nothing)))
-  (letn loop model = model
-    notes = (yield (channel-get chan-events))
-    (right (gen-susp events model)) = (dispatch-events model notes)
-    (loop model))))
+  (gn yield (notes)
+    result = (letn loop (list submodel notes) = (list submodel notes)
+      (match (dispatch-notes yield submodel notes)
+        ((left result) result)
+        ((right submodel)
+         (loop (list submodel (yield (channel-get chan-events)))))))
+    _ = (kill-threads)
+    result))
+
+(def (markout-model latency doc)
+  view = (markout-view-model latency doc (const-gen (nothing)))
+  terminal = (terminal-event-model latency view)
+  (thunk (terminal '())))
 
 (define (markout-model-control-loop doc ctrl)
   (with-cursor-hidden
