@@ -9,6 +9,7 @@
   event-multi-broadcast
   event-keycount
   event-keypress
+  event-source-model
   event-terminate
   event-tick
   keycount->events
@@ -280,14 +281,19 @@
            (dispatch-notes yield model notes)))))
     ((left (gen-susp r _)) (left r))))
 
-(def (terminal-event-model latency submodel)
-  (list chan-events kill-threads) = (start-terminal-event-threads latency)
+(def (event-source-model source submodel)
   (gn yield (notes)
-    result = (letn loop (list submodel notes) = (list submodel notes)
+    (letn loop (list submodel notes) = (list submodel notes)
       (match (dispatch-notes yield submodel notes)
         ((left result) result)
         ((right submodel)
-         (loop (list submodel (yield (channel-get chan-events)))))))
+         (loop (list submodel (yield (source)))))))))
+
+(def (terminal-event-model latency submodel)
+  (list chan-events kill-threads) = (start-terminal-event-threads latency)
+  model = (event-source-model (thunk (channel-get chan-events)) submodel)
+  (gn yield (notes)
+    result = (gen-delegate yield model notes)
     _ = (kill-threads)
     result))
 
