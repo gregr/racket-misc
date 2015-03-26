@@ -185,26 +185,29 @@
 (records multi-msg
   (multi-msg-add key ctrl)
   (multi-msg-remove key)
-  (multi-msg-dispatch key event)
+  (multi-msg-dispatch kevents)
   (multi-msg-broadcast event))
 
 (define multi-controller (gn yield (event)
   dispatch = (fn (cdict key event)
     ctrl = (dict-ref cdict key)
     (match (ctrl event)
-      ((gen-susp v k) (list (dict-set cdict key k) (list (cons key v))))
-      ((gen-result r) (list (dict-remove cdict key) (list (cons key r))))))
+      ((gen-susp v k) (list (dict-set cdict key k) (cons key v)))
+      ((gen-result r) (list (dict-remove cdict key) (cons key r)))))
+  dispatch-many = (fn (cdict kevents)
+    (forf (list cdict kcmds) = (list cdict '())
+          (cons key event) <- kevents
+          (list cdict kcmd) = (dispatch cdict key event)
+          (list cdict (list* kcmd kcmds))))
   (letn loop (list cdict event) = (list (hash) event)
     (list cdict kcmds) =
     (match event
       ((multi-msg-add key ctrl) (list (dict-set cdict key ctrl) '()))
       ((multi-msg-remove key) (list (dict-remove cdict key) '()))
-      ((multi-msg-dispatch key event) (dispatch cdict key event))
+      ((multi-msg-dispatch kevents) (dispatch-many cdict kevents))
       ((multi-msg-broadcast event)
-       (forf (list cdict kcmds) = (list cdict '())
-             key <- (dict-keys cdict)
-             (list cdict (list kcmd)) = (dispatch cdict key event)
-             (list cdict (list* kcmd kcmds)))))
+       (dispatch-many cdict
+        (map (lambda (key) (cons key event)) (dict-keys cdict)))))
     event = (yield kcmds)
     (loop (list cdict event)))))
 
@@ -214,17 +217,23 @@
       mc = multi-controller
       (gen-susp _ mc) = (mc (multi-msg-add 'one (const-gen 'c1)))
       (gen-susp _ mc) = (mc (multi-msg-add 'two (gn _ (ev) (list 'c2 ev))))
-      (gen-susp _ mc) = (mc (multi-msg-add 'three (gn y (ev) ev = (y (list 'c3 ev)) (y (list 'c4 ev)))))
+      (gen-susp _ mc) = (mc (multi-msg-add 'three
+                              (gn y (ev)
+                                ev = (y (list 'c3 ev))
+                                ev = (y (list 'c4 ev))
+                                (y (list 'c5 ev)))))
       (gen-susp cmds0 mc) = (mc (multi-msg-broadcast 't0))
-      (gen-susp cmds1 mc) = (mc (multi-msg-dispatch 'one 't1))
+      (gen-susp cmds1 mc) = (mc (multi-msg-dispatch '((one . t1))))
+      (gen-susp cmds2 mc) = (mc (multi-msg-dispatch '((three . t1))))
       (gen-susp _ mc) = (mc (multi-msg-remove 'one))
-      (gen-susp cmds2 mc) = (mc (multi-msg-broadcast 't2))
-      (map make-immutable-hash (list cmds0 cmds1 cmds2)))
+      (gen-susp cmds3 mc) = (mc (multi-msg-broadcast 't2))
+      (map make-immutable-hash (list cmds0 cmds1 cmds2 cmds3)))
     (list (hash 'one 'c1
                 'two (list 'c2 't0)
                 'three (list 'c3 't0))
           (hash 'one 'c1)
-          (hash 'three (list 'c4 't2)))
+          (hash 'three (list 'c4 't1))
+          (hash 'three (list 'c5 't2)))
     ))
 
 (def (display-doc doc)
