@@ -3,6 +3,7 @@
   maybe?
   (struct-out nothing)
   (struct-out just)
+  maybe-filter
   maybe-fold
   maybe-from
   maybe-iterate
@@ -16,6 +17,11 @@
   "record.rkt"
   racket/match
   )
+
+(module+ test
+  (require
+    rackunit
+    ))
 
 (records maybe
   (nothing)
@@ -33,6 +39,14 @@
 
 (define (maybe-map f val)
   (maybe-fold val (compose1 just f) val))
+
+(define (maybe-filter ms) (map just-x (filter just? ms)))
+
+(module+ test
+  (check-equal?
+    (maybe-filter (list (nothing) (just 3) (nothing) (just 4)))
+    '(3 4)
+    ))
 
 (define maybe-monad
   (monad
