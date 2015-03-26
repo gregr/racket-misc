@@ -238,7 +238,6 @@
 (define (display-doc-thread latency doc)
   (define chan (make-channel))
   (define fetch-chan (make-channel))
-  (define current-doc (box doc))
   (def (fetch-loop doc)
     evt = (sync chan (channel-put-evt fetch-chan doc))
     (if (channel-put-evt? evt)
@@ -306,7 +305,6 @@
   (with-cursor-hidden
     (with-stty-direct
       (with-screen-fresh
-        (display-doc doc)
         (model-control-loop ctrl (markout-model latency-default doc))))))
 
 (module+ main
