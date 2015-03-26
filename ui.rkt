@@ -208,7 +208,7 @@
       ((multi-msg-broadcast event)
        (dispatch-many cdict
         (map (lambda (key) (cons key event)) (dict-keys cdict)))))
-    event = (yield kcmds)
+    event = (yield (multi-msg-dispatch kcmds))
     (loop (list cdict event)))))
 
 (module+ test
@@ -227,7 +227,8 @@
       (gen-susp cmds2 mc) = (mc (multi-msg-dispatch '((three . t1))))
       (gen-susp _ mc) = (mc (multi-msg-remove 'one))
       (gen-susp cmds3 mc) = (mc (multi-msg-broadcast 't2))
-      (map make-immutable-hash (list cmds0 cmds1 cmds2 cmds3)))
+      (map (compose1 make-immutable-hash multi-msg-dispatch-kevents)
+           (list cmds0 cmds1 cmds2 cmds3)))
     (list (hash 'one 'c1
                 'two (list 'c2 't0)
                 'three (list 'c3 't0))
