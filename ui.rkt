@@ -149,9 +149,11 @@
         (match event
           ((event-keypress char)
            (if (char-numeric? char)
-             (list (list* char digits) (nothing))
-             (list '() (just (event-keycount char (digits->count digits))))))
-          (_ (list digits (just event))))
+             (lets
+               digits = (list* char digits)
+               (list digits (left (digits->count digits))))
+             (list '() (right (event-keycount char (digits->count digits))))))
+          (_ (list digits (right event))))
         (gen-susp mevent (new digits))))
      (new '()))))
 
@@ -169,8 +171,9 @@
       #\v (lambda (count) (list (note-view count)))
       #\q (lambda (_) (list (event-terminate)))))
   (define key-ctrl
-    (gen-compose (maybe-gen '() (fn->gen (keycount->events test-keymap)))
-                 keycount-controller))
+    (gen-compose* (fn->gen (curry either-from '()))
+                  (either-gen (fn->gen (keycount->events test-keymap)))
+                  keycount-controller))
   (define (test-key-source dt)
     (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
           (event-keypress #\q)))
@@ -340,7 +343,8 @@
     doc = (doc-preformatted (styled-block-fill sty #\x (size 10 20)))
     doc = (doc-append doc (doc-str "Press 'q' to quit this test."))
     ctrl = (gen-compose*
-             (maybe-gen '()
+             (fn->gen (curry either-from '()))
+             (either-gen
                 (gen-compose*
                   (ctrl doc)
                   (fn->gen (lambda (events) (first events)))
