@@ -25,15 +25,13 @@
   (left x)
   (right x))
 
-(define (either-from default either-value)
-  (match either-value
-    ((left _)  default)
-    ((right x) x)))
-
 (define (either-fold left-fold right-fold val)
   (match val
     ((left x)  (left-fold x))
     ((right x) (right-fold x))))
+
+(define (either-from default either-value)
+  (either-fold (const default) identity either-value))
 
 (define (either-map f val)
   (either-fold (const val) (compose1 right f) val))

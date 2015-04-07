@@ -15,6 +15,7 @@
 (require
   "monad.rkt"
   "record.rkt"
+  racket/function
   racket/match
   )
 
@@ -27,15 +28,13 @@
   (nothing)
   (just x))
 
-(define (maybe-from default maybe-value)
-  (match maybe-value
-    ((nothing) default)
-    ((just x)  x)))
-
 (define (maybe-fold nothing-fold just-fold val)
   (match val
     ((nothing) nothing-fold)
     ((just x)  (just-fold x))))
+
+(define (maybe-from default maybe-value)
+  (maybe-fold default identity maybe-value))
 
 (define (maybe-map f val)
   (maybe-fold val (compose1 just f) val))
