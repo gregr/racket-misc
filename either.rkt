@@ -9,6 +9,7 @@
   either-map
   either-monad
   either-or
+  either->maybe
   maybe->either
   )
 
@@ -58,6 +59,9 @@
   (match (f arg)
     ((left _)    arg)
     ((right arg) (either-iterate f arg))))
+
+(define (either->maybe either)
+  (either-fold (const (nothing)) just either))
 
 (define (maybe->either left-arg maybe)
   (maybe-fold (left left-arg) right maybe))
