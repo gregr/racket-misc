@@ -292,18 +292,21 @@
 (define ((either-gen gen) input)
   (define (susp v k) (gen-susp v (either-gen k)))
   (match input
-    ((left l) (susp l gen))
+    ((left l) (susp (left l) gen))
     ((right r)
      (match (gen r)
        ((gen-result r) (gen-result r))
-       ((gen-susp v k) (susp v k))))))
+       ((gen-susp v k) (susp (right v) k))))))
 
-(define (maybe-gen on-nothing gen)
-  (gen-compose (either-gen gen) (fn->gen (curry maybe->either on-nothing))))
+(define (maybe-gen gen)
+  (gen-compose* (fn->gen either->maybe)
+                (either-gen gen)
+                (fn->gen (curry maybe->either (void)))))
 
 (module+ test
   (check-equal?
-    (match-let* ((gen (maybe-gen 'x identity-gen))
+    (match-let* ((gen (gen-compose (fn->gen (curry maybe-from 'x))
+                                   (maybe-gen identity-gen)))
                  ((gen-susp v0 gen) (gen (just 'a)))
                  ((gen-susp v1 gen) (gen (nothing)))
                  ((gen-susp v2 gen) (gen (just 'b))))
