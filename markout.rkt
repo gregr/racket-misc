@@ -12,6 +12,7 @@
   (struct-out doc-atom)
   (struct-out doc-chain)
   (struct-out doc-table)
+  (struct-out doc-filler)
   (struct-out doc-frame)
   (struct-out frame-flexible)
   (struct-out frame-fixed)
@@ -168,6 +169,7 @@
   (doc-atom style str)
   (doc-chain style attr items)
   (doc-table style table-style rows)
+  (doc-filler min-sz max-w sz->block)
   (doc-frame style attr doc)
   )
 
@@ -273,6 +275,7 @@
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list min-width max-width min-widths allocation-order)))
+         ((doc-filler (size min-w _) max-w _) (list min-w max-w '() '()))
          ((doc-frame _ fattr doc)
           (lets
             (list _ max-width _ _) = (widths ctx doc)
@@ -505,7 +508,8 @@
   block = (styled-block-sub block (rect pos sz))
   (list block))
 
-(def (doc->blocks ctx (size full-width full-height) doc)
+(def (doc->blocks ctx full-size doc)
+  (size full-width full-height) = full-size
   (match doc
     ((doc-preformatted block) (list block))
     ((doc-atom sty str)
@@ -517,6 +521,8 @@
        (list initial _ mins allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
        (list (table->styled-block ctx sty table-sty col-widths rows))))
+    ((doc-filler (size min-w min-h) _ sz->block)
+     (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
     ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))))
 
 (def (doc->styled-block ctx style full-size doc)
@@ -609,8 +615,20 @@
     frame-attr-6 = (frame-flexible (coord 1 1))
     frame-6 = (doc-frame style-8 frame-attr-6 chain-5)
 
+    filler-0 = (doc-filler (size 4 1) 10
+                           (curry styled-block-fill style-0 #\*))
+
     test-equalities =
     (list
+      (list
+        (list (size 2 0) filler-0)
+        "\e[0m\e[27;25;24;22;44;37m****\e[0m")
+      (list
+        (list (size 6 2) filler-0)
+        "\e[0m\e[27;25;24;22;44;37m******\e[0m\n\e[27;25;24;22;44;37m******\e[0m")
+      (list
+        (list (size 12 4) filler-0)
+        "\e[0m\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m")
       (list
         (list (size 5 0) chain-nested)
         "\e[0m\e[27;25;24;22;44;37m{[]\e[41;30m   \e[0m\n\e[27;25;24;22;44;37m {[]\e[41;30m  \e[0m\n\e[27;25;24;22;44;37m  {[]\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   {[]\e[0m\n\e[27;25;24;22;44;37m    []\e[0m\n\e[27;25;24;22;44;37m    }\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   }}\e[41;30m \e[0m\n\e[27;25;24;22;44;37m }\e[41;30m    \e[0m")
