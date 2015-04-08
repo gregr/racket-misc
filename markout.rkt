@@ -454,7 +454,7 @@
   after-indent-width = (- full-width prefix-width)
   next-state =
   (fn (prefix header avail-width item)
-    blocks = (doc->blocks context avail-width item)
+    blocks = (doc->blocks context (size avail-width 0) item)
     (list blocks first-block) = (list-init+last blocks)
     (size align-width _) = (styled-block-size prefix)
     alignment = (space-block style (size align-width 1))
@@ -505,7 +505,7 @@
   block = (styled-block-sub block (rect pos sz))
   (list block))
 
-(define (doc->blocks ctx full-width doc)
+(def (doc->blocks ctx (size full-width full-height) doc)
   (match doc
     ((doc-preformatted block) (list block))
     ((doc-atom sty str)
@@ -519,8 +519,8 @@
        (list (table->styled-block ctx sty table-sty col-widths rows))))
     ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))))
 
-(def (doc->styled-block ctx style (size full-width full-height) doc)
-  blocks = (doc->blocks ctx full-width doc)
+(def (doc->styled-block ctx style full-size doc)
+  blocks = (doc->blocks ctx full-size doc)
   (forf
     result = (car blocks)
     block <- (cdr blocks)
