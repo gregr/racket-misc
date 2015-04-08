@@ -1,12 +1,15 @@
 #lang racket/base
 (provide
-  attr-tight-aligned
-  attr-tight-indented
   attr-loose-aligned
   attr-loose-indented
+  attr-tight-aligned
+  attr-tight-indented
   bordered-table
   bracketed-chain
+  doc->styled-block
   separated
+  sizing-context-new
+  sizing-context-new-default
   tight-pair
   vertical-list
   (struct-out doc-preformatted)
@@ -18,9 +21,6 @@
   (struct-out frame-flexible)
   (struct-out frame-fixed)
   (struct-out frame-fixed-height)
-  doc->styled-block
-  sizing-context-new
-  sizing-context-new-default
   )
 
 (require
@@ -44,7 +44,6 @@
 
 (define indent-width-default 2)
 (define space-width-default 1)
-(define table-border-width-default 1)
 
 (define (widths-memo-new) (make-hasheq))
 (define (widths-memo-ref memo doc) (hash-ref memo doc (nothing)))
@@ -55,52 +54,6 @@
   (sizing-context (widths-memo-new) space-width indent-width))
 (define (sizing-context-new-default)
   (sizing-context-new space-width-default indent-width-default))
-
-(def (table-blocks->plain-block style rows)
-  (forf
-    header = '()
-    row <- rows
-    row = (forf
-            prefix = '()
-            col <- row
-            (block-append-horiz style prefix col))
-    (block-append-vert style header row)))
-
-(def (bordered-table
-       inner-style style border-size divider-size
-       (list t b ih
-             l r iv
-             tl tr bl br
-             tj bj lj rj ij)
-       rows)
-  bs = border-size
-  ds = divider-size
-  (size bw bh) = border-size
-  (size dw dh) = divider-size
-  (list tl tr bl br tj bj lj rj ij) =
-  (forl
-    char <- (list tl tr bl br tj bj lj rj ij)
-    sz <- (list bs bs bs bs ds ds bs bs ds)
-    (doc-preformatted (styled-block-fill style char sz)))
-  (list t b ih) =
-  (forl
-    char <- (list t b ih)
-    height <- (list bh bh dh)
-    (doc-filler (size 0 height) 0 (curry styled-block-fill style char)))
-  (list l r iv) =
-  (forl
-    char <- (list l r iv)
-    width <- (list bw bw dw)
-    (doc-filler (size width 0) width (curry styled-block-fill style char)))
-  num-cols = (if (empty? rows) 0 (length (first rows)))
-  add-between-around = (lambda (xs l i r)
-                         (append (list l) (add-between xs i) (list r)))
-  hdiv = (add-between-around (make-list num-cols ih) lj ij rj)
-  top = (add-between-around (make-list num-cols t) tl tj tr)
-  bottom = (add-between-around (make-list num-cols b) bl bj br)
-  rows = (forl row <- rows (add-between-around row l iv r))
-  rows = (add-between-around rows top hdiv bottom)
-  (doc-table inner-style rows))
 
 (record chain-attr spaced? indented?)
 (define attr-tight-aligned (chain-attr #f #f))
@@ -138,6 +91,42 @@
   (doc-chain outer-style attr-tight-indented (list prefix suffix-chain)))
 (define (vertical-list style docs)
   (doc-table style (map list docs)))
+
+(def (bordered-table
+       inner-style style border-size divider-size
+       (list t b ih
+             l r iv
+             tl tr bl br
+             tj bj lj rj ij)
+       rows)
+  bs = border-size
+  ds = divider-size
+  (size bw bh) = border-size
+  (size dw dh) = divider-size
+  (list tl tr bl br tj bj lj rj ij) =
+  (forl
+    char <- (list tl tr bl br tj bj lj rj ij)
+    sz <- (list bs bs bs bs ds ds bs bs ds)
+    (doc-preformatted (styled-block-fill style char sz)))
+  (list t b ih) =
+  (forl
+    char <- (list t b ih)
+    height <- (list bh bh dh)
+    (doc-filler (size 0 height) 0 (curry styled-block-fill style char)))
+  (list l r iv) =
+  (forl
+    char <- (list l r iv)
+    width <- (list bw bw dw)
+    (doc-filler (size width 0) width (curry styled-block-fill style char)))
+  num-cols = (if (empty? rows) 0 (length (first rows)))
+  add-between-around = (lambda (xs l i r)
+                         (append (list l) (add-between xs i) (list r)))
+  hdiv = (add-between-around (make-list num-cols ih) lj ij rj)
+  top = (add-between-around (make-list num-cols t) tl tj tr)
+  bottom = (add-between-around (make-list num-cols b) bl bj br)
+  rows = (forl row <- rows (add-between-around row l iv r))
+  rows = (add-between-around rows top hdiv bottom)
+  (doc-table inner-style rows))
 
 (define (separator-count xs) (max 0 (- (length xs) 1)))
 
@@ -408,7 +397,14 @@
                               expand (curry doc->styled-block ctx style sz))
                             expand col))
       (list row-height cols)))
-  (table-blocks->plain-block style rows))
+  (forf
+    header = '()
+    row <- rows
+    row = (forf
+            prefix = '()
+            col <- row
+            (block-append-horiz style prefix col))
+    (block-append-vert style header row)))
 
 (def (chain->blocks
        context style (chain-attr spaced? indented?) full-width items)
