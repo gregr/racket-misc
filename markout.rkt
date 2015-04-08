@@ -104,10 +104,12 @@
   ds = divider-size
   (size bw bh) = border-size
   (size dw dh) = divider-size
+  tbjs = (size dw bh)
+  lrjs = (size bw dh)
   (list tl tr bl br tj bj lj rj ij) =
   (forl
     char <- (list tl tr bl br tj bj lj rj ij)
-    sz <- (list bs bs bs bs ds ds bs bs ds)
+    sz <- (list bs bs bs bs tbjs tbjs lrjs lrjs ds)
     (doc-preformatted (styled-block-fill style char sz)))
   (list t b ih) =
   (forl
