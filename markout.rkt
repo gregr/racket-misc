@@ -313,7 +313,12 @@
                          #\# #\# #\|
                          #\^ #\> #\< #\v
                          #\+ #\+ #\+ #\+ #\+)
-                   (make-list 15 (style 'default 'default #f #f #f #t))))))
+                   (make-list 15 (style 'default 'default #f #f #f #t)))))
+  (define (unbordered-test-table style rows)
+    (doc-table style table-style-empty rows))
+  (define (bordered-test-table style rows)
+    (doc-table style table-style-test rows))
+  )
 
 (module+ test
   (lets
@@ -348,8 +353,8 @@
     items-1 = (list (doc-atom style "testing") chain-0)
     chain-1 = (bracketed-chain (doc-atom style "[") (doc-atom style "]")
                                attr-loose-aligned style style items-1)
-    table-0 = (doc-table style table-style-test
-                         (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-0 = (bordered-test-table
+                style (list (list chain-0 chain-1) (list chain-0 chain-0)))
     d0 = (- 17 7)
     d1 = (- 27 9)
     padding = (+ (* 2 bw-test) dw-test)
@@ -589,12 +594,13 @@
     items-1 = (list (doc-atom style-5 "testing") chain-0)
     chain-1 = (bracketed-chain (doc-atom style-5 "[") (doc-atom style-5 "]")
                                attr-loose-aligned style-6 style-7 items-1)
-    table-0 = (doc-table style-4 table-style-test
-                         (list (list chain-0 chain-1) (list chain-0 chain-0)))
-    table-1 = (doc-table style-4 table-style-test '())
-    table-2 = (doc-table style-4 table-style-test (list '() '()))
-    table-3 = (doc-table style-4 table-style-empty
-                         (list (list chain-0 chain-1) (list preformatted-0 chain-0)))
+    table-0 = (bordered-test-table
+                style-4 (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-1 = (bordered-test-table style-4 '())
+    table-2 = (bordered-test-table style-4 (list '() '()))
+    table-3 = (unbordered-test-table style-4
+                                (list (list chain-0 chain-1)
+                                      (list preformatted-0 chain-0)))
 
     items-2 = (list chain-1 atom-2 atom-3)
     chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
@@ -639,11 +645,12 @@
                            (curry styled-block-fill style-0 #\x))
     filler-5 = (doc-filler (size 1 1) 1
                            (curry styled-block-fill style-0 #\-))
-    table-4 = (doc-table style-4 table-style-empty
-                         (list (list filler-4 filler-5 filler-4 filler-5 filler-4)
-                               (list filler-3 chain-0 filler-1 chain-1 filler-3)
-                               (list filler-3 preformatted-0 filler-2 chain-0 filler-3)
-                               (list filler-4 filler-5 filler-4 filler-5 filler-4)))
+    table-4 = (unbordered-test-table
+                style-4
+                (list (list filler-4 filler-5 filler-4 filler-5 filler-4)
+                      (list filler-3 chain-0 filler-1 chain-1 filler-3)
+                      (list filler-3 preformatted-0 filler-2 chain-0 filler-3)
+                      (list filler-4 filler-5 filler-4 filler-5 filler-4)))
 
     test-equalities =
     (list
