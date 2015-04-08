@@ -8,6 +8,7 @@
   bracketed-chain
   doc->styled-block
   separated
+  simple-bordered-table
   sizing-context-new
   sizing-context-new-default
   tight-pair
@@ -127,6 +128,10 @@
   rows = (forl row <- rows (add-between-around row l iv r))
   rows = (add-between-around rows top hdiv bottom)
   (doc-table inner-style rows))
+
+(define (simple-bordered-table inner-style style char rows)
+  (bordered-table inner-style style
+                  (size 1 1) (size 1 1) (make-list 15 char) rows))
 
 (define (separator-count xs) (max 0 (- (length xs) 1)))
 
