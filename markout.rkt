@@ -26,6 +26,7 @@
   )
 
 (require
+  "either.rkt"
   "list.rkt"
   "maybe.rkt"
   "record.rkt"
@@ -434,16 +435,27 @@
   (zip-default '(() ())
     (forl
       row <- rows
+      row = (forl
+              doc <- row
+              (match doc
+                ((doc-filler _ _ _) (left doc))
+                (_ (right doc))))
       cols = (forl
                col <- row
                col-width <- col-widths
-               (doc->styled-block ctx style (size col-width 0) col))
-      sizes = (map styled-block-size cols)
+               (either-map
+                 (curry doc->styled-block ctx style (size col-width 0)) col))
+      sizes = (map (curry either-fold (const (size 0 0)) styled-block-size)
+                   cols)
       row-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
       cols = (forl
                col <- cols
                col-width <- col-widths
-               (block-expand style col (size col-width row-height)))
+               sz = (size col-width row-height)
+               expand = (lambda (col) (block-expand style col sz))
+               (either-fold (compose1
+                              expand (curry doc->styled-block ctx style sz))
+                            expand col))
       (list row-height cols)))
   (blocks->final-block style row-heights col-widths rows))
 
@@ -617,6 +629,21 @@
 
     filler-0 = (doc-filler (size 4 1) 10
                            (curry styled-block-fill style-0 #\*))
+    filler-1 = (doc-filler (size 1 1) 2
+                           (curry styled-block-fill style-8 #\+))
+    filler-2 = (doc-filler (size 4 1) 4
+                           (curry styled-block-fill style-2 #\+))
+    filler-3 = (doc-filler (size 1 1) 1
+                           (curry styled-block-fill style-0 #\|))
+    filler-4 = (doc-filler (size 1 1) 1
+                           (curry styled-block-fill style-0 #\x))
+    filler-5 = (doc-filler (size 1 1) 1
+                           (curry styled-block-fill style-0 #\-))
+    table-4 = (doc-table style-4 table-style-empty
+                         (list (list filler-4 filler-5 filler-4 filler-5 filler-4)
+                               (list filler-3 chain-0 filler-1 chain-1 filler-3)
+                               (list filler-3 preformatted-0 filler-2 chain-0 filler-3)
+                               (list filler-4 filler-5 filler-4 filler-5 filler-4)))
 
     test-equalities =
     (list
@@ -629,6 +656,9 @@
       (list
         (list (size 12 4) filler-0)
         "\e[0m\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m")
+      (list
+        (list (size 30 10) table-4)
+        "\e[0m\e[27;25;24;22;44;37mx--------xxxx----------------x\e[0m\n\e[27;25;24;22;44;37m|\e[45mtest(\e[7;49;39m   \e[27;43;30m++++\e[49;39m[testing\e[7m        \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;43;30m++++\e[49;36m \e[45;37mtest(\e[7;49;39m          \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;43;30m++++\e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m  \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   \e[27;43;30m++++\e[49;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mthings\e[43;30m++++\e[7;49;39m                \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[45;37m)\e[7;49;39m     \e[27;43;30m++++\e[7;49;39m                \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++test(\e[7;49;39m           \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++\e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m   \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++\e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m   \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37mx--------xxxx----------------x\e[0m")
       (list
         (list (size 5 0) chain-nested)
         "\e[0m\e[27;25;24;22;44;37m{[]\e[41;30m   \e[0m\n\e[27;25;24;22;44;37m {[]\e[41;30m  \e[0m\n\e[27;25;24;22;44;37m  {[]\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   {[]\e[0m\n\e[27;25;24;22;44;37m    []\e[0m\n\e[27;25;24;22;44;37m    }\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   }}\e[41;30m \e[0m\n\e[27;25;24;22;44;37m }\e[41;30m    \e[0m")
