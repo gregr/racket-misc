@@ -4,6 +4,7 @@
   attr-tight-indented
   attr-loose-aligned
   attr-loose-indented
+  bordered-table
   bracketed-chain
   separated
   tight-pair
@@ -20,9 +21,6 @@
   doc->styled-block
   sizing-context-new
   sizing-context-new-default
-  (struct-out table-style)
-  table-style-basic-bordered
-  table-style-empty
   )
 
 (require
@@ -58,9 +56,7 @@
 (define (sizing-context-new-default)
   (sizing-context-new space-width-default indent-width-default))
 
-(record table-style border-width divider-width blocks->final-block)
-
-(def (table-blocks->plain-block style _ _ rows)
+(def (table-blocks->plain-block style rows)
   (forf
     header = '()
     row <- rows
@@ -69,90 +65,42 @@
             col <- row
             (block-append-horiz style prefix col))
     (block-append-vert style header row)))
-(record table-basic-border-maker
-  make-top make-bottom make-hdiv
-  make-left make-right make-vdiv
-  )
-(def (table-blocks->basic-bordered-block
-       (table-basic-border-maker make-top make-bottom make-hdiv
-                                 make-left make-right make-vdiv)
-       style row-heights col-widths rows)
-  (list top-border bottom-border hdiv) =
-  (map (lambda (f) (f col-widths)) (list make-top make-bottom make-hdiv))
-  rows =
-  (forl
-    blocks <- rows
-    row-height <- row-heights
-    (list vleft vright vdiv) =
-    (map (lambda (f) (f row-height)) (list make-left make-right make-vdiv))
-    internal = (if (empty? blocks) '()
-                 (forf
-                   prefix = (car blocks)
-                   block <- (cdr blocks)
-                   prefix = (block-append-horiz style prefix vdiv)
-                   (block-append-horiz style prefix block)))
-    prefix = (block-append-horiz style vleft internal)
-    (block-append-horiz style prefix vright))
-  rows = (if (empty? rows) '()
-           (forf
-             header = (car rows)
-             row <- (cdr rows)
-             header = (block-append-vert style header hdiv)
-             (block-append-vert style header row)))
-  header = (block-append-vert style top-border rows)
-  (block-append-vert style header bottom-border))
-(def (table-style-basic-bordered
-       border-width divider-width
-       t b ih
-       l r iv
-       tl tr bl br
-       tj bj lj rj ij
-       ts bs ihs
-       ls rs ivs
-       tls trs bls brs
-       tjs bjs ljs rjs ijs
-       )
-  bw = border-width
-  dw = divider-width
+
+(def (bordered-table
+       inner-style style border-size divider-size
+       (list t b ih
+             l r iv
+             tl tr bl br
+             tj bj lj rj ij)
+       rows)
+  bs = border-size
+  ds = divider-size
+  (size bw bh) = border-size
+  (size dw dh) = divider-size
   (list tl tr bl br tj bj lj rj ij) =
   (forl
     char <- (list tl tr bl br tj bj lj rj ij)
-    style <- (list tls trs bls brs tjs bjs ljs rjs ijs)
-    width <- (list bw bw bw bw dw dw bw bw dw)
-    (styled-string style (make-immutable-string width char)))
-  hborder =
-  (lambda (style left right middle junc)
-    (fn (col-widths)
-      col-parts =
-      (forl
-        col-width <- col-widths
-        (styled-string style (make-immutable-string col-width middle)))
-      rmid =
-      (if (empty? col-parts) '()
-        (forf
-          prefix = (list (car col-parts))
-          col-part <- (cdr col-parts)
-          (list* col-part (list* junc prefix))))
-      (styled-block
-        (list (styled-line (list* left (reverse (list* right rmid))))))))
-  hspans =
+    sz <- (list bs bs bs bs ds ds bs bs ds)
+    (doc-preformatted (styled-block-fill style char sz)))
+  (list t b ih) =
   (forl
-    args <- (list (list tl tr t tj) (list bl br b bj) (list lj rj ih ij))
-    style <- (list ts bs ihs)
-    (apply hborder style args))
-  vspans =
+    char <- (list t b ih)
+    height <- (list bh bh dh)
+    (doc-filler (size 0 height) 0 (curry styled-block-fill style char)))
+  (list l r iv) =
   (forl
     char <- (list l r iv)
-    style <- (list ls rs ivs)
     width <- (list bw bw dw)
-    (lambda (height)
-      (styled-block-fill style char (size width height))))
-  blocks->final-block =
-  (curry table-blocks->basic-bordered-block
-         (apply table-basic-border-maker (append hspans vspans)))
-  (table-style border-width divider-width blocks->final-block))
-
-(define table-style-empty (table-style 0 0 table-blocks->plain-block))
+    (doc-filler (size width 0) width (curry styled-block-fill style char)))
+  num-cols = (if (empty? rows) 0 (length (first rows)))
+  add-between-around = (lambda (xs l i r)
+                         (append (list l) (add-between xs i) (list r)))
+  hdiv = (add-between-around (make-list num-cols ih) lj ij rj)
+  top = (add-between-around (make-list num-cols t) tl tj tr)
+  bottom = (add-between-around (make-list num-cols b) bl bj br)
+  rows = (forl row <- rows (add-between-around row l iv r))
+  rows = (add-between-around rows top hdiv bottom)
+  (doc-table inner-style rows))
 
 (record chain-attr spaced? indented?)
 (define attr-tight-aligned (chain-attr #f #f))
@@ -169,7 +117,7 @@
   (doc-preformatted block)
   (doc-atom style str)
   (doc-chain style attr items)
-  (doc-table style table-style rows)
+  (doc-table style rows)
   (doc-filler min-sz max-w sz->block)
   (doc-frame style attr doc)
   )
@@ -189,7 +137,7 @@
   suffix-chain = (doc-chain outer-style attr-tight-aligned (list elements suffix))
   (doc-chain outer-style attr-tight-indented (list prefix suffix-chain)))
 (define (vertical-list style docs)
-  (doc-table style table-style-empty (map list docs)))
+  (doc-table style (map list docs)))
 
 (define (separator-count xs) (max 0 (- (length xs) 1)))
 
@@ -257,7 +205,7 @@
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
             (list min-width max-width '() '())))
-         ((doc-table _ (table-style border-width divider-width _) rows)
+         ((doc-table _ rows)
           (lets
             cols = (zip rows)
             (list min-widths max-widths scores) =
@@ -269,10 +217,8 @@
                 max-width = (apply max max-widths)
                 scored-deltas = (width-scored-deltas min-width max-widths)
                 (list min-width max-width scored-deltas)))
-            padding = (+ (* 2 border-width)
-                         (* divider-width (separator-count cols)))
-            min-width = (+ padding (sum min-widths))
-            max-width = (+ padding (sum max-widths))
+            min-width = (sum min-widths)
+            max-width = (sum max-widths)
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list min-width max-width min-widths allocation-order)))
@@ -306,18 +252,16 @@
 (module+ test
   (define bw-test 3)
   (define dw-test 2)
-  (define table-style-test
-    (apply table-style-basic-bordered
-           bw-test dw-test
-           (append (list #\= #\= #\-
-                         #\# #\# #\|
-                         #\^ #\> #\< #\v
-                         #\+ #\+ #\+ #\+ #\+)
-                   (make-list 15 (style 'default 'default #f #f #f #t)))))
   (define (unbordered-test-table style rows)
-    (doc-table style table-style-empty rows))
-  (define (bordered-test-table style rows)
-    (doc-table style table-style-test rows))
+    (doc-table style rows))
+  (define (bordered-test-table sty rows)
+    (bordered-table sty (style 'default 'default #f #f #f #t)
+                    (size bw-test 1) (size dw-test 1)
+                    (list #\= #\= #\-
+                          #\# #\# #\|
+                          #\^ #\> #\< #\v
+                          #\+ #\+ #\+ #\+ #\+)
+                    rows))
   )
 
 (module+ test
@@ -365,6 +309,9 @@
       (list initial _ cmins callocs) = table-0-widths
       calc = (lambda (avail) (table-col-widths avail initial cmins callocs))
       (list (calc (+ 7 8 padding)) (calc max-width) (calc 100) (calc 35)))
+    splice-border-widths =
+    (lambda (xs)
+      (append (list bw-test) (add-between xs dw-test) (list bw-test)))
     (begin
       (check-equal?
         (widths ctx chain-empty)
@@ -405,24 +352,24 @@
       (check-equal?
         table-0-widths
         (list (+ 7 8 padding) max-width
-              (list 7 8)
-              (list (cons 1 (- 17 8)) (cons 0 d0) (cons 1 (- d1 (- 17 9)))))
+              (splice-border-widths (list 7 8))
+              (list (cons bw-test (- 17 8)) (cons 1 d0) (cons bw-test (- d1 (- 17 9)))))
         )
       (check-equal?
         t0c-min
-        (list 7 8)
+        (splice-border-widths (list 7 8))
         )
       (check-equal?
         t0c-snug
-        (list 17 27)
+        (splice-border-widths (list 17 27))
         )
       (check-equal?
         t0c-extra
-        (list 17 27)
+        (splice-border-widths (list 17 27))
         )
       (check-equal?
         t0c-meh
-        (list 10 17)
+        (splice-border-widths (list 10 17))
         )
       )))
 
@@ -434,8 +381,7 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block
-       ctx style (table-style _ _ blocks->final-block) col-widths rows)
+(def (table->styled-block ctx style col-widths rows)
   (list row-heights rows) =
   (zip-default '(() ())
     (forl
@@ -462,7 +408,7 @@
                               expand (curry doc->styled-block ctx style sz))
                             expand col))
       (list row-height cols)))
-  (blocks->final-block style row-heights col-widths rows))
+  (table-blocks->plain-block style rows))
 
 (def (chain->blocks
        context style (chain-attr spaced? indented?) full-width items)
@@ -533,11 +479,11 @@
      (list (styled-block (list (styled-line (list (styled-string sty str)))))))
     ((doc-chain sty attr items)
      (chain->blocks ctx sty attr full-width items))
-    ((doc-table sty table-sty rows)
+    ((doc-table sty rows)
      (lets
        (list initial _ mins allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
-       (list (table->styled-block ctx sty table-sty col-widths rows))))
+       (list (table->styled-block ctx sty col-widths rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
      (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
     ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))))
