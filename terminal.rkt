@@ -4,6 +4,7 @@
   (struct-out size)
   (struct-out rect)
   (struct-out style)
+  string->styled-block
   style-empty
   blank-string
   styled-string
@@ -592,6 +593,21 @@
             sline <- (styled-block-lines sb)
             (string-append* (map sgrstr-str (styled-line-strings sline))))
   (string-join block "\n"))
+
+(define (string->styled-block str)
+  (styled-block
+    (map (compose1 styled-line list (curry styled-string style-empty))
+         (string-split str "\n"))))
+
+(module+ test
+  (lets
+    test-str = "one two\nthree four\n\nfive\nsix"
+    _ = (check-equal?
+      (styled-block->string-unstyled (string->styled-block test-str))
+      test-str)
+    (check-equal?
+      (styled-block->string (string->styled-block test-str))
+      "\e[0m\e[27;25;24;22;49;39mone two\e[0m\n\e[27;25;24;22;49;39mthree four\e[0m\n\e[27;25;24;22;49;39m\e[0m\n\e[27;25;24;22;49;39mfive\e[0m\n\e[27;25;24;22;49;39msix\e[0m")))
 
 (module+ test
   (define test-style-3 (style 'white 'blue #t #f #f #f))
