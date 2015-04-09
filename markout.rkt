@@ -493,10 +493,7 @@
 
 (def (doc->styled-block ctx style full-size doc)
   blocks = (doc->blocks ctx full-size doc)
-  (forf
-    result = (car blocks)
-    block <- (cdr blocks)
-    (block-append-vert style block result)))  ; bottom to top
+  (vertical-blocks->block style #\space #t blocks))
 
 (module+ test
   (lets

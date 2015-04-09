@@ -30,6 +30,7 @@
   cursor-show
   with-cursor-hidden
   stty
+  vertical-blocks->block
   with-stty
   with-stty-direct
   with-stty-previous
@@ -412,6 +413,13 @@
                             src-line <- src
                             (styled-line-blit tgt-line tx src-line)))
   (styled-block-concat-v prefix (styled-block-concat-v blitted suffix)))
+
+(define (vertical-blocks->block sty fill-char right? blocks)
+  (if (empty? blocks) (styled-block '())
+    (forf
+      result = (first blocks) ; bottom to top
+      block <- (rest blocks)
+      (styled-block-append-vertical sty fill-char right? block result))))
 
 (module+ test
   (define test-block-0 (styled-block-fill test-style-0 #\- (size 20 30)))
