@@ -13,6 +13,7 @@
   sizing-context-new-default
   tight-pair
   vertical-list
+  widths
   (struct-out doc-preformatted)
   (struct-out doc-atom)
   (struct-out doc-chain)
