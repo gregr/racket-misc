@@ -602,20 +602,29 @@
             (string-append* (map sgrstr-str (styled-line-strings sline))))
   (string-join block "\n"))
 
-(define (string->styled-block str)
-  (styled-block
-    (map (compose1 styled-line list (curry styled-string style-empty))
-         (string-split str "\n"))))
+(def (string->styled-block sty fill-char str)
+  blocks =
+  (map (compose1 styled-block list styled-line list (curry styled-string sty))
+       (string-split str "\n"))
+  (vertical-blocks->block sty fill-char #t (reverse blocks)))
 
 (module+ test
   (lets
     test-str = "one two\nthree four\n\nfive\nsix"
     _ = (check-equal?
-      (styled-block->string-unstyled (string->styled-block test-str))
+      (string-join
+        (map string-trim
+             (string-split (styled-block->string-unstyled
+                             (string->styled-block
+                               style-empty #\space test-str))
+                           "\n"))
+        "\n")
       test-str)
-    (check-equal?
-      (styled-block->string (string->styled-block test-str))
-      "\e[0m\e[27;25;24;22;49;39mone two\e[0m\n\e[27;25;24;22;49;39mthree four\e[0m\n\e[27;25;24;22;49;39m\e[0m\n\e[27;25;24;22;49;39mfive\e[0m\n\e[27;25;24;22;49;39msix\e[0m")))
+    (visual-check-equal?
+      identity
+      (styled-block->string
+        (string->styled-block (style 'red 'blue #f #f #f #f) #\space test-str))
+      "\e[0m\e[27;25;24;22;44;31mone two   \e[0m\n\e[27;25;24;22;44;31mthree four\e[0m\n\e[27;25;24;22;44;31m          \e[0m\n\e[27;25;24;22;44;31mfive      \e[0m\n\e[27;25;24;22;44;31msix       \e[0m")))
 
 (module+ test
   (define test-style-3 (style 'white 'blue #t #f #f #f))
