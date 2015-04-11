@@ -10,12 +10,14 @@
   zip*
   zip-with
   zip-with-default
+  list-get
   list-index
   list-index-equal
   list->index-hash
   index-hash->list
   list-set
   list-has-key?
+  list-ref-default
   list-ref-key
   list-set-key
   list-init+last
@@ -28,6 +30,7 @@
 
 (require
   "match.rkt"
+  "maybe.rkt"
   racket/function
   racket/list
   racket/match
@@ -159,3 +162,25 @@
     '(a b c)
     )
   )
+
+(define (list-get xs idx)
+  (if (< idx (length xs)) (just (list-ref xs idx)) (nothing)))
+
+(module+ test
+  (check-equal?
+    (list-get '(a b c) 3)
+    (nothing))
+  (check-equal?
+    (list-get '(a b c) 2)
+    (just 'c)))
+
+(define (list-ref-default xs idx default)
+  (maybe-from default (list-get xs idx)))
+
+(module+ test
+  (check-equal?
+    (list-ref-default '(a b c) 3 'd)
+    'd)
+  (check-equal?
+    (list-ref-default '(a b c) 2 'd)
+    'c))
