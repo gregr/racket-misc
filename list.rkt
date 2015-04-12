@@ -15,6 +15,7 @@
   list-index-equal
   list->index-hash
   index-hash->list
+  list-remove
   list-set
   list-has-key?
   list-ref-default
@@ -184,3 +185,17 @@
   (check-equal?
     (list-ref-default '(a b c) 2 'd)
     'c))
+
+(define (list-remove xs idx)
+  (if (< idx (length xs))
+    (let-values (((start end) (split-at xs idx)))
+      (append start (rest end)))
+    xs))
+
+(module+ test
+  (check-equal?
+    (list-remove '(a b c d) 2)
+    '(a b d))
+  (check-equal?
+    (list-remove '(a b c d) 4)
+    '(a b c d)))
