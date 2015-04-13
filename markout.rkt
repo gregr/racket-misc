@@ -7,6 +7,10 @@
   bordered-table
   bracketed-chain
   doc->styled-block
+  expander-neither
+  expander-width
+  expander-height
+  expander-both
   separated
   simple-bordered-table
   sizing-context-new
@@ -17,6 +21,7 @@
   (struct-out doc-preformatted)
   (struct-out doc-atom)
   (struct-out doc-chain)
+  (struct-out doc-expander)
   (struct-out doc-table)
   (struct-out doc-filler)
   (struct-out doc-frame)
@@ -68,6 +73,12 @@
   (frame-fixed rect)
   (frame-fixed-height coord height))
 
+(record expander-attr width? height?)
+(define expander-neither (expander-attr #f #f))
+(define expander-width (expander-attr #t #f))
+(define expander-height (expander-attr #f #t))
+(define expander-both (expander-attr #t #t))
+
 (records doc
   (doc-preformatted block)
   (doc-atom style str)
@@ -75,6 +86,7 @@
   (doc-table style rows)
   (doc-filler min-sz max-w sz->block)
   (doc-frame style attr doc)
+  (doc-expander attr doc)
   )
 
 (define (tight-pair style lhs rhs)
