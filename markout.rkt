@@ -31,6 +31,7 @@
   )
 
 (require
+  "cursor.rkt"
   "either.rkt"
   "list.rkt"
   "maybe.rkt"
@@ -185,6 +186,11 @@
   (sizing-context memo space-width indent-width) = ctx
   widths-grouped = (lambda (xs) (zip-default '(() () () () ())
                                              (map (curry widths ctx) xs)))
+  expander-attr-aggregate = (lambda (eas)
+    (forf
+      (expander-attr width? height?) = (expander-attr #f #f)
+      (expander-attr w? h?) <- eas
+      (expander-attr (or w? width?) (or h? height?))))
   (match (widths-memo-ref memo doc)
     ((just result) result)
     ((nothing)
@@ -202,7 +208,8 @@
             (list (size len 1) len expander-neither '() '())))
          ((doc-chain _ (chain-attr spaced? indented?) items)
           (lets
-            (list min-sizes max-widths _ _ _) = (widths-grouped items)
+            (list min-sizes max-widths eas _ _) = (widths-grouped items)
+            ea = (expander-attr-aggregate eas)
             min-widths = (map size-w min-sizes)
             spacing = (if spaced? (* space-width (separator-count items)) 0)
             indent = (if indented? indent-width 0)
@@ -215,37 +222,41 @@
               (list (+ spacing width) (max width final-min-width)))
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
-            (list (size min-width 0) max-width expander-neither '() '())))
+            (list (size min-width 0) max-width ea '() '())))
          ((doc-table _ rows)
           (lets
             cols = (zip rows)
-            (list min-widths max-widths scores) =
+            (list min-widths max-widths eas scores) =
             (zip-default '(() () ())
               (forl
                 col <- cols
-                (list min-sizes max-widths _ _ _) = (widths-grouped col)
+                (list min-sizes max-widths eas _ _) = (widths-grouped col)
+                ea = (expander-attr-aggregate eas)
                 min-widths = (map size-w min-sizes)
                 min-width = (apply max min-widths)
                 max-width = (apply max max-widths)
                 scored-deltas = (width-scored-deltas min-width max-widths)
-                (list min-width max-width scored-deltas)))
+                (list min-width max-width ea scored-deltas)))
+            ea = (expander-attr-aggregate eas)
             min-width = (sum min-widths)
             max-width = (sum max-widths)
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
-            (list (size min-width 0) max-width expander-neither
+            (list (size min-width 0) max-width ea
                   min-widths allocation-order)))
          ((doc-filler min-sz max-w _)
           (list min-sz max-w expander-neither '() '()))
          ((doc-frame _ fattr doc)
           (lets
-            (list _ max-width _ _ _) = (widths ctx doc)
-            flexible = (list (size 0 0) max-width expander-neither '() '())
+            (list _ max-width ea _ _) = (widths ctx doc)
+            flexible = (list (size 0 0) max-width ea '() '())
+            (expander-attr w? h?) = ea
             (match fattr
               ((frame-flexible _) flexible)
               ((frame-fixed (rect _ (size width height)))
                (list (size width 0) width expander-neither '() '()))
-              ((frame-fixed-height _ _) flexible)))))
+              ((frame-fixed-height _ _)
+               (:=* flexible (expander-attr w? #f) 'rest 'rest 'first))))))
        _ = (widths-memo-set! memo doc result)
        result))))
 
