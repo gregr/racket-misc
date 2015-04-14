@@ -565,7 +565,8 @@
         (next-state prefix-new header after-indent-width item))))
   (cons prefix header))
 
-(def (frame->blocks context style fattr full-width doc)
+(def (frame->blocks context style fattr full-sz doc)
+  (size full-width full-height) = full-sz
   frame-rect = (fn (crd height)
     (list _ max-width _ _ _ _) = (widths context doc)
     width = (min max-width full-width)
@@ -576,7 +577,7 @@
     ((frame-fixed rct) rct)
     ((frame-fixed-height crd height) (frame-rect crd height)))
   (size width height) = sz
-  inner-height = (if (void? height) 0 height)
+  inner-height = (if (void? height) full-height height)
   block = (doc->styled-block context style (size width inner-height) doc)
   (size bw bh) = (styled-block-size block)
   height = (if (void? height) bh height)
@@ -602,7 +603,7 @@
        (list (table->styled-block ctx sty col-widths full-height rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
      (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
-    ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))
+    ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-size doc))
     ((doc-expander _ doc) (doc->blocks ctx full-size doc))))
 
 (def (doc->styled-block ctx style full-size doc)
