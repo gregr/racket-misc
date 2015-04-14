@@ -179,8 +179,8 @@
     (match scores
       ('() (reverse choices))
       ((cons (list idx (cons (cons _ wdelta) rest)) losers)
-      (loop (cons (cons idx wdelta) choices)
-            (cons (list idx rest) losers))))))
+       (loop (cons (cons idx wdelta) choices)
+             (cons (list idx rest) losers))))))
 
 (def (widths ctx doc)
   (sizing-context memo space-width indent-width) = ctx
@@ -256,17 +256,47 @@
               ((frame-fixed (rect _ (size width height)))
                (list (size width 0) width expander-neither '() '() '()))
               ((frame-fixed-height _ _)
-               (:=* flexible (expander-attr w? #f) 'rest 'rest 'first))))))
+               (:=* flexible (expander-attr w? #f) 'rest 'rest 'first)))))
+         ((doc-expander attr doc)
+          (lets
+            (list min-sz max-w _ _ _ _) = (widths ctx doc)
+            (list min-sz max-w attr '() '() '()))))
        _ = (widths-memo-set! memo doc result)
        result))))
 
-(def (table-col-widths available initial mins allocs)
+(def (table-col-widths available initial mins eas allocs)
+  ews = (map expander-attr-width? eas)
+  ew-count = (length (filter identity ews))
+  col-count = (length mins)
   cols = (list->index-hash mins)
   (let loop
     ((col-widths cols) (allocs allocs) (avail (max 0 (- available initial))))
     (if (= 0 avail) (index-hash->list col-widths)
       (match allocs
-        ('() (loop col-widths '() 0))
+        ('()
+         (lets
+           col-widths =
+           (if (= 0 ew-count) col-widths
+             (lets
+               shared = (quotient avail ew-count)
+               extra = (remainder avail ew-count)
+               (list extra-offset _) =
+               (forf
+                 (list index count) = (list 0 0)
+                 idx <- (range col-count)
+                 w? <- ews
+                 #:break (>= count extra)
+                 (list (+ 1 idx) (if w? (+ count 1) 0)))
+               (list->index-hash
+                 (forl
+                   idx <- (range col-count)
+                   cw <- (index-hash->list col-widths)
+                   w? <- ews
+                   (+ cw
+                      (if w?
+                        (+ shared (if (< idx extra-offset) 1 0))
+                        0))))))
+           (loop col-widths '() 0)))
         ((cons (cons idx amount) allocs)
          (lets
            amount = (min avail amount)
@@ -324,6 +354,12 @@
                                attr-loose-aligned style style items-1)
     table-0 = (bordered-test-table
                 style (list (list chain-0 chain-1) (list chain-0 chain-0)))
+    table-1 = (bordered-test-table
+                style-empty (list (list chain-0 chain-1)
+                                  (list (doc-expander expander-both chain-0) chain-0)))
+    table-2 = (bordered-test-table
+                style-empty (list (list chain-0 (doc-expander expander-both chain-1))
+                                  (list (doc-expander expander-both chain-0) chain-0)))
     d0 = (- 17 7)
     d1 = (- 27 9)
     padding = (+ (* 2 bw-test) dw-test)
@@ -332,11 +368,15 @@
     (list t0c-min t0c-snug t0c-extra t0c-meh) =
     (lets
       (list (size initial _) _ _ cmins ceas callocs) = table-0-widths
-      calc = (lambda (avail) (table-col-widths avail initial cmins callocs))
+      calc = (lambda (avail) (table-col-widths avail initial cmins ceas callocs))
       (list (calc (+ 7 8 padding)) (calc max-width) (calc 100) (calc 35)))
     splice-border-widths =
     (lambda (xs)
       (append (list bw-test) (add-between xs dw-test) (list bw-test)))
+    col-widths-for =
+    (fn (doc full-width)
+      (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
+      (table-col-widths full-width initial mins eas allocs))
     (begin
       (check-equal?
         (widths ctx chain-empty)
@@ -397,6 +437,15 @@
         t0c-meh
         (splice-border-widths (list 10 17))
         )
+      (check-equal?
+        (col-widths-for table-1 (+ 17 27 padding))
+        (splice-border-widths (list 17 27)))
+      (check-equal?
+        (col-widths-for table-1 100)
+        (splice-border-widths (list (- 100 (+ 27 padding)) 27)))
+      (check-equal?
+        (col-widths-for table-2 101)
+        (splice-border-widths (list 42 51)))
       )))
 
 (define (space-block style sz) (styled-block-fill style #\space sz))
@@ -515,11 +564,12 @@
     ((doc-table sty rows)
      (lets
        (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
-       col-widths = (table-col-widths full-width initial mins allocs)
+       col-widths = (table-col-widths full-width initial mins eas allocs)
        (list (table->styled-block ctx sty col-widths rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
      (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
-    ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))))
+    ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))
+    ((doc-expander _ doc) (doc->blocks ctx full-size doc))))
 
 (def (doc->styled-block ctx style full-size doc)
   blocks = (doc->blocks ctx full-size doc)
@@ -574,9 +624,9 @@
                 style-4 (list (list chain-0 chain-1) (list chain-0 chain-0)))
     table-1 = (bordered-test-table style-4 '())
     table-2 = (bordered-test-table style-4 (list '() '()))
-    table-3 = (unbordered-test-table style-4
-                                (list (list chain-0 chain-1)
-                                      (list preformatted-0 chain-0)))
+    table-3 = (unbordered-test-table
+                style-4 (list (list chain-0 chain-1)
+                              (list preformatted-0 chain-0)))
 
     items-2 = (list chain-1 atom-2 atom-3)
     chain-2 = (bracketed-chain (doc-atom style-2 "(nested") (doc-atom style-2 ")")
@@ -627,6 +677,9 @@
                       (list filler-3 chain-0 filler-1 chain-1 filler-3)
                       (list filler-3 preformatted-0 filler-2 chain-0 filler-3)
                       (list filler-4 filler-5 filler-4 filler-5 filler-4)))
+    table-5 = (unbordered-test-table
+                style-4 (list (list (doc-expander expander-both chain-0) chain-1)
+                              (list preformatted-0 chain-0)))
 
     test-equalities =
     (list
@@ -660,6 +713,12 @@
       (list
         (list (size 25 0) table-3)
         "\e[0m\e[27;25;24;22;45;37mtest(\e[7;49;39m   \e[27m[testing\e[7m         \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m \e[27;36m \e[45;37mtest(\e[7;49;39m           \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mworld\e[7;49;39m \e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m   \e[0m\n\e[27;25;24;22;42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   \e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m  \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[7;49;39m                 \e[0m\n\e[27;25;24;22;42;39m  \e[45;37m)\e[7;49;39m                      \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;45;37mtest(\e[7;49;39m            \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m        \e[0m")
+      (list
+        (list (size 80 0) table-3)
+        "\e[0m\e[27;25;24;22;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                        \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                              \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                              \e[0m")
+      (list
+        (list (size 80 0) table-5)
+        "\e[0m\e[27;25;24;22;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m              \e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                      \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                                            \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                                            \e[0m")
       (list
         (list (size 20 0) frame-0)
         "\e[0m\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;49;39m[\e[44;37mhello\e[7;49;36m \e[27;5;4;1;40;31m**********\e[25;24;22;43;30m   \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[7;49;36m      \e[27;45;37m$$$$\e[42;39m \e[43;30m        \e[0m\n\e[27;25;24;22;42;39m \e[44;37mworld\e[7;49;36m \e[27;45;37m$$$$\e[49;39m]\e[43;30m        \e[0m\n\e[27;25;24;22;43;30m                    \e[0m")
