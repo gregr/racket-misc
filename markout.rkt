@@ -456,33 +456,67 @@
 (define (block-expand style block sz)
   (styled-block-expand style #\space block sz #t #t))
 
-(def (table->styled-block ctx style col-widths rows)
-  (list row-heights rows) =
-  (zip-default '(() ())
+(def (table->styled-block ctx style col-widths full-height rows)
+  row->height*cols = (fn (avail-height row)
+    row = (forl
+            doc <- row
+            (match doc
+              ((doc-filler _ _ _) (left doc))
+              (_ (right doc))))
+    cols = (forl
+             col <- row
+             col-width <- col-widths
+             (either-map
+               (curry doc->styled-block ctx style
+                      (size col-width avail-height)) col))
+    sizes = (map (curry either-fold (const (size 0 0)) styled-block-size) cols)
+    row-height = (max avail-height
+                      (apply max 0 (map (fn ((size _ h)) h) sizes)))
+    cols = (forl
+             col <- cols
+             col-width <- col-widths
+             sz = (size col-width row-height)
+             expand = (lambda (col) (block-expand style col sz))
+             (either-fold
+               (compose1 expand (curry doc->styled-block ctx style sz))
+               expand col))
+    (list row-height cols))
+  erows =
     (forl
       row <- rows
-      row = (forl
-              doc <- row
-              (match doc
-                ((doc-filler _ _ _) (left doc))
-                (_ (right doc))))
-      cols = (forl
-               col <- row
-               col-width <- col-widths
-               (either-map
-                 (curry doc->styled-block ctx style (size col-width 0)) col))
-      sizes = (map (curry either-fold (const (size 0 0)) styled-block-size)
-                   cols)
-      row-height = (apply max 0 (map (fn ((size _ h)) h) sizes))
-      cols = (forl
-               col <- cols
-               col-width <- col-widths
-               sz = (size col-width row-height)
-               expand = (lambda (col) (block-expand style col sz))
-               (either-fold (compose1
-                              expand (curry doc->styled-block ctx style sz))
-                            expand col))
-      (list row-height cols)))
+      h? = (forf
+             height? = #f
+             col <- row
+             (list _ _ (expander-attr _ h?) _ _ _) = (widths ctx col)
+             (or height? h?))
+      (if h? (left row) (right (row->height*cols 0 row))))
+  finished-rows = (map right-x (filter right? erows))
+  unfinished-row-count = (- (length rows) (length finished-rows))
+  (list _ rows) =
+  (zip-default
+    '(() ())
+    (if (= 0 unfinished-row-count) finished-rows
+      (lets
+        used-height = (sum (map car finished-rows))
+        remaining-height = (- full-height used-height)
+        shared = (quotient remaining-height unfinished-row-count)
+        extra = (remainder remaining-height unfinished-row-count)
+        indices = (range (length rows))
+        (list extra-offset _) =
+        (forf
+          (list index count) = (list 0 0)
+          idx <- indices
+          erow <- erows
+          #:break (>= count extra)
+          (list (+ 1 idx) (if (left? erow) (+ count 1) 0)))
+        (forl
+          idx <- indices
+          erow <- erows
+          (match erow
+            ((right result) result)
+            ((left row)
+             (row->height*cols
+               (+ shared (if (< idx extra-offset) 1 0)) row)))))))
   (forf
     header = '()
     row <- rows
@@ -565,7 +599,7 @@
      (lets
        (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins eas allocs)
-       (list (table->styled-block ctx sty col-widths rows))))
+       (list (table->styled-block ctx sty col-widths full-height rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
      (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
     ((doc-frame sty attr doc) (frame->blocks ctx sty attr full-width doc))
