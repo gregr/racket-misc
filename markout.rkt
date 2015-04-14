@@ -11,6 +11,8 @@
   expander-width
   expander-height
   expander-both
+  filler-h
+  filler-v
   separated
   simple-bordered-table
   sizing-context-new
@@ -107,6 +109,13 @@
   (doc-chain outer-style attr-tight-indented (list prefix suffix-chain)))
 (define (vertical-list style docs)
   (doc-table style (map list docs)))
+
+(define (filler-h style char thickness)
+  (doc-filler (size 0 thickness) 0
+              (curry styled-block-fill style char)))
+(define (filler-v style char thickness)
+  (doc-filler (size thickness 0) thickness
+              (curry styled-block-fill style char)))
 
 (def (bordered-table
        inner-style style border-size divider-size
