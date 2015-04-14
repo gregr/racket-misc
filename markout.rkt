@@ -39,6 +39,7 @@
   "string.rkt"
   "sugar.rkt"
   "terminal.rkt"
+  racket/dict
   racket/function
   racket/list
   racket/match
@@ -243,7 +244,7 @@
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list (size min-width 0) max-width ea
-                  min-widths eas allocation-order)))
+                  max-widths eas allocation-order)))
          ((doc-filler min-sz max-w _)
           (list min-sz max-w expander-neither '() '() '()))
          ((doc-frame _ fattr doc)
@@ -264,45 +265,33 @@
        _ = (widths-memo-set! memo doc result)
        result))))
 
-(def (table-col-widths available initial mins eas allocs)
+(def (table-col-widths available maxes eas)
+  col-count = (length maxes)
+  cols = (list->index-dict (make-list (length maxes) 0))
+  pair<= = (fn ((cons _ a) (cons _ b)) (<= a b))
+  max-indexed = (list->index-list maxes)
+  (list col-widths available) =
+  (forf
+    (list col-widths avail) = (list cols available)
+    count <- (reverse (range 1 (+ 1 col-count)))
+    (cons idx maxw) <- (sort max-indexed pair<=)
+    alloc = (quotient avail count)
+    used = (min maxw alloc)
+    col-widths = (dict-update col-widths idx (curry + used))
+    (list col-widths (- avail used)))
   ews = (map expander-attr-width? eas)
   ew-count = (length (filter identity ews))
-  col-count = (length mins)
-  cols = (list->index-dict mins)
-  (let loop
-    ((col-widths cols) (allocs allocs) (avail (max 0 (- available initial))))
-    (if (= 0 avail) (index-dict->list col-widths)
-      (match allocs
-        ('()
-         (lets
-           col-widths =
-           (if (= 0 ew-count) col-widths
-             (lets
-               shared = (quotient avail ew-count)
-               extra = (remainder avail ew-count)
-               (list extra-offset _) =
-               (forf
-                 (list index count) = (list 0 0)
-                 idx <- (range col-count)
-                 w? <- ews
-                 #:break (>= count extra)
-                 (list (+ 1 idx) (if w? (+ count 1) 0)))
-               (list->index-dict
-                 (forl
-                   idx <- (range col-count)
-                   cw <- (index-dict->list col-widths)
-                   w? <- ews
-                   (+ cw
-                      (if w?
-                        (+ shared (if (< idx extra-offset) 1 0))
-                        0))))))
-           (loop col-widths '() 0)))
-        ((cons (cons idx amount) allocs)
-         (lets
-           amount = (min avail amount)
-           avail = (- avail amount)
-           col-widths = (hash-update col-widths idx (curry + amount))
-           (loop col-widths allocs avail)))))))
+  (list col-widths _ _) =
+  (forf
+    (list col-widths avail count) = (list col-widths available ew-count)
+    #:break (= 0 count)
+    idx <- (range (length ews))
+    w? <- ews
+    used = (if w? (quotient avail count) 0)
+    count = (if w? (- count 1) count)
+    col-widths = (dict-update col-widths idx (curry + used))
+    (list col-widths (- avail used) count))
+  (index-dict->list col-widths))
 
 (module+ test
   (define bw-test 3)
@@ -367,16 +356,16 @@
     table-0-widths = (widths ctx table-0)
     (list t0c-min t0c-snug t0c-extra t0c-meh) =
     (lets
-      (list (size initial _) _ _ cmins ceas callocs) = table-0-widths
-      calc = (lambda (avail) (table-col-widths avail initial cmins ceas callocs))
+      (list _ _ _ cmaxes ceas _) = table-0-widths
+      calc = (lambda (avail) (table-col-widths avail cmaxes ceas))
       (list (calc (+ 7 8 padding)) (calc max-width) (calc 100) (calc 35)))
     splice-border-widths =
     (lambda (xs)
       (append (list bw-test) (add-between xs dw-test) (list bw-test)))
     col-widths-for =
     (fn (doc full-width)
-      (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
-      (table-col-widths full-width initial mins eas allocs))
+      (list _ _ _ maxes eas _) = (widths ctx doc)
+      (table-col-widths full-width maxes eas))
     (begin
       (check-equal?
         (widths ctx chain-empty)
@@ -404,7 +393,7 @@
         )
       (check-equal?
         (widths ctx chain-nested-vlist)
-        (list (size 6 0) 22 expander-neither (list 6) (list expander-neither) (list (cons 0 16)))
+        (list (size 6 0) 22 expander-neither (list 22) (list expander-neither) (list (cons 0 16)))
         )
       (check-equal?
         (widths ctx chain-0)
@@ -418,7 +407,7 @@
         table-0-widths
         (list (size (+ 7 8 padding) 0) max-width
               expander-neither
-              (splice-border-widths (list 7 8)) (make-list 5 expander-neither)
+              (splice-border-widths (list 17 27)) (make-list 5 expander-neither)
               (list (cons bw-test (- 17 8)) (cons 1 d0) (cons bw-test (- d1 (- 17 9)))))
         )
       (check-equal?
@@ -435,7 +424,7 @@
         )
       (check-equal?
         t0c-meh
-        (splice-border-widths (list 10 17))
+        (splice-border-widths (list 13 14))
         )
       (check-equal?
         (col-widths-for table-1 (+ 17 27 padding))
@@ -445,7 +434,7 @@
         (splice-border-widths (list (- 100 (+ 27 padding)) 27)))
       (check-equal?
         (col-widths-for table-2 101)
-        (splice-border-widths (list 42 51)))
+        (splice-border-widths (list 41 52)))
       )))
 
 (define (space-block style sz) (styled-block-fill style #\space sz))
@@ -457,6 +446,7 @@
   (styled-block-expand style #\space block sz #t #t))
 
 (def (table->styled-block ctx style col-widths full-height rows)
+  flex-frame = (curry doc-frame style (frame-flexible (coord 0 0)))
   row->height*cols = (fn (avail-height row)
     row = (forl
             doc <- row
@@ -467,8 +457,11 @@
              col <- row
              col-width <- col-widths
              (either-map
-               (curry doc->styled-block ctx style
-                      (size col-width avail-height)) col))
+               (compose1
+                 (curry doc->styled-block ctx style
+                        (size col-width avail-height))
+                 flex-frame)
+               col))
     sizes = (map (curry either-fold (const (size 0 0)) styled-block-size) cols)
     row-height = (max avail-height
                       (apply max 0 (map (fn ((size _ h)) h) sizes)))
@@ -598,8 +591,8 @@
      (chain->blocks ctx sty attr full-width items))
     ((doc-table sty rows)
      (lets
-       (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
-       col-widths = (table-col-widths full-width initial mins eas allocs)
+       (list _ _ _ maxes eas _) = (widths ctx doc)
+       col-widths = (table-col-widths full-width maxes eas)
        (list (table->styled-block ctx sty col-widths full-height rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
      (list (sz->block (size (max full-width min-w) (max full-height min-h)))))
@@ -729,7 +722,7 @@
         "\e[0m\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m\n\e[27;25;24;22;44;37m************\e[0m")
       (list
         (list (size 30 10) table-4)
-        "\e[0m\e[27;25;24;22;44;37mx--------xxxx----------------x\e[0m\n\e[27;25;24;22;44;37m|\e[45mtest(\e[7;49;39m   \e[27;43;30m++++\e[49;39m[testing\e[7m        \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;43;30m++++\e[49;36m \e[45;37mtest(\e[7;49;39m          \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;43;30m++++\e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m  \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   \e[27;43;30m++++\e[49;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mthings\e[43;30m++++\e[7;49;39m                \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[45;37m)\e[7;49;39m     \e[27;43;30m++++\e[7;49;39m                \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++test(\e[7;49;39m           \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++\e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m   \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m    \e[27;45;37m++++\e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m   \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37mx--------xxxx----------------x\e[0m")
+        "\e[0m\e[27;25;24;22;44;37mx------------xxxx------------x\e[0m\n\e[27;25;24;22;44;37m|\e[45mtest(\e[7;49;39m       \e[27;43;30m++++\e[49;39m[testing\e[7m    \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mhello\e[7;49;39m     \e[27;43;30m++++\e[49;36m \e[45;37mtest(\e[7;49;39m      \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;43;30m++++\e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m    \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[42;39m  \e[44;37mthings\e[45m)\e[7;49;39m   \e[27;43;30m++++\e[49;36m \e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[7;49;39m            \e[27;43;30m++++\e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m        \e[27;45;37m++++test(\e[7;49;39m       \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m        \e[27;45;37m++++\e[42;39m  \e[44;37mhello\e[7;49;39m     \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[45m$$$$\e[7;49;39m        \e[27;45;37m++++\e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37m|\e[7;49;39m            \e[27;45;37m++++\e[42;39m  \e[44;37mthings\e[45m)\e[7;49;39m   \e[27;44;37m|\e[0m\n\e[27;25;24;22;44;37mx------------xxxx------------x\e[0m")
       (list
         (list (size 5 0) chain-nested)
         "\e[0m\e[27;25;24;22;44;37m{[]\e[41;30m   \e[0m\n\e[27;25;24;22;44;37m {[]\e[41;30m  \e[0m\n\e[27;25;24;22;44;37m  {[]\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   {[]\e[0m\n\e[27;25;24;22;44;37m    []\e[0m\n\e[27;25;24;22;44;37m    }\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   }}\e[41;30m \e[0m\n\e[27;25;24;22;44;37m }\e[41;30m    \e[0m")
@@ -737,7 +730,7 @@
         (list (size 1 0) chain-nested)
         "\e[0m\e[27;25;24;22;44;37m{[]\e[41;30m   \e[0m\n\e[27;25;24;22;44;37m {[]\e[41;30m  \e[0m\n\e[27;25;24;22;44;37m  {[]\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   {[]\e[0m\n\e[27;25;24;22;44;37m    []\e[0m\n\e[27;25;24;22;44;37m    }\e[41;30m \e[0m\n\e[27;25;24;22;44;37m   }\e[41;30m  \e[0m\n\e[27;25;24;22;44;37m  }\e[41;30m   \e[0m\n\e[27;25;24;22;44;37m }\e[41;30m    \e[0m")
       (list
-        (list (size 1 0) chain-nested-vlist)
+        (list (size 6 0) chain-nested-vlist)
         "\e[0m\e[27;25;24;22;44;37m{[]\e[49;39m   \e[0m\n\e[27;25;24;22;44;37m {[]\e[49;39m  \e[0m\n\e[27;25;24;22;44;37m  {[]\e[49;39m \e[0m\n\e[27;25;24;22;44;37m   {[]\e[0m\n\e[27;25;24;22;44;37m    []\e[0m\n\e[27;25;24;22;44;37m    }}\e[0m\n\e[27;25;24;22;44;37m  }}\e[49;39m  \e[0m")
       (list
         (list (size 10 0) table-1)
@@ -747,7 +740,7 @@
         "\e[0m\e[7;25;24;22;49;39m^^^>>>\e[0m\n\e[7;25;24;22;49;39m++++++\e[0m\n\e[7;25;24;22;49;39m<<<vvv\e[0m")
       (list
         (list (size 25 0) table-3)
-        "\e[0m\e[27;25;24;22;45;37mtest(\e[7;49;39m   \e[27m[testing\e[7m         \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m \e[27;36m \e[45;37mtest(\e[7;49;39m           \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mworld\e[7;49;39m \e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m   \e[0m\n\e[27;25;24;22;42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   \e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m  \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[7;49;39m                 \e[0m\n\e[27;25;24;22;42;39m  \e[45;37m)\e[7;49;39m                      \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;45;37mtest(\e[7;49;39m            \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m    \e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m        \e[0m")
+        "\e[0m\e[27;25;24;22;45;37mtest(\e[7;49;39m       \e[27m[testing\e[7m     \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mhello\e[7;49;39m     \e[27;36m \e[45;37mtest(\e[7;49;39m       \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m     \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[45m)\e[7;49;39m   \e[27;36m \e[42;39m  \e[44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[0m\n\e[7;25;24;22;49;39m            \e[27;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m  \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m        \e[27;45;37mtest(\e[7;49;39m        \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m        \e[27;42m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m        \e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[0m")
       (list
         (list (size 80 0) table-3)
         "\e[0m\e[27;25;24;22;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                        \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                              \e[0m\n\e[27;25;24;22;45;37m$$$$\e[7;49;39m                                                              \e[0m")
@@ -792,13 +785,13 @@
         "\e[0m\e[27;25;24;22;49;39m[testing\e[41;30m          \e[0m\n\e[27;25;24;22;49;36m \e[45;37mtest(\e[41;30m            \e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[41;30m       \e[0m")
       (list
         (list (size 20 0) table-0)
-        "\e[0m\e[7;25;24;22;49;39m^^^========++=========>>>\e[0m\n\e[7;25;24;22;49;39m###\e[27;45;37mtest(\e[7;49;39m   ||\e[27m[testing\e[7m ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mhello\e[7;49;39m ||\e[27;36m \e[45;37mtest(\e[7;49;39m   ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mworld\e[7;49;39m ||\e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ||\e[27;36m \e[42;39m  \e[44;37mworld\e[7;49;39m ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mthings\e[7;49;39m||\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m     ||\e[27;36m \e[42;39m  \e[44;37mthings\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###        ||\e[27;36m \e[42;39m  \e[45;37m)\e[49;39m]\e[7m    ###\e[0m\n\e[7;25;24;22;49;39m+++--------++---------+++\e[0m\n\e[7;25;24;22;49;39m###\e[27;45;37mtest(\e[7;49;39m   ||\e[27;45;37mtest(\e[7;49;39m    ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mhello\e[7;49;39m ||\e[27;42m  \e[44;37mhello\e[7;49;39m  ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mworld\e[7;49;39m ||\e[27;42m  \e[44;37mworld\e[7;49;39m  ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ||\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m    ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mthings\e[7;49;39m||\e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m     ||         ###\e[0m\n\e[7;25;24;22;49;39m<<<========++=========vvv\e[0m")
+        "\e[0m\e[7;25;24;22;49;39m^^^======++======>>>\e[0m\n\e[7;25;24;22;49;39m###\e[27;45;37mtest(\e[7;49;39m ||\e[27m[testi\e[7m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mhell\e[7;49;39m||\e[27;36m \e[45;37mtest(\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mworl\e[7;49;39m||\e[27;36m \e[42;39m  \e[44;37mhel\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ||\e[27;36m \e[42;39m  \e[44;37mwor\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mthin\e[7;49;39m||\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m   ||\e[27;36m \e[42;39m  \e[44;37mthi\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###      ||\e[27;36m \e[42;39m  \e[45;37m)\e[49;39m]\e[7m ###\e[0m\n\e[7;25;24;22;49;39m+++------++------+++\e[0m\n\e[7;25;24;22;49;39m###\e[27;45;37mtest(\e[7;49;39m ||\e[27;45;37mtest(\e[7;49;39m ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mhell\e[7;49;39m||\e[27;42m  \e[44;37mhell\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mworl\e[7;49;39m||\e[27;42m  \e[44;37mworl\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ||\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[44;37mthin\e[7;49;39m||\e[27;42m  \e[44;37mthin\e[7;49;39m###\e[0m\n\e[7;25;24;22;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m   ||\e[27;42m  \e[45;37m)\e[7;49;39m   ###\e[0m\n\e[7;25;24;22;49;39m<<<======++======vvv\e[0m")
       (list
         (list (size 22 0) chain-2)
         "\e[0m\e[27;25;24;22;45;37m(nested\e[41;30m             \e[0m\n\e[27;25;24;22;42;39m  \e[49m[testing\e[41;30m          \e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[45;37mtest(\e[41;30m            \e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[0m\n\e[27;25;24;22;42;39m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m   \e[0m\n\e[27;25;24;22;42;39m  \e[44;37mthings\e[45m)\e[41;30m           \e[0m")
       (list
         (list (size 23 0) chain-3)
-        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m              \e[0m\n\e[27;25;24;22;45;37m  (nested\e[41;30m                  \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49m[testing\e[41;30m               \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[45;37mtest(\e[41;30m                 \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m     \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m        \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[44;37mthings\e[45m)\e[41;30m                \e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m^^^========++=========>>>\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;45;37mtest(\e[7;49;39m   ||\e[27m[testing\e[7m ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mhello\e[7;49;39m ||\e[27;36m \e[45;37mtest(\e[7;49;39m   ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mworld\e[7;49;39m ||\e[27;36m \e[42;39m  \e[44;37mhello\e[7;49;39m ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ||\e[27;36m \e[42;39m  \e[44;37mworld\e[7;49;39m ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mthings\e[7;49;39m||\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m     ||\e[27;36m \e[42;39m  \e[44;37mthings\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###        ||\e[27;36m \e[42;39m  \e[45;37m)\e[49;39m]\e[7m    ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m+++--------++---------+++\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;45;37mtest(\e[7;49;39m   ||\e[27;45;37mtest(\e[7;49;39m    ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mhello\e[7;49;39m ||\e[27;42m  \e[44;37mhello\e[7;49;39m  ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mworld\e[7;49;39m ||\e[27;42m  \e[44;37mworld\e[7;49;39m  ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m   ||\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m    ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mthings\e[7;49;39m||\e[27;42m  \e[44;37mthings\e[45m)\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m     ||         ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m<<<========++=========vvv\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[41;30m                 \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[45;37mtest(\e[41;30m                   \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m       \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m             \e[0m")
+        "\e[0m\e[27;25;24;22;49;36mwith-a-table(\e[41;30m          \e[0m\n\e[27;25;24;22;45;37m  (nested\e[41;30m              \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49m[testing\e[41;30m           \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[45;37mtest(\e[41;30m             \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m    \e[0m\n\e[27;25;24;22;45;37m  \e[42;39m  \e[44;37mthings\e[45m)\e[41;30m            \e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m^^^======++=======>>>\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;45;37mtest(\e[7;49;39m ||\e[27m[testin\e[7m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mhell\e[7;49;39m||\e[27;36m \e[45;37mtest(\e[7;49;39m ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mworl\e[7;49;39m||\e[27;36m \e[42;39m  \e[44;37mhell\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ||\e[27;36m \e[42;39m  \e[44;37mworl\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mthin\e[7;49;39m||\e[27;36m \e[42;39m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m   ||\e[27;36m \e[42;39m  \e[44;37mthin\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###      ||\e[27;36m \e[42;39m  \e[45;37m)\e[49;39m]\e[7m  ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m+++------++-------+++\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;45;37mtest(\e[7;49;39m ||\e[27;45;37mtest(\e[7;49;39m  ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mhell\e[7;49;39m||\e[27;42m  \e[44;37mhello\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mworl\e[7;49;39m||\e[27;42m  \e[44;37mworld\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m ||\e[27;42m  \e[5;4;1;40;31mand\e[7;25;24;22;49;39m  ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[44;37mthin\e[7;49;39m||\e[27;42m  \e[44;37mthing\e[7;49;39m###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m###\e[27;42m  \e[45;37m)\e[7;49;39m   ||\e[27;42m  \e[45;37m)\e[7;49;39m    ###\e[0m\n\e[27;25;24;22;45;37m  \e[7;49;39m<<<======++=======vvv\e[0m\n\e[27;25;24;22;45;37m  \e[49;39m[testing\e[41;30m             \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[45;37mtest(\e[41;30m               \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[25;24;22;41;30m   \e[0m\n\e[27;25;24;22;45;37m  \e[49;36m \e[42;39m  \e[44;37mthings\e[45m)\e[49;39m]\e[36m)\e[41;30m         \e[0m")
       (list
         (list (size 200 0) chain-3)
         "\e[0m\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m^^^============================++======================================>>>\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m###\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m||\e[27m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m###\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m+++----------------------------++--------------------------------------+++\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;45;37m             \e[44m                                                          \e[7;49;39m###\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m||\e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[7;49;39m          ###\e[27;44;37m                                       \e[45m \e[0m\n\e[27;25;24;22;49;36mwith-a-table(\e[45;37m(nested\e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[7m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[44m \e[7;49;39m<<<============================++======================================vvv\e[27;44;37m \e[49;39m[testing\e[7;36m \e[27;45;37mtest(\e[44mhello\e[7;49;39m \e[27;44;37mworld\e[7;49;39m \e[27;5;4;1;40;31mand\e[7;25;24;22;49;39m \e[27;44;37mthings\e[45m)\e[49;39m]\e[36m)\e[0m")
