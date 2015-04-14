@@ -5,6 +5,8 @@
   map*
   cross
   cross*
+  index-dict->list
+  index-list->list
   zip
   zip-default
   zip*
@@ -13,8 +15,8 @@
   list-get
   list-index
   list-index-equal
-  list->index-hash
-  index-hash->list
+  list->index-dict
+  list->index-list
   list-remove
   list-set
   list-has-key?
@@ -32,6 +34,7 @@
 (require
   "match.rkt"
   "maybe.rkt"
+  racket/dict
   racket/function
   racket/list
   racket/match
@@ -144,22 +147,20 @@
     '((1 3 a) (1 3 b) (1 4 a) (1 4 b) (2 3 a) (2 3 b) (2 4 a) (2 4 b))
     ))
 
-(define (list->index-hash xs)
-  (make-immutable-hash (map cons (range (length xs)) xs)))
-
-(define (index-hash->list hx)
-  (let loop ((result '()) (remaining (hash-count hx)))
-    (if (= 0 remaining) result
-      (let* ((idx (- remaining 1)) (value (hash-ref hx idx)))
-        (loop (cons value result) idx)))))
+(define (list->index-list xs) (map cons (range (length xs)) xs))
+(define (list->index-dict xs) (make-immutable-hash (list->index-list xs)))
+(define (index-list->list ixs)
+  (define (ix< lhs rhs) (< (car lhs) (car rhs)))
+  (map cdr (sort ixs ix<)))
+(define (index-dict->list hx) (index-list->list (dict->list hx)))
 
 (module+ test
   (check-equal?
-    (list->index-hash '(a b c))
+    (list->index-dict '(a b c))
     (hash 0 'a 1 'b 2 'c)
     )
   (check-equal?
-    (index-hash->list (list->index-hash (list 'a 'b 'c)))
+    (index-dict->list (list->index-dict (list 'a 'b 'c)))
     '(a b c)
     )
   )

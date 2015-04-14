@@ -268,10 +268,10 @@
   ews = (map expander-attr-width? eas)
   ew-count = (length (filter identity ews))
   col-count = (length mins)
-  cols = (list->index-hash mins)
+  cols = (list->index-dict mins)
   (let loop
     ((col-widths cols) (allocs allocs) (avail (max 0 (- available initial))))
-    (if (= 0 avail) (index-hash->list col-widths)
+    (if (= 0 avail) (index-dict->list col-widths)
       (match allocs
         ('()
          (lets
@@ -287,10 +287,10 @@
                  w? <- ews
                  #:break (>= count extra)
                  (list (+ 1 idx) (if w? (+ count 1) 0)))
-               (list->index-hash
+               (list->index-dict
                  (forl
                    idx <- (range col-count)
-                   cw <- (index-hash->list col-widths)
+                   cw <- (index-dict->list col-widths)
                    w? <- ews
                    (+ cw
                       (if w?
