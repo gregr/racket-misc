@@ -28,6 +28,7 @@
   list-inits
   list-path
   iterate
+  reverse-range
   sum
   )
 
@@ -200,3 +201,13 @@
   (check-equal?
     (list-remove '(a b c d) 4)
     '(a b c d)))
+
+(define (reverse-range xs start end)
+  (let-values (((prefix suffix) (split-at xs start)))
+    (let-values (((target suffix) (split-at suffix (+ 1 (- end start)))))
+      (append prefix (reverse target) suffix))))
+
+(module+ test
+  (check-equal?
+    (reverse-range '(a b c d e f) 1 4)
+    '(a e d c b f)))
