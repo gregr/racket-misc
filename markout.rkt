@@ -184,7 +184,7 @@
 
 (def (widths ctx doc)
   (sizing-context memo space-width indent-width) = ctx
-  widths-grouped = (lambda (xs) (zip-default '(() () () () ())
+  widths-grouped = (lambda (xs) (zip-default '(() () () () () ())
                                              (map (curry widths ctx) xs)))
   expander-attr-aggregate = (lambda (eas)
     (forf
@@ -201,14 +201,14 @@
           (lets
             sz = (styled-block-size block)
             (size width height) = sz
-            (list sz width expander-neither '() '())))
+            (list sz width expander-neither '() '() '())))
          ((doc-atom _ str)
           (lets
             len = (string-length str)
-            (list (size len 1) len expander-neither '() '())))
+            (list (size len 1) len expander-neither '() '() '())))
          ((doc-chain _ (chain-attr spaced? indented?) items)
           (lets
-            (list min-sizes max-widths eas _ _) = (widths-grouped items)
+            (list min-sizes max-widths eas _ _ _) = (widths-grouped items)
             ea = (expander-attr-aggregate eas)
             min-widths = (map size-w min-sizes)
             spacing = (if spaced? (* space-width (separator-count items)) 0)
@@ -222,15 +222,15 @@
               (list (+ spacing width) (max width final-min-width)))
             max-width = (+ spacing (sum max-widths))
             min-width = (min min-width max-width)
-            (list (size min-width 0) max-width ea '() '())))
+            (list (size min-width 0) max-width ea '() '() '())))
          ((doc-table _ rows)
           (lets
             cols = (zip rows)
             (list min-widths max-widths eas scores) =
-            (zip-default '(() () ())
+            (zip-default '(() () () ())
               (forl
                 col <- cols
-                (list min-sizes max-widths eas _ _) = (widths-grouped col)
+                (list min-sizes max-widths eas _ _ _) = (widths-grouped col)
                 ea = (expander-attr-aggregate eas)
                 min-widths = (map size-w min-sizes)
                 min-width = (apply max min-widths)
@@ -243,18 +243,18 @@
             scores = (zip* (range (length scores)) scores)
             allocation-order = (width-allocation-order scores)
             (list (size min-width 0) max-width ea
-                  min-widths allocation-order)))
+                  min-widths eas allocation-order)))
          ((doc-filler min-sz max-w _)
-          (list min-sz max-w expander-neither '() '()))
+          (list min-sz max-w expander-neither '() '() '()))
          ((doc-frame _ fattr doc)
           (lets
-            (list _ max-width ea _ _) = (widths ctx doc)
-            flexible = (list (size 0 0) max-width ea '() '())
+            (list _ max-width ea _ _ _) = (widths ctx doc)
+            flexible = (list (size 0 0) max-width ea '() '() '())
             (expander-attr w? h?) = ea
             (match fattr
               ((frame-flexible _) flexible)
               ((frame-fixed (rect _ (size width height)))
-               (list (size width 0) width expander-neither '() '()))
+               (list (size width 0) width expander-neither '() '() '()))
               ((frame-fixed-height _ _)
                (:=* flexible (expander-attr w? #f) 'rest 'rest 'first))))))
        _ = (widths-memo-set! memo doc result)
@@ -331,7 +331,7 @@
     table-0-widths = (widths ctx table-0)
     (list t0c-min t0c-snug t0c-extra t0c-meh) =
     (lets
-      (list (size initial _) _ _ cmins callocs) = table-0-widths
+      (list (size initial _) _ _ cmins ceas callocs) = table-0-widths
       calc = (lambda (avail) (table-col-widths avail initial cmins callocs))
       (list (calc (+ 7 8 padding)) (calc max-width) (calc 100) (calc 35)))
     splice-border-widths =
@@ -340,45 +340,45 @@
     (begin
       (check-equal?
         (widths ctx chain-empty)
-        (list (size 2 0) 2 expander-neither '() '())
+        (list (size 2 0) 2 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-empties)
-        (list (size 2 0) 5 expander-neither '() '())
+        (list (size 2 0) 5 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-empties-tail)
-        (list (size 2 0) 6 expander-neither '() '())
+        (list (size 2 0) 6 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-empties-tail-head)
-        (list (size 3 0) 7 expander-neither '() '())
+        (list (size 3 0) 7 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-small)
-        (list (size 3 0) 7 expander-neither '() '())
+        (list (size 3 0) 7 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-nested)
-        (list (size 6 0) 22 expander-neither '() '())
+        (list (size 6 0) 22 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-nested-vlist)
-        (list (size 6 0) 22 expander-neither (list 6) (list (cons 0 16)))
+        (list (size 6 0) 22 expander-neither (list 6) (list expander-neither) (list (cons 0 16)))
         )
       (check-equal?
         (widths ctx chain-0)
-        (list (size 7 0) 17 expander-neither '() '())
+        (list (size 7 0) 17 expander-neither '() '() '())
         )
       (check-equal?
         (widths ctx chain-1)
-        (list (size 8 0) 27 expander-neither '() '())
+        (list (size 8 0) 27 expander-neither '() '() '())
         )
       (check-equal?
         table-0-widths
         (list (size (+ 7 8 padding) 0) max-width
               expander-neither
-              (splice-border-widths (list 7 8))
+              (splice-border-widths (list 7 8)) (make-list 5 expander-neither)
               (list (cons bw-test (- 17 8)) (cons 1 d0) (cons bw-test (- d1 (- 17 9)))))
         )
       (check-equal?
@@ -471,7 +471,7 @@
   (forf
     (list prefix header avail-width) = (list '() '() full-width)
     item <- items
-    (list _ max-width _ _ _) = (widths context item)
+    (list _ max-width _ _ _ _) = (widths context item)
     (if (>= avail-width (min max-width after-indent-width))
       (lets
         prefix = (if (empty? prefix) prefix
@@ -484,7 +484,7 @@
 
 (def (frame->blocks context style fattr full-width doc)
   frame-rect = (fn (crd height)
-    (list _ max-width _ _ _) = (widths context doc)
+    (list _ max-width _ _ _ _) = (widths context doc)
     width = (min max-width full-width)
     (rect crd (size width height)))
   (rect (coord x y) sz) =
@@ -514,7 +514,7 @@
      (chain->blocks ctx sty attr full-width items))
     ((doc-table sty rows)
      (lets
-       (list (size initial _) _ _ mins allocs) = (widths ctx doc)
+       (list (size initial _) _ _ mins eas allocs) = (widths ctx doc)
        col-widths = (table-col-widths full-width initial mins allocs)
        (list (table->styled-block ctx sty col-widths rows))))
     ((doc-filler (size min-w min-h) _ sz->block)
