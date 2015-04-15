@@ -13,10 +13,6 @@
   gen-compose
   gen-compose*
   gen-delegate
-  gen-fold
-  gen-for
-  gen-for/fold
-  gen-iterate
   gen-loop
   gen-response?
   generator
@@ -87,59 +83,6 @@
     (list 3 5 (void))
     ))
 
-(define (gen-fold on-susp on-result input acc gen)
-  (match (gen input)
-    ((gen-result r) (on-result r acc))
-    ((gen-susp v k)
-     (match-let (((list input acc) (on-susp v acc)))
-       (gen-fold on-susp on-result input acc k)))))
-
-(define-syntax gen-for/fold
-  (syntax-rules ()
-    ((_ (acc acc-init) (output gen-expr) on-susp result on-result)
-     (gen-fold (lambda/destruct (output acc) on-susp)
-               (lambda/destruct (result acc) on-result)
-               (void) acc-init (lambda (_) gen-expr)))))
-
-(define (gen-iterate on-susp gen (seed (void)))
-  (gen-fold (lambda (v _) (list (on-susp v) (void)))
-            (lambda (r _) r)
-            seed (void) gen))
-
-(define-syntax gen-for
-  (syntax-rules ()
-    ((_ (output gen-expr) body ...)
-     (gen-iterate (lambda/destruct (output) body ...) (lambda (_) gen-expr)))))
-
-(module+ test
-  (check-equal?
-    (gen-for
-      (v (run (yield (+ 3 (yield (+ 2 (yield 1)))))))
-      (* v 10))
-    1230
-    ))
-
-(define (gen->list gen)
-  (gen-for/fold (vs '()) (v (gen (void)))
-    (list (void) (cons v vs))
-    _ (reverse vs)))
-
-(module+ test
-  (check-equal?
-    (gen->list (generator _ (yield 3) (yield 5)))
-    (list 3 5)
-    ))
-
-(module+ test
-  (check-equal?
-    (gen->list (generator* yield0 _
-                (yield0 1)
-                (gen->list (generator* yield1 _
-                            (yield1 'ignored)
-                            (yield0 3)))
-                (yield0 4)))
-    (list 1 3 4)
-    ))
 
 (records gen-stream-state
   (gen-stream-pending gen)
@@ -208,6 +151,25 @@
   (check-equal?
     (for/list ((val (gen->stream (sequence->gen (in-range 10 16))))) val)
     (range 10 16)
+    ))
+
+(define (gen->list gen) (stream->list (gen->stream gen)))
+
+(module+ test
+  (check-equal?
+    (gen->list (generator _ (yield 3) (yield 5)))
+    (list 3 5)
+    ))
+
+(module+ test
+  (check-equal?
+    (gen->list (generator* yield0 _
+                (yield0 1)
+                (gen->list (generator* yield1 _
+                            (yield1 'ignored)
+                            (yield0 3)))
+                (yield0 4)))
+    (list 1 3 4)
     ))
 
 (define ((fn->gen fn) input)
