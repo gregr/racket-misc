@@ -13,7 +13,9 @@
   gen-compose
   gen-compose*
   gen-delegate
+  gen-fold
   gen-loop
+  gen-map
   gen-response?
   generator
   generator*
@@ -83,6 +85,35 @@
     (list 3 5 (void))
     ))
 
+(define (gen-fold f acc gen xs)
+  (let loop ((acc acc) (gen gen) (xs xs))
+    (match xs
+      ('() (gen-susp acc gen))
+      ((cons x xs)
+       (match (gen x)
+         ((gen-result r) (gen-result (list r acc xs)))
+         ((gen-susp v k) (loop (f v acc) k xs)))))))
+
+(define (gen-map gen xs)
+  (match (gen-fold cons '() gen xs)
+    ((gen-result (list r yielded xs))
+     (gen-result (list r (reverse yielded) xs)))
+    ((gen-susp yielded k) (gen-susp (reverse yielded) k))))
+
+(module+ test
+  (check-equal?
+    (gen-susp-v
+      (gen-map (generator* yield (xa)
+                 (yield (+ 4 (yield (+ 3 (yield (+ 2 (yield (+ 1 xa)))))))))
+               (list 10 20 30 40)))
+    (list 11 22 33 44)))
+
+(module+ test
+  (check-equal?
+    (gen-map (generator* yield (xa)
+               (yield (+ 4 (yield (+ 3 (yield (+ 2 (yield (+ 1 xa)))))))))
+             (list 10 20 30 40 50 60))
+    (gen-result (list 50 (list 11 22 33 44) (list 60)))))
 
 (records gen-stream-state
   (gen-stream-pending gen)
