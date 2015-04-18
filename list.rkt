@@ -18,6 +18,7 @@
   list->index-dict
   list->index-list
   list-range
+  list-range-reverse
   list-remove
   list-set
   list-has-key?
@@ -29,7 +30,6 @@
   list-inits
   list-path
   iterate
-  reverse-range
   sum
   )
 
@@ -223,12 +223,12 @@
     (list-remove '(a b c d) 4)
     '(a b c d)))
 
-(define (reverse-range xs start end)
+(define (list-range-reverse xs start end)
   (let-values (((prefix suffix) (split-at xs start)))
     (let-values (((target suffix) (split-at suffix (+ 1 (- end start)))))
       (append prefix (reverse target) suffix))))
 
 (module+ test
   (check-equal?
-    (reverse-range '(a b c d e f) 1 4)
+    (list-range-reverse '(a b c d e f) 1 4)
     '(a e d c b f)))
