@@ -17,6 +17,7 @@
   list-index-equal
   list->index-dict
   list->index-list
+  list-range
   list-remove
   list-set
   list-has-key?
@@ -187,6 +188,26 @@
   (check-equal?
     (list-ref-default '(a b c) 2 'd)
     'c))
+
+(define (list-range xs start end) (take (drop xs start) (- end start)))
+
+(module+ test
+  (check-equal?
+    (list-range '() 0 0)
+    '())
+  (check-equal?
+    (list-range '(a b c d) 0 0)
+    '())
+  (check-equal?
+    (list-range '(a b c d) 0 2)
+    '(a b))
+  (check-equal?
+    (list-range '(a b c d) 1 3)
+    '(b c))
+  (check-equal?
+    (list-range '(a b c d) 1 4)
+    '(b c d))
+  )
 
 (define (list-remove xs idx)
   (if (< idx (length xs))
