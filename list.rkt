@@ -19,6 +19,7 @@
   list->index-list
   list-range
   list-range-transform
+  list-range-remove
   list-range-reverse
   list-remove
   list-set
@@ -210,20 +211,6 @@
     '(b c d))
   )
 
-(define (list-remove xs idx)
-  (if (< idx (length xs))
-    (let-values (((start end) (split-at xs idx)))
-      (append start (rest end)))
-    xs))
-
-(module+ test
-  (check-equal?
-    (list-remove '(a b c d) 2)
-    '(a b d))
-  (check-equal?
-    (list-remove '(a b c d) 4)
-    '(a b c d)))
-
 (define ((list-range-transform f) xs start end)
   (let-values (((prefix suffix) (split-at xs start)))
     (let-values (((target suffix) (split-at suffix (- end start))))
@@ -245,3 +232,30 @@
     (list-range-reverse '(a b c d e f) 1 6)
     '(a f e d c b))
   )
+
+(define list-range-remove (list-range-transform (lambda (_) '())))
+
+(module+ test
+  (check-equal?
+    (list-range-remove '() 0 0)
+    '())
+  (check-equal?
+    (list-range-remove '(a b c d e) 1 3)
+    '(a d e))
+  (check-equal?
+    (list-range-remove '(a b c d e) 1 5)
+    '(a))
+  )
+
+(define (list-remove xs idx)
+  (if (< idx (length xs))
+    (list-range-remove xs idx (+ idx 1))
+    xs))
+
+(module+ test
+  (check-equal?
+    (list-remove '(a b c d) 2)
+    '(a b d))
+  (check-equal?
+    (list-remove '(a b c d) 4)
+    '(a b c d)))
