@@ -18,6 +18,7 @@
   list->index-dict
   list->index-list
   list-range
+  list-range-transform
   list-range-reverse
   list-remove
   list-set
@@ -223,12 +224,24 @@
     (list-remove '(a b c d) 4)
     '(a b c d)))
 
-(define (list-range-reverse xs start end)
+(define ((list-range-transform f) xs start end)
   (let-values (((prefix suffix) (split-at xs start)))
-    (let-values (((target suffix) (split-at suffix (+ 1 (- end start)))))
-      (append prefix (reverse target) suffix))))
+    (let-values (((target suffix) (split-at suffix (- end start))))
+      (append prefix (f target) suffix))))
+
+(define list-range-reverse (list-range-transform reverse))
 
 (module+ test
   (check-equal?
+    (list-range-reverse '() 0 0)
+    '())
+  (check-equal?
+    (list-range-reverse '(a b c d e f) 0 0)
+    '(a b c d e f))
+  (check-equal?
     (list-range-reverse '(a b c d e f) 1 4)
-    '(a e d c b f)))
+    '(a d c b e f))
+  (check-equal?
+    (list-range-reverse '(a b c d e f) 1 6)
+    '(a f e d c b))
+  )
