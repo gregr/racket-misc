@@ -1,0 +1,25 @@
+===============================================================================
+= current
+===============================================================================
+cursors:
+  additional operator for multiple transformations in sequence
+    more concise and more efficient
+  default void constructor for :=% and friends
+    won't be able to support varargs versions, but this is fine
+
+consolidate ui.rkt
+  a lot of this is unnecessary
+
+markout:
+  design is sucking due to too many special cases; can it be fixed?
+  seem to need height management, not just width
+    draw tables twice, measuring the first time to provide measurement the second time?
+      simplest quick fix; not a long term solution
+
+===============================================================================
+= future
+===============================================================================
+logic/relational programming
+  oleg's lambda term generation: http://okmij.org/ftp/Haskell/AlgorithmsH1.html#random-term
+
+simple proof checker
