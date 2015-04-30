@@ -182,9 +182,10 @@
 
 (define-syntax def
   (syntax-rules ()
+    ((_ ((pre ...) post ...) body ...)
+     (def (pre ...) (fn (post ...) body ...)))
     ((_ (name pattern ...) body ...)
-     (define name
-       (fn (pattern ...) body ...)))))
+     (define name (fn (pattern ...) body ...)))))
 
 (module+ test
   (def (test-def (list x y) z)
@@ -192,7 +193,13 @@
     (* z w))
   (check-equal?
     (test-def (list 1 2) 3)
-    9))
+    9)
+  (def (((test-def-curried (list a b)) c) (list d e))
+    result = (list a b c d e)
+    result)
+  (check-equal?
+    (((test-def-curried (list 1 2)) 3) (list 4 5))
+    '(1 2 3 4 5)))
 
 (define-syntax gn
   (syntax-rules ()
