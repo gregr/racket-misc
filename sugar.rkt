@@ -99,12 +99,12 @@
     ))
 
 (define-syntax forl
-  (syntax-rules (=)
+  (syntax-rules ()
     ((_ rest ...)
      (for_-cont for/list/match () () rest ...))))
 
 (define-syntax forl*
-  (syntax-rules (=)
+  (syntax-rules ()
     ((_ rest ...)
      (for_-cont for*/list/match () () rest ...))))
 
