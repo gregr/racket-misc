@@ -16,6 +16,11 @@ markout:
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
 
+sugar:
+  for_
+  extend def to support currying syntax
+  'values' pattern matching
+
 ===============================================================================
 = future
 ===============================================================================
