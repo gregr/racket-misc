@@ -126,6 +126,32 @@
     '((a 2) (a 4) (b 2) (b 4))
     ))
 
+(define-syntax for_
+  (syntax-rules ()
+    ((_ rest ...) (void (forl rest ...)))))
+
+(define-syntax for_*
+  (syntax-rules ()
+    ((_ rest ...) (void (forl* rest ...)))))
+
+(module+ test
+  (check-equal?
+    (for_ x <- '(a b c)
+          y <- '(1 2 3)
+      yy = (* 2 y)
+      (list x yy))
+    (void)
+    ))
+
+(module+ test
+  (check-equal?
+    (for_* x <- '(a b)
+           y <- '(1 2)
+      yy = (* 2 y)
+      (list x yy))
+    (void)
+    ))
+
 (define-syntax fn
   (syntax-rules ()
     ((_ (pattern ...) body ...)
