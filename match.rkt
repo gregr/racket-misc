@@ -6,6 +6,7 @@
   lambda/cata
   define/cata
   match/cata
+  match-let1+values
   for/fold/match/derived
   for*/fold/match/derived
   for/fold/match
@@ -22,6 +23,13 @@
 
 (module+ test
   (require rackunit))
+
+(define-syntax match-let1+values
+  (syntax-rules (values)
+    ((_ (values vals ...) val-expr body ...)
+     (let-values (((vals ...) val-expr)) body ...))
+    ((_ pattern val-expr body ...)
+     (match-let ((pattern val-expr)) body ...))))
 
 (define-syntax (lambda/destruct stx)
   (syntax-case stx ()

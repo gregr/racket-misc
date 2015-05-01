@@ -53,7 +53,7 @@
     ((_ (pattern <- value) body ...)
      (bind value (lambda/destruct (pattern) body ...)))
     ((_ (pattern = value) body ...)
-     (match-let ((pattern value)) body ...))))
+     (match-let1+values pattern value body ...))))
 
 (define-syntax (let/monad stx)
   (syntax-case stx ()

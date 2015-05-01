@@ -23,12 +23,6 @@
 (module+ test
   (require rackunit))
 
-(define-syntax match-let1+values
-  (syntax-rules (values)
-    ((_ (values vals ...) val-expr body ...)
-     (let-values (((vals ...) val-expr)) body ...))
-    ((_ pattern val-expr body ...)
-     (match-let ((pattern val-expr)) body ...))))
 (define-syntax lets1
   (syntax-rules (=)
     ((_ (pattern = value) body ...)
