@@ -6,6 +6,7 @@ cursors:
     more concise and more efficient
   default void constructor for :=% and friends
     won't be able to support varargs versions, but this is fine
+  support non-list pairs
 
 consolidate ui.rkt
   a lot of this is unnecessary
@@ -15,6 +16,17 @@ markout:
   seem to need height management, not just width
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
+
+kanren:
+  test microkanren
+  recover minikanren-like interface
+  support alternative search strategies
+  constraints
+    optional occurs-check?
+  fix hash unification
+  extended aggregate unification?
+    sets and hashes with variable keys may have multiple component orderings
+      unification could produce multiple possible subs
 
 ===============================================================================
 = future
