@@ -18,7 +18,6 @@ markout:
       simplest quick fix; not a long term solution
 
 kanren:
-  test microkanren
   recover minikanren-like interface
   support alternative search strategies
   constraints
