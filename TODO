@@ -22,6 +22,8 @@ kanren:
   support alternative search strategies
   constraints
     optional occurs-check?
+    https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
+      interesting sub-thread between torkel and pereira
   fix hash unification
   extended aggregate unification?
     sets and hashes with variable keys may have multiple component orderings
