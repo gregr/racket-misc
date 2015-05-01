@@ -23,10 +23,16 @@
 (module+ test
   (require rackunit))
 
+(define-syntax match-let1+values
+  (syntax-rules (values)
+    ((_ (values vals ...) val-expr body ...)
+     (let-values (((vals ...) val-expr)) body ...))
+    ((_ pattern val-expr body ...)
+     (match-let ((pattern val-expr)) body ...))))
 (define-syntax lets1
   (syntax-rules (=)
     ((_ (pattern = value) body ...)
-     (match-let ((pattern value)) body ...))))
+     (match-let1+values pattern value body ...))))
 
 (define-syntax lets
   (syntax-rules ()
@@ -41,8 +47,14 @@
       x = 4
       y = 3
       (+ x y))
-    7
-    ))
+    7)
+  (check-equal?
+    (lets
+      a = 1
+      (values b c) = (values 2 3)
+      d = 4
+      (list a b c d))
+    '(1 2 3 4)))
 
 (define-syntax for_-cont
   (syntax-rules (<-)
