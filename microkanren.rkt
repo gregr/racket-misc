@@ -11,8 +11,10 @@
   muk-state-sub
   muk-take
   muk-take-all
+  muk-var
   muk-var?
   muk-var->symbol
+  muk-reify
   muk-reify-var
   Zzz
   )
@@ -95,6 +97,10 @@
       ((just components)
        (muk-rebuild
          vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
+(define (muk-reify vtrans vrs states)
+  (forl (muk-state sub _) <- states
+        (forl vr <- vrs
+              (muk-reify-var sub vr vtrans))))
 
 (def ((== e0 e1) (muk-state sub next))
   (match (muk-unify sub e0 e1)
@@ -139,8 +145,7 @@
 
 (module+ test
   (define (reify-states name states)
-    (forl (muk-state sub _) <- states
-          (muk-reify-var sub (muk-var name) muk-var->symbol)))
+    (muk-reify muk-var->symbol (list (muk-var name)) states))
   (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
     (muk-take-all ((call/fresh one-and-two) muk-state-empty))
@@ -148,11 +153,11 @@
   (check-equal?
     (reify-states 0 (muk-take-all
                       ((call/fresh (fn (x) (== x x))) muk-state-empty)))
-    '(_.0))
+    '((_.0)))
   (define (fives x) (disj* (== x 5) (fives x)))
   (check-equal?
     (reify-states 0 (muk-take 1 ((call/fresh fives) muk-state-empty)))
-    '(5))
+    '((5)))
   (define (sixes x) (disj* (== x 6) (sixes x)))
   (define fives-and-sixes
     (call/fresh (lambda (x) (disj (fives x) (sixes x)))))
@@ -160,5 +165,5 @@
     (list st0 st1) = (muk-take 2 (fives-and-sixes muk-state-empty))
     (check-equal?
       (reify-states 0 (list st0 st1))
-      '(5 6))
+      '((5) (6)))
     ))
