@@ -3,6 +3,7 @@
   def
   fn
   fnr
+  for_
   forf
   forf*
   forl
