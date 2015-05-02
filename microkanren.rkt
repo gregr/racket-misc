@@ -121,15 +121,11 @@
 (define-syntax Zzz
   (syntax-rules () ((_ goal) (lambda (st) (thunk (goal st))))))
 
-(define-syntax conj*-cont
-  (syntax-rules ()
-    ((_ g0 g1) (conj g0 g1))
-    ((_ g0 gs ...) (conj g0 (conj*-cont gs ...)))))
 (define-syntax conj*
   (syntax-rules ()
     ((_) muk-unit)
     ((_ g0) g0)
-    ((_ gs ...) (Zzz (conj*-cont gs ...)))))
+    ((_ g0 gs ...) (conj g0 (conj* gs ...)))))
 (define-syntax disj*-cont
   (syntax-rules ()
     ((_ g0) (Zzz g0))
