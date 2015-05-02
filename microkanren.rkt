@@ -54,6 +54,14 @@
 (define (vector-components vec) (vector->list vec))
 (define (struct-components str) (vector-components (struct->vector str)))
 (define (hash-components hsh) (hash->list hsh))  ; TODO: generic key sorting
+(define (muk-split aggs)
+  (forf components = (nothing)
+        (list pred make-components) <- `((,pair? ,pair-components)
+                                         (,vector? ,vector-components)
+                                         (,struct? ,struct-components)
+                                         (,hash? ,hash-components))
+        #:break (just? components)
+        (if (andmap pred aggs) (just (map make-components aggs)) components)))
 
 (def (muk-unify sub e0 e1)
   e0 = (muk-sub-get sub e0)
@@ -62,22 +70,11 @@
     (lets
       (list e0 e1) = (if (muk-var? e1) (list e1 e0) (list e0 e1))
       (if (muk-var? e0) (just (muk-sub-add sub e0 e1))
-        (lets
-          (list found components) =
-          (forf (list found components) = (list #f '())
-                (list pred make-components) <- `((,pair? ,pair-components)
-                                                 (,vector? ,vector-components)
-                                                 (,struct? ,struct-components)
-                                                 (,hash? ,hash-components))
-                #:break found
-                found = (and (pred e0) (pred e1))
-                (if found
-                  (list found (zip (map make-components (list e0 e1))))
-                  (list found components)))
-          (if found
-            (monad-foldl maybe-monad
-              (fn (sub (list e0c e1c)) (muk-unify sub e0c e1c)) sub components)
-            (nothing)))))))
+        (begin/with-monad maybe-monad
+          components <- (muk-split (list e0 e1))
+          (monad-foldl maybe-monad
+            (fn (sub (list e0c e1c)) (muk-unify sub e0c e1c)) sub
+            (zip components)))))))
 
 (def ((== e0 e1) (muk-state sub next))
   (match (muk-unify sub e0 e1)
