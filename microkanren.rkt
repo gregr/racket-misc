@@ -6,6 +6,8 @@
   conj
   disj
   muk-state-empty
+  muk-take
+  muk-take-all
   Zzz
   )
 
@@ -91,6 +93,14 @@
 (define-syntax Zzz
   (syntax-rules () ((_ goal) (lambda (st) (thunk (goal st))))))
 
+(define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
+(define (muk-take n ss)
+  (if (= 0 n) '()
+    (match (muk-force ss)
+      ('() '())
+      ((cons st ss) (list* st (muk-take (- n 1) ss))))))
+(define (muk-take-all ss) (muk-take -1 ss))
+
 (module+ test
   (define (get-by-name name st) (muk-sub-get (muk-state-sub st) (muk-var 0)))
   (define (one-and-two x) (conj (== x 1) (== x 2)))
@@ -105,10 +115,7 @@
   (define fives-and-sixes
     (call/fresh (lambda (x) (disj (fives x) (sixes x)))))
   (lets
-    ss0 = (fives-and-sixes muk-state-empty)
-    st0 = (car ss0)
-    ss1 = ((cdr ss0))
-    st1 = (car ss1)
+    (list st0 st1) = (muk-take 2 (fives-and-sixes muk-state-empty))
     (check-equal?
       (map (curry get-by-name 0) (list st0 st1))
       '(5 6)))
