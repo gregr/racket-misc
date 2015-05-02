@@ -2,7 +2,7 @@
 ; described in: http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf
 (provide
   ==
-  call/fresh
+  call/var
   conj
   conj*
   disj
@@ -112,7 +112,7 @@
     ((nothing) muk-mzero)
     ((just sub) (muk-unit (muk-state sub next)))))
 
-(def ((call/fresh f) (muk-state sub next))
+(def ((call/var f) (muk-state sub next))
   ((f next) (muk-state sub (muk-var-next next))))
 
 (define ((conj g0 g1) st) (muk-bind (g0 st) g1))
@@ -149,19 +149,19 @@
     (muk-reify muk-var->symbol (list (muk-var name)) states))
   (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
-    (muk-take-all ((call/fresh one-and-two) muk-state-empty))
+    (muk-take-all ((call/var one-and-two) muk-state-empty))
     '())
   (check-equal?
     (reify-states 0 (muk-take-all
-                      ((call/fresh (fn (x) (== x x))) muk-state-empty)))
+                      ((call/var (fn (x) (== x x))) muk-state-empty)))
     '((_.0)))
   (define (fives x) (disj* (== x 5) (fives x)))
   (check-equal?
-    (reify-states 0 (muk-take 1 ((call/fresh fives) muk-state-empty)))
+    (reify-states 0 (muk-take 1 ((call/var fives) muk-state-empty)))
     '((5)))
   (define (sixes x) (disj* (== x 6) (sixes x)))
   (define fives-and-sixes
-    (call/fresh (lambda (x) (disj (fives x) (sixes x)))))
+    (call/var (lambda (x) (disj (fives x) (sixes x)))))
   (lets
     (list st0 st1) = (muk-take 2 (fives-and-sixes muk-state-empty))
     (check-equal?
@@ -171,8 +171,8 @@
   (record thing one two)
   (for_
     build <- (list cons vector thing)
-    rel = (call/fresh
-            (lambda (x) (call/fresh
+    rel = (call/var
+            (lambda (x) (call/var
                           (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
     (check-equal?
       (reify-states
