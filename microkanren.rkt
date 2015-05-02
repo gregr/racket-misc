@@ -61,18 +61,23 @@
 (def (pair-components (cons a d)) (list a d))
 (define (vector-components vec) (vector->list vec))
 (define (struct-components str) (vector-components (struct->vector str)))
-(define (hash-components hsh) (hash->list hsh))  ; TODO: generic key sorting
+;(define (hash-components hsh) (hash->list hsh))  ; TODO: generic key sorting
 (define (muk-split aggs)
   (forf components = (nothing)
         (list pred make-components) <- `((,pair? ,pair-components)
                                          (,vector? ,vector-components)
-                                         (,struct? ,struct-components)
-                                         (,hash? ,hash-components))
+                                         (,struct? ,struct-components))
         #:break (just? components)
         (if (andmap pred aggs) (just (map make-components aggs)) components)))
 (def (muk-rebuild agg components)
-  (values sty _) = (struct-info agg)
-  (apply (struct-type-make-constructor sty) components))
+  rebuild =
+  (cond ((pair? agg) (curry apply cons))
+        ((vector? agg) list->vector)
+        ((struct? agg)
+         (lets (values sty _) = (struct-info agg)
+               (compose1 (curry apply (struct-type-make-constructor sty))
+                         cdr))))
+  (rebuild components))
 
 (def (muk-unify sub e0 e1)
   e0 = (muk-sub-get sub e0)
@@ -94,7 +99,7 @@
   (if (muk-var? vr) (vtrans vr)
     (match (muk-split (list vr))
       ((nothing) vr)
-      ((just components)
+      ((just (list components))
        (muk-rebuild
          vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
@@ -166,4 +171,15 @@
     (check-equal?
       (reify-states 0 (list st0 st1))
       '((5) (6)))
-    ))
+    )
+  (record thing one two)
+  (for_
+    build <- (list cons vector thing)
+    rel = (call/fresh
+            (lambda (x) (call/fresh
+                          (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
+    (check-equal?
+      (reify-states
+        0 (muk-take 1 (rel muk-state-empty)))
+      `((,(build 1 2)))))
+  )
