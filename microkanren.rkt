@@ -4,7 +4,9 @@
   ==
   call/fresh
   conj
+  conj*
   disj
+  disj*
   muk-state-empty
   muk-state-sub
   muk-take
@@ -108,6 +110,25 @@
 (define-syntax Zzz
   (syntax-rules () ((_ goal) (lambda (st) (thunk (goal st))))))
 
+(define-syntax conj*-cont
+  (syntax-rules ()
+    ((_ g0 g1) (conj g0 g1))
+    ((_ g0 gs ...) (conj g0 (conj*-cont gs ...)))))
+(define-syntax conj*
+  (syntax-rules ()
+    ((_) muk-unit)
+    ((_ g0) g0)
+    ((_ gs ...) (Zzz (conj*-cont gs ...)))))
+(define-syntax disj*-cont
+  (syntax-rules ()
+    ((_ g0) (Zzz g0))
+    ((_ g0 gs ...) (disj (Zzz g0) (disj*-cont gs ...)))))
+(define-syntax disj*
+  (syntax-rules ()
+    ((_) (const muk-zero))
+    ((_ g0) g0)
+    ((_ gs ...) (disj*-cont gs ...))))
+
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
 (define (muk-take n ss)
   (if (= 0 n) '()
@@ -117,23 +138,22 @@
 (define (muk-take-all ss) (muk-take -1 ss))
 
 (module+ test
-  (define (get-by-name name st) (muk-sub-get (muk-state-sub st) (muk-var 0)))
   (define (reify-states name states)
     (forl (muk-state sub _) <- states
           (muk-reify-var sub (muk-var name) muk-var->symbol)))
-  (define (one-and-two x) (conj (== x 1) (== x 2)))
+  (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
-    ((call/fresh one-and-two) muk-state-empty)
+    (muk-take-all ((call/fresh one-and-two) muk-state-empty))
     '())
   (check-equal?
     (reify-states 0 (muk-take-all
                       ((call/fresh (fn (x) (== x x))) muk-state-empty)))
     '(_.0))
-  (define (fives x) (disj (== x 5) (Zzz (fives x))))
+  (define (fives x) (disj* (== x 5) (fives x)))
   (check-equal?
     (reify-states 0 (muk-take 1 ((call/fresh fives) muk-state-empty)))
     '(5))
-  (define (sixes x) (disj (== x 6) (Zzz (sixes x))))
+  (define (sixes x) (disj* (== x 6) (sixes x)))
   (define fives-and-sixes
     (call/fresh (lambda (x) (disj (fives x) (sixes x)))))
   (lets
