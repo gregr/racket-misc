@@ -6,8 +6,12 @@
   conj
   disj
   muk-state-empty
+  muk-state-sub
   muk-take
   muk-take-all
+  muk-var?
+  muk-var->symbol
+  muk-reify-var
   Zzz
   )
 
@@ -62,6 +66,9 @@
                                          (,hash? ,hash-components))
         #:break (just? components)
         (if (andmap pred aggs) (just (map make-components aggs)) components)))
+(def (muk-rebuild agg components)
+  (values sty _) = (struct-info agg)
+  (apply (struct-type-make-constructor sty) components))
 
 (def (muk-unify sub e0 e1)
   e0 = (muk-sub-get sub e0)
@@ -75,6 +82,17 @@
           (monad-foldl maybe-monad
             (fn (sub (list e0c e1c)) (muk-unify sub e0c e1c)) sub
             (zip components)))))))
+
+(def (muk-var->symbol (muk-var name))
+  (string->symbol (string-append "_." (number->string name))))
+(def (muk-reify-var sub vr vtrans)
+  vr = (muk-sub-get sub vr)
+  (if (muk-var? vr) (vtrans vr)
+    (match (muk-split (list vr))
+      ((nothing) vr)
+      ((just components)
+       (muk-rebuild
+         vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
 
 (def ((== e0 e1) (muk-state sub next))
   (match (muk-unify sub e0 e1)
@@ -100,20 +118,27 @@
 
 (module+ test
   (define (get-by-name name st) (muk-sub-get (muk-state-sub st) (muk-var 0)))
+  (define (reify-states name states)
+    (forl (muk-state sub _) <- states
+          (muk-reify-var sub (muk-var name) muk-var->symbol)))
   (define (one-and-two x) (conj (== x 1) (== x 2)))
   (check-equal?
     ((call/fresh one-and-two) muk-state-empty)
     '())
+  (check-equal?
+    (reify-states 0 (muk-take-all
+                      ((call/fresh (fn (x) (== x x))) muk-state-empty)))
+    '(_.0))
   (define (fives x) (disj (== x 5) (Zzz (fives x))))
   (check-equal?
-    (get-by-name 0 (car ((call/fresh fives) muk-state-empty)))
-    5)
+    (reify-states 0 (muk-take 1 ((call/fresh fives) muk-state-empty)))
+    '(5))
   (define (sixes x) (disj (== x 6) (Zzz (sixes x))))
   (define fives-and-sixes
     (call/fresh (lambda (x) (disj (fives x) (sixes x)))))
   (lets
     (list st0 st1) = (muk-take 2 (fives-and-sixes muk-state-empty))
     (check-equal?
-      (map (curry get-by-name 0) (list st0 st1))
-      '(5 6)))
-  )
+      (reify-states 0 (list st0 st1))
+      '(5 6))
+    ))
