@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  ==
   conde
   exist
   matche
