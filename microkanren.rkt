@@ -8,7 +8,6 @@
   disj
   disj*
   muk-state-empty
-  muk-state-sub
   muk-take
   muk-take-all
   muk-var
@@ -33,16 +32,17 @@
 (module+ test
   (require rackunit))
 
-(record muk-var name)
-(record muk-sub bindings)
-(define muk-sub-empty (muk-sub (hash)))
-(define (muk-sub-get sub vr)
-  (match (if (muk-var? vr) (dict-get (muk-sub-bindings sub) vr) (nothing))
+(records muk-term
+  (muk-var name)
+  (muk-func desc args))
+(record muk-func-descriptor name op)
+(define (muk-sub-get-var sub vr)
+  (match (if (muk-var? vr) (dict-get sub vr) (nothing))
     ((nothing) vr)
-    ((just vr) (muk-sub-get sub vr))))
-(def (muk-sub-add (muk-sub bs) vr val) (muk-sub (dict-add bs vr val)))
-(record muk-state sub next-var)
-(define muk-state-empty (muk-state muk-sub-empty (muk-var 0)))
+    ((just vr) (muk-sub-get-var sub vr))))
+(def (muk-sub-add bs vr val) (dict-add bs vr val))
+(record muk-state sub-vars sub-funcs func-deps next-var)
+(define muk-state-empty (muk-state (hash) (hash) (hash) (muk-var 0)))
 (def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
 
 (define muk-mzero '())
@@ -80,8 +80,8 @@
   (rebuild components))
 
 (def (muk-unify sub e0 e1)
-  e0 = (muk-sub-get sub e0)
-  e1 = (muk-sub-get sub e1)
+  e0 = (muk-sub-get-var sub e0)
+  e1 = (muk-sub-get-var sub e1)
   (if (equal? e0 e1) (just sub)
     (lets
       (list e0 e1) = (if (muk-var? e1) (list e1 e0) (list e0 e1))
@@ -95,7 +95,7 @@
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (number->string name))))
 (def (muk-reify-var sub vr vtrans)
-  vr = (muk-sub-get sub vr)
+  vr = (muk-sub-get-var sub vr)
   (if (muk-var? vr) (vtrans vr)
     (match (muk-split (list vr))
       ((nothing) vr)
@@ -103,17 +103,17 @@
        (muk-rebuild
          vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
-  (forl (muk-state sub _) <- states
+  (forl (muk-state sub _ _ _) <- states
         (forl vr <- vrs
               (muk-reify-var sub vr vtrans))))
 
-(def ((== e0 e1) (muk-state sub next))
+(def ((== e0 e1) (muk-state sub sub-func func-deps next))
   (match (muk-unify sub e0 e1)
     ((nothing) muk-mzero)
-    ((just sub) (muk-unit (muk-state sub next)))))
+    ((just sub) (muk-unit (muk-state sub sub-func func-deps next)))))
 
-(def ((call/var f) (muk-state sub next))
-  ((f next) (muk-state sub (muk-var-next next))))
+(def ((call/var f) (muk-state sub sub-func func-deps next))
+  ((f next) (muk-state sub sub-func func-deps (muk-var-next next))))
 
 (define ((conj g0 g1) st) (muk-bind (g0 st) g1))
 (define ((disj g0 g1) st) (muk-mplus (g0 st) (g1 st)))
