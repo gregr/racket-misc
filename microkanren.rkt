@@ -28,11 +28,15 @@
   "sugar.rkt"
   racket/dict
   racket/function
+  racket/set
   (except-in racket/match ==)
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    racket/list
+    rackunit
+    ))
 
 (records muk-term
   (muk-var name)
@@ -96,6 +100,37 @@
                (compose1 (curry apply (struct-type-make-constructor sty))
                          cdr))))
   (rebuild components))
+
+(define (muk-term->vars term)
+  (define (recur xs) (foldl set-union (set) (map muk-term->vars xs)))
+  (match term
+    ((muk-var _) (set term))
+    ((muk-func _ args) (recur args))
+    (_ (match (muk-split (list term))
+         ((nothing) (set))
+         ((just (list components)) (recur components))))))
+
+(module+ test
+  (lets
+    vars = (map muk-var (range 3))
+    (list v0 v1 v2) = vars
+    f0 = (muk-func 'zero (list v0 v1))
+    f1 = (muk-func 'one (list v2 f0))
+    f2 = (muk-func 'two (list f0 f1 v1))
+    (begin
+      (check-equal?
+        (map muk-term->vars vars)
+        (map set vars))
+      (check-equal?
+        (muk-term->vars f0)
+        (set v0 v1))
+      (check-equal?
+        (muk-term->vars f1)
+        (set v0 v1 v2))
+      (check-equal?
+        (muk-term->vars f2)
+        (set v0 v1 v2))
+      )))
 
 (def (muk-unify sub e0 e1)
   e0 = (muk-sub-get-var sub e0)
