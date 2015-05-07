@@ -195,17 +195,21 @@
       (check-equal? (muk-term->vars nf2) (set v4 v3 v1))
       )))
 
-(def (muk-unify sub e0 e1)
-  e0 = (muk-sub-get-var sub e0)
-  e1 = (muk-sub-get-var sub e1)
-  (if (equal? e0 e1) (just sub)
+(define (muk-normalize-term st term)
+  (if (muk-term? term) (muk-normalize-get st term) (list st term)))
+
+(def (muk-unify st e0 e1)
+  (list st e0) = (muk-normalize-term st e0)
+  (list st e1) = (muk-normalize-term st e1)
+  (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st
+  (if (equal? e0 e1) (just st)
     (lets
       (list e0 e1) = (if (muk-var? e1) (list e1 e0) (list e0 e1))
-      (if (muk-var? e0) (just (muk-sub-add sub e0 e1))
+      (if (muk-var? e0) (just (:=* st (muk-sub-add sub-vars e0 e1) 'sub-vars))
         (begin/with-monad maybe-monad
           components <- (muk-split (list e0 e1))
           (monad-foldl maybe-monad
-            (fn (sub (list e0c e1c)) (muk-unify sub e0c e1c)) sub
+            (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
             (zip components)))))))
 
 (def (muk-var->symbol (muk-var name))
@@ -223,10 +227,10 @@
         (forl vr <- vrs
               (muk-reify-var sub vr vtrans))))
 
-(def ((== e0 e1) (muk-state sub sub-func func-deps func-interps next))
-  (match (muk-unify sub e0 e1)
+(define ((== e0 e1) st)
+  (match (muk-unify st e0 e1)
     ((nothing) muk-mzero)
-    ((just sub) (muk-unit (muk-state sub sub-func func-deps func-interps next)))))
+    ((just st) (muk-unit st))))
 
 (define ((call/var f) st)
   ((f (:.* st 'next-var)) (:~* st muk-var-next 'next-var)))
