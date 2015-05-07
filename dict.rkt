@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   dict-add
+  dict-diff
   dict-empty
   dict-get
   dict-subtract
@@ -8,6 +9,7 @@
   )
 
 (require
+  "match.rkt"
   "maybe.rkt"
   racket/dict
   )
@@ -32,3 +34,15 @@
     (dict-subtract (hash 'a 1 'b 2 'c 3 'd 4 'e 5 'f 6)
                    (hash 'b 7 'd 4) (hash 'b 4 'e 3))
     (hash 'a 1 'c 3 'f 6)))
+
+(define (dict-diff d0 d1)
+  (for/list/match (((cons key val) (dict->list d0))
+                   #:unless (equal? (just val) (dict-get d1 key)))
+                  (cons key val)))
+
+(module+ test
+  (check-equal?
+    (make-immutable-hash
+      (dict-diff (hash 'b 5 'c 3 'a 1 'e 11 'f 12)
+                 (hash 'a 1 'b 2 'c 3 'd 4)))
+    (hash 'b 5 'e 11 'f 12)))
