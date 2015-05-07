@@ -47,6 +47,21 @@
 (define muk-state-empty (muk-state (hash) (hash) (hash) (hash) (muk-var 0)))
 (define ((muk-state-interpret name op) st)
   (:~* st (lambda (fis) (dict-set fis name op)) 'func-interps))
+(def (muk-sub-prefix (muk-state sub-vars-old _ _ _ _)
+                     (muk-state sub-vars-new _ _ _ _))
+  (forl
+    (cons key val) <- (dict->list sub-vars-new)
+    #:unless (equal? (just val) (dict-get sub-vars-old key))
+    (cons key val)))
+
+(module+ test
+  (check-equal?
+    (make-immutable-hash
+      (apply muk-sub-prefix
+             (map (fn (sub) (:=* muk-state-empty sub 'sub-vars))
+                  (list (hash 'a 1 'b 2 'c 3 'd 4)
+                        (hash 'b 5 'c 3 'a 1 'e 11 'f 12)))))
+    (hash 'b 5 'e 11 'f 12)))
 
 (define muk-mzero '())
 (define (muk-mplus ss1 ss2)
