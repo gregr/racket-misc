@@ -321,7 +321,7 @@
     ((_ g0 gs ...) (disj (Zzz g0) (disj*-cont gs ...)))))
 (define-syntax disj*
   (syntax-rules ()
-    ((_) (const muk-zero))
+    ((_) (const muk-mzero))
     ((_ g0) g0)
     ((_ gs ...) (disj*-cont gs ...))))
 
