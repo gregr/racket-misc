@@ -7,9 +7,9 @@
   conj*
   disj
   disj*
+  interpret
   muk-func-app
   muk-state-empty
-  muk-state-interpret
   muk-take
   muk-take-all
   muk-term?
@@ -284,6 +284,9 @@
 
 (define ((conj g0 g1) st) (muk-bind (g0 st) g1))
 (define ((disj g0 g1) st) (muk-mplus (g0 st) (g1 st)))
+
+(define ((interpret interpretations) st)
+  (muk-unit (muk-state-interpret st interpretations)))
 
 (define-syntax Zzz
   (syntax-rules () ((_ goal) (lambda (st) (thunk (goal st))))))
