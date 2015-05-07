@@ -14,7 +14,6 @@
   muk-var?
   muk-var->symbol
   muk-reify
-  muk-reify-var
   Zzz
   )
 
@@ -42,10 +41,11 @@
   (muk-var name)
   (muk-func name args))
 (def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
-(define (muk-sub-get-var sub vr)
-  (match (if (muk-var? vr) (dict-get sub vr) (nothing))
-    ((nothing) vr)
-    ((just vr) (muk-sub-get-var sub vr))))
+(define (muk-sub-get-var st vr)
+  (let loop ((sub (:.* st 'sub-vars)) (vr vr))
+    (match (if (muk-var? vr) (dict-get sub vr) (nothing))
+      ((nothing) vr)
+      ((just vr) (loop sub vr)))))
 (def (muk-sub-add bs vr val) (dict-add bs vr val))
 (record muk-state sub-vars sub-funcs func-deps func-interps next-var)
 (define muk-state-empty (muk-state (hash) (hash) (hash) (hash) (muk-var 0)))
@@ -162,7 +162,7 @@
           (list st (list* narg normalized))))
   (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st
   (match term
-    ((muk-var _) (list st (muk-sub-get-var sub-vars term)))
+    ((muk-var _) (list st (muk-sub-get-var st term)))
     ((muk-func name args)
      (lets (list st normalized) = (normalize-get st args)
            op = (dict-ref func-interps name)
@@ -244,18 +244,18 @@
 
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (number->string name))))
-(def (muk-reify-var sub vr vtrans)
-  vr = (muk-sub-get-var sub vr)
+(def (muk-reify-var st vr vtrans)
+  vr = (muk-sub-get-var st vr)
   (if (muk-var? vr) (vtrans vr)
     (match (muk-split (list vr))
       ((nothing) vr)
       ((just (list components))
        (muk-rebuild
-         vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
+         vr (map (fn (vr) (muk-reify-var st vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
-  (forl (muk-state sub _ _ _ _) <- states
+  (forl st <- states
         (forl vr <- vrs
-              (muk-reify-var sub vr vtrans))))
+              (muk-reify-var st vr vtrans))))
 
 (define ((== e0 e1) st)
   (match (muk-unify-and-update st e0 e1)
