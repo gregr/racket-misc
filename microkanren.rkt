@@ -1,5 +1,5 @@
 #lang racket/base
-; described in: http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf
+; variant of: http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf
 (provide
   ==
   call/var
@@ -19,12 +19,14 @@
   )
 
 (require
+  "cursor.rkt"
   "dict.rkt"
   "list.rkt"
   "maybe.rkt"
   "monad.rkt"
   "record.rkt"
   "sugar.rkt"
+  racket/dict
   racket/function
   (except-in racket/match ==)
   )
@@ -34,16 +36,17 @@
 
 (records muk-term
   (muk-var name)
-  (muk-func desc args))
-(record muk-func-descriptor name op)
+  (muk-func name args))
+(def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
 (define (muk-sub-get-var sub vr)
   (match (if (muk-var? vr) (dict-get sub vr) (nothing))
     ((nothing) vr)
     ((just vr) (muk-sub-get-var sub vr))))
 (def (muk-sub-add bs vr val) (dict-add bs vr val))
-(record muk-state sub-vars sub-funcs func-deps next-var)
-(define muk-state-empty (muk-state (hash) (hash) (hash) (muk-var 0)))
-(def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
+(record muk-state sub-vars sub-funcs func-deps func-interps next-var)
+(define muk-state-empty (muk-state (hash) (hash) (hash) (hash) (muk-var 0)))
+(define ((muk-state-interpret name op) st)
+  (:~* st (lambda (fis) (dict-set fis name op)) 'func-interps))
 
 (define muk-mzero '())
 (define (muk-mplus ss1 ss2)
@@ -103,17 +106,17 @@
        (muk-rebuild
          vr (map (fn (vr) (muk-reify-var sub vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
-  (forl (muk-state sub _ _ _) <- states
+  (forl (muk-state sub _ _ _ _) <- states
         (forl vr <- vrs
               (muk-reify-var sub vr vtrans))))
 
-(def ((== e0 e1) (muk-state sub sub-func func-deps next))
+(def ((== e0 e1) (muk-state sub sub-func func-deps func-interps next))
   (match (muk-unify sub e0 e1)
     ((nothing) muk-mzero)
-    ((just sub) (muk-unit (muk-state sub sub-func func-deps next)))))
+    ((just sub) (muk-unit (muk-state sub sub-func func-deps func-interps next)))))
 
-(def ((call/var f) (muk-state sub sub-func func-deps next))
-  ((f next) (muk-state sub sub-func func-deps (muk-var-next next))))
+(define ((call/var f) st)
+  ((f (:.* st 'next-var)) (:~* st muk-var-next 'next-var)))
 
 (define ((conj g0 g1) st) (muk-bind (g0 st) g1))
 (define ((disj g0 g1) st) (muk-mplus (g0 st) (g1 st)))
