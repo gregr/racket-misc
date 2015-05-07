@@ -7,9 +7,12 @@
   conj*
   disj
   disj*
+  muk-func-app
   muk-state-empty
+  muk-state-interpret
   muk-take
   muk-take-all
+  muk-term?
   muk-var
   muk-var?
   muk-var->symbol
@@ -52,8 +55,13 @@
 (define (muk-sub-add st vr val)
   (:~* (:~* st (lambda (bs) (dict-add bs vr val)) 'sub-vars)
        (curry list* vr) 'bound-vars))
-(define ((muk-state-interpret name op) st)
-  (:~* st (lambda (fis) (dict-set fis name op)) 'func-interps))
+(define (muk-state-interpret st interpretations)
+  (:~* st (fn (func-interps)
+              (forf
+                interps = func-interps
+                (cons name op) <- (dict->list interpretations)
+                (dict-set interps name op)))
+       'func-interps))
 (def (muk-sub-prefix (muk-state vars-old _ _ _ _ _)
                      (muk-state vars-new _ _ _ _ _))
   (let loop ((current vars-new))
@@ -182,9 +190,9 @@
   (lets
     st = (:=* muk-state-empty (muk-var 3) 'next-var)
     id-func-op = (fn (fname) (lambda xs (muk-func-app fname xs)))
-    st = (forf st = st
-               fname <- (list 'zero 'one 'two)
-               ((muk-state-interpret fname (id-func-op fname)) st))
+    interps = (forl fname <- (list 'zero 'one 'two)
+                    (cons fname (id-func-op fname)))
+    st = (muk-state-interpret st interps)
     id-func = (fn (name args) (apply (id-func-op name) args))
     vars = (map muk-var (range 5))
     (list v0 v1 v2 v3 v4) = vars
