@@ -10,9 +10,12 @@
   interpret
   muk-func-app
   muk-state-empty
+  muk-sub-get-var
+  muk-sub-prefix
   muk-take
   muk-take-all
   muk-term?
+  muk-unify-and-update
   muk-var
   muk-var?
   muk-var->symbol
