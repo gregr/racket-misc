@@ -9,8 +9,13 @@
   )
 
 (require
+  "maybe.rkt"
   "microkanren.rkt"
+  "monad.rkt"
+  "sugar.rkt"
   racket/list
+  (except-in racket/match ==)
+  racket/set
   (for-syntax
     racket/base
     racket/list
@@ -62,6 +67,36 @@
     ((_ arg (pattern gs ...) ...)
      (let ((param arg)) (disj* (match1e param pattern gs ...) ...)))))
 
+(define (interp-=/= . or-diseqs)
+  (match (monad-foldl maybe-monad
+          (fn (st (cons e0 e1)) (muk-unify-and-update st e0 e1))
+          muk-state-empty or-diseqs)
+    ((nothing) #t)
+    ((just st-new)
+     (lets
+       or-diseqs = (forl
+                     vr <- (muk-sub-prefix muk-state-empty st-new)
+                     val = (muk-sub-get-var st-new vr)
+                     (cons vr val))
+       (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
+
+(define interpretations
+  (hash
+    '=/= interp-=/=
+    ))
+
+(define with-constraints (interpret interpretations))
+
+(define (=/= e0 e1) (== #t (muk-func-app '=/= (list (cons e0 e1)))))
+(define (all-diffo xs)
+  (matche xs
+    ('())
+    (`(,_))
+    (`(,a ,ad . ,dd)
+      (=/= a ad)
+      (all-diffo `(,a . ,dd))
+      (all-diffo `(,ad . ,dd)))))
+
 (module+ test
   (check-equal?
     (run* (x y) (== (cons (list x 3) 5) (cons (list 4 y) 5)))
@@ -83,30 +118,22 @@
       ((1 2 3) (4 5))
       ((1 2 3 4) (5))
       ((1 2 3 4 5) ())))
-  (define (rember*o tr o)
+  (check-match
+    (run 1 (q) with-constraints (all-diffo `(2 3 ,q)))
+    `((,q : ((=/= (,q . 2)) == #t) ((=/= (,q . 3)) == #t))))
+  (define (rembero x ls out)
     (conde
-      ((== '() tr) (== '() o))
-      ((exist (a d)
-        (== (cons a d) tr)
+      ((== '() ls) (== '() out))
+      ((exist (a d res)
+        (== `(,a . ,d) ls)
+        (rembero x d res)
         (conde
-          ((exist (aa da)
-            (== (cons aa da) a)
-            (exist (a^ d^)
-              (rember*o a a^)
-              (rember*o d d^)
-              (== (cons a^ d^) o))))
-          ((== a 8) (rember*o d o))
-          ((exist (d^)
-            (rember*o d d^)
-            (== (cons a d^) o))))))))
+          ((== a x) (== res out))
+          ((=/= a x) (== `(,a . ,res) out)))))))
   (check-equal?
-    (run 8 (q) (rember*o q '(1 2 8 3 4 5)))
-    '(((1 2 8 3 4 5))
-      ((1 2 8 3 4 5 8))
-      ((1 2 8 3 4 8 5))
-      ((1 2 8 3 8 4 5))
-      ((1 2 8 8 3 4 5))
-      ((1 2 8 8 3 4 5))
-      ((1 8 2 8 3 4 5))
-      ((8 1 2 8 3 4 5))))
+    (run* (q) with-constraints (rembero 'a '(a b a c) q))
+    '(((b c))))
+  (check-equal?
+    (run* (q) with-constraints (rembero 'a '(a b c) '(a b c)))
+    '())
   )
