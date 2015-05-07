@@ -39,7 +39,7 @@
 
 (records muk-term
   (muk-var name)
-  (muk-func name args))
+  (muk-func-app name args))
 (def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
 (record muk-state
         bound-vars sub-vars sub-funcs func-deps func-interps next-var)
@@ -109,7 +109,7 @@
   (define (recur xs) (foldl set-union (set) (map muk-term->vars xs)))
   (match term
     ((muk-var _) (set term))
-    ((muk-func _ args) (recur args))
+    ((muk-func-app _ args) (recur args))
     (_ (match (muk-split (list term))
          ((nothing) (set))
          ((just (list components)) (recur components))))))
@@ -118,9 +118,9 @@
   (lets
     vars = (map muk-var (range 3))
     (list v0 v1 v2) = vars
-    f0 = (muk-func 'zero (list v0 v1))
-    f1 = (muk-func 'one (list v2 f0))
-    f2 = (muk-func 'two (list f0 f1 v1))
+    f0 = (muk-func-app 'zero (list v0 v1))
+    f1 = (muk-func-app 'one (list v2 f0))
+    f2 = (muk-func-app 'two (list f0 f1 v1))
     (begin
       (check-equal?
         (map muk-term->vars vars)
@@ -138,7 +138,7 @@
 
 (def (muk-sub-get-term st term)
   (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
-  (if (muk-func? term)
+  (if (muk-func-app? term)
     (match (dict-get sub-funcs term)
       ((nothing)
        (lets
@@ -168,7 +168,7 @@
   (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
   (match term
     ((muk-var _) (list st (muk-sub-get-var st term)))
-    ((muk-func name args)
+    ((muk-func-app name args)
      (lets (list st normalized) = (normalize-get st args)
            op = (dict-ref func-interps name)
            (list st (apply op normalized))))
@@ -181,7 +181,7 @@
 (module+ test
   (lets
     st = (:=* muk-state-empty (muk-var 3) 'next-var)
-    id-func-op = (fn (fname) (lambda xs (muk-func fname xs)))
+    id-func-op = (fn (fname) (lambda xs (muk-func-app fname xs)))
     st = (forf st = st
                fname <- (list 'zero 'one 'two)
                ((muk-state-interpret fname (id-func-op fname)) st))
@@ -217,7 +217,7 @@
             (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
             (zip components)))))))
 
-(def (muk-func-update st term-old)
+(def (muk-func-app-update st term-old)
   (list st term-new) = (muk-normalize st term-old)
   (if (equal? term-old term-new) (just st)
     (lets
@@ -247,7 +247,7 @@
               new = (muk-sub-prefix st-old st-new)
               fterms = (foldl set-union (set)
                               (forl vr <- new (dict-ref func-deps vr (set))))
-              st-new-new <- (monad-foldl maybe-monad muk-func-update st-new
+              st-new-new <- (monad-foldl maybe-monad muk-func-app-update st-new
                                          (set->list fterms))
               (loop (list st-new st-new-new)))))))))
 
