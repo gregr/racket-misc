@@ -264,6 +264,17 @@
 
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (number->string name))))
+(def (muk-reify-term st term vtrans)
+  term = (muk-sub-get-var st term)
+  (match term
+    ((muk-var _) (vtrans term))
+    ((muk-func-app name args)
+     `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
+    (_ (match (muk-split (list term))
+         ((nothing) term)
+         ((just (list components))
+          (muk-rebuild
+            term (map (fn (el) (muk-reify-term st el vtrans)) components)))))))
 (def (muk-reify-var st vr vtrans)
   vr = (muk-sub-get-var st vr)
   (if (muk-var? vr) (vtrans vr)
@@ -274,8 +285,13 @@
          vr (map (fn (vr) (muk-reify-var st vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
   (forl st <- states
-        (forl vr <- vrs
-              (muk-reify-var st vr vtrans))))
+        reify = (fn (term) (muk-reify-term st term vtrans))
+        vars = (map reify vrs)
+        func-apps =
+        (forl (cons fterm val) <- (dict->list (:.* st 'sub-funcs))
+              `(,(reify fterm) == ,(reify val)))
+        constraints = (if (null? func-apps) '() `(: ,@func-apps))
+        `(,@vars ,@constraints)))
 
 (define ((== e0 e1) st)
   (match (muk-unify-and-update st e0 e1)
