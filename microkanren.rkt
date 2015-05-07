@@ -132,6 +132,69 @@
         (set v0 v1 v2))
       )))
 
+(def (muk-sub-get-term st term)
+  (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st
+  (if (muk-func? term)
+    (match (dict-get sub-funcs term)
+      ((nothing)
+       (lets
+         term-var = next-var
+         next-var = (muk-var-next next-var)
+         sub-funcs = (dict-add sub-funcs term term-var)
+         func-deps = (forf
+           func-deps = func-deps
+           vr <- (muk-term->vars term)
+           deps = (set-add (dict-ref func-deps vr (set)) term)
+           (dict-set func-deps vr deps))
+         st = (muk-state sub-vars sub-funcs func-deps func-interps next-var)
+         (list st term-var)))
+      ((just expected) (list st expected)))
+    (list st term)))
+
+(define (muk-normalize-get st term)
+  (apply muk-sub-get-term (muk-normalize st term)))
+
+(def (muk-normalize st term)
+  normalize-get = (fn (st args)
+    (forf (list st normalized) = (list st '())
+          arg <- (reverse args)
+          (list st narg) = (muk-normalize-get st arg)
+          (list st (list* narg normalized))))
+  (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st
+  (match term
+    ((muk-var _) (list st (muk-sub-get-var sub-vars term)))
+    ((muk-func name args)
+     (lets (list st normalized) = (normalize-get st args)
+           op = (dict-ref func-interps name)
+           (list st (apply op normalized))))
+    (_ (match (muk-split (list term))
+         ((nothing) (list st term))
+         ((just (list components))
+          (lets (list st ncomps) = (normalize-get st components)
+                (list st (muk-rebuild term ncomps))))))))
+
+(module+ test
+  (lets
+    st = (:=* muk-state-empty (muk-var 3) 'next-var)
+    id-func-op = (fn (fname) (lambda xs (muk-func fname xs)))
+    st = (forf st = st
+               fname <- (list 'zero 'one 'two)
+               ((muk-state-interpret fname (id-func-op fname)) st))
+    id-func = (fn (name args) (apply (id-func-op name) args))
+    vars = (map muk-var (range 5))
+    (list v0 v1 v2 v3 v4) = vars
+    f0 = (id-func 'zero (list v0 v1))
+    f1 = (id-func 'one (list v2 f0))
+    f2 = (id-func 'two (list f0 f1 f0 v1))
+    (list _ nf0) = (muk-normalize st f0)
+    (list _ nf1) = (muk-normalize st f1)
+    (list _ nf2) = (muk-normalize st f2)
+    (begin
+      (check-equal? (muk-term->vars nf0) (muk-term->vars f0))
+      (check-equal? (muk-term->vars nf1) (set v2 v3))
+      (check-equal? (muk-term->vars nf2) (set v4 v3 v1))
+      )))
+
 (def (muk-unify sub e0 e1)
   e0 = (muk-sub-get-var sub e0)
   e1 = (muk-sub-get-var sub e1)
