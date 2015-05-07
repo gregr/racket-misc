@@ -212,6 +212,36 @@
             (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
             (zip components)))))))
 
+(def (muk-func-update st term-old)
+  (list st term-new) = (muk-normalize st term-old)
+  (if (equal? term-old term-new) (just st)
+    (lets
+      (list st expected-old) = (muk-sub-get-term st term-old)
+      (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st
+      func-deps =
+      (forf func-deps = func-deps
+            old-var <- (muk-term->vars term-old)
+            ; TODO: if empty, remove completely
+            (dict-update func-deps old-var
+                         (fn (terms) (set-remove terms term-old))))
+      sub-funcs = (dict-remove sub-funcs term-old)
+      st = (muk-state sub-vars sub-funcs func-deps func-interps next-var)
+      (list st expected-new) = (muk-sub-get-term st term-new)
+      (muk-unify st expected-old expected-new))))
+
+(define (muk-unify-and-update st e0 e1)
+  (begin/with-monad maybe-monad
+    st-new <- (muk-unify st e0 e1)
+    (letn loop (list st-old st-new) = (list st st-new)
+      new = (muk-sub-prefix st-old st-new)
+      (muk-state sub-vars sub-funcs func-deps func-interps next-var) = st-new
+      fterms = (foldl set-union (set) (forl (cons vr _) <- new
+                                            (dict-ref func-deps vr (set))))
+      fterms = (set->list fterms)
+      (if (null? fterms) (just st-new)
+        (loop (list st-new
+                    (monad-foldl maybe-monad muk-func-update fterms)))))))
+
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (number->string name))))
 (def (muk-reify-var sub vr vtrans)
@@ -228,7 +258,7 @@
               (muk-reify-var sub vr vtrans))))
 
 (define ((== e0 e1) st)
-  (match (muk-unify st e0 e1)
+  (match (muk-unify-and-update st e0 e1)
     ((nothing) muk-mzero)
     ((just st) (muk-unit st))))
 
