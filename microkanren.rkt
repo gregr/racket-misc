@@ -41,14 +41,15 @@
   (muk-var name)
   (muk-func name args))
 (def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
+(record muk-state sub-vars sub-funcs func-deps func-interps next-var)
+(define muk-state-empty (muk-state (hash) (hash) (hash) (hash) (muk-var 0)))
 (define (muk-sub-get-var st vr)
   (let loop ((sub (:.* st 'sub-vars)) (vr vr))
     (match (if (muk-var? vr) (dict-get sub vr) (nothing))
       ((nothing) vr)
       ((just vr) (loop sub vr)))))
-(def (muk-sub-add bs vr val) (dict-add bs vr val))
-(record muk-state sub-vars sub-funcs func-deps func-interps next-var)
-(define muk-state-empty (muk-state (hash) (hash) (hash) (hash) (muk-var 0)))
+(define (muk-sub-add st vr val)
+  (:~* st (lambda (bs) (dict-add bs vr val)) 'sub-vars))
 (define ((muk-state-interpret name op) st)
   (:~* st (lambda (fis) (dict-set fis name op)) 'func-interps))
 (def (muk-sub-prefix (muk-state sub-vars-old _ _ _ _)
@@ -205,7 +206,7 @@
   (if (equal? e0 e1) (just st)
     (lets
       (list e0 e1) = (if (muk-var? e1) (list e1 e0) (list e0 e1))
-      (if (muk-var? e0) (just (:=* st (muk-sub-add sub-vars e0 e1) 'sub-vars))
+      (if (muk-var? e0) (just (muk-sub-add st e0 e1))
         (begin/with-monad maybe-monad
           components <- (muk-split (list e0 e1))
           (monad-foldl maybe-monad
