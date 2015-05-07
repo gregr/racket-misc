@@ -18,6 +18,8 @@ markout:
       simplest quick fix; not a long term solution
 
 kanren:
+  remove deps upon use
+    possibly gather relevant func-deps during muk-sub-add? can then also scrap muk-sub-prefix
   alternative constraint system approach based on interpretation of function terms
     type-of, all-diff, etc.
     muk-term = muk-var name | muk-function name [muk-term] | constants/aggregates
