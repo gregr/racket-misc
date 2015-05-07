@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+
+while true; do
+  inotifywait -e modify *.rkt --format '%w' | {
+    read filename
+    printf 'testing: %s\n' "$filename"
+    time raco test "$filename" || true
+  }
+done
