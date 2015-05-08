@@ -30,6 +30,7 @@
   "maybe.rkt"
   "monad.rkt"
   "record.rkt"
+  "repr.rkt"
   "sugar.rkt"
   racket/dict
   racket/function
@@ -95,26 +96,12 @@
     ((? procedure?) (thunk (muk-bind (ss) goal)))
     ((cons st ss) (muk-mplus (goal st) (muk-bind ss goal)))))
 
-(def (pair-components (cons a d)) (list a d))
-(define (vector-components vec) (vector->list vec))
-(define (struct-components str) (vector-components (struct->vector str)))
-;(define (hash-components hsh) (hash->list hsh))  ; TODO: generic key sorting
 (define (muk-split aggs)
   (forf components = (nothing)
-        (list pred make-components) <- `((,pair? ,pair-components)
-                                         (,vector? ,vector-components)
-                                         (,struct? ,struct-components))
+        pred <- (list pair? vector? struct?)
         #:break (just? components)
-        (if (andmap pred aggs) (just (map make-components aggs)) components)))
-(def (muk-rebuild agg components)
-  rebuild =
-  (cond ((pair? agg) (curry apply cons))
-        ((vector? agg) list->vector)
-        ((struct? agg)
-         (lets (values sty _) = (struct-info agg)
-               (compose1 (curry apply (struct-type-make-constructor sty))
-                         cdr))))
-  (rebuild components))
+        (if (andmap pred aggs) (just (map value->repr aggs)) components)))
+(define muk-rebuild repr->value)
 
 (define (muk-term->vars term)
   (define (recur xs) (foldl set-union (set) (map muk-term->vars xs)))
@@ -123,7 +110,7 @@
     ((muk-func-app _ args) (recur args))
     (_ (match (muk-split (list term))
          ((nothing) (set))
-         ((just (list components)) (recur components))))))
+         ((just (list (repr _ components))) (recur components))))))
 
 (module+ test
   (lets
@@ -185,9 +172,9 @@
            (list st (apply op normalized))))
     (_ (match (muk-split (list term))
          ((nothing) (list st term))
-         ((just (list components))
+         ((just (list (repr type components)))
           (lets (list st ncomps) = (normalize-get st components)
-                (list st (muk-rebuild term ncomps))))))))
+                (list st (muk-rebuild (repr type ncomps)))))))))
 
 (module+ test
   (lets
@@ -223,7 +210,9 @@
       (list e0 e1) = (if (muk-var? e1) (list e1 e0) (list e0 e1))
       (if (muk-var? e0) (just (muk-sub-add st e0 e1))
         (begin/with-monad maybe-monad
-          components <- (muk-split (list e0 e1))
+          reprs <- (muk-split (list e0 e1))
+          components = (forl (repr type components) <- reprs
+                             (list* type components))
           (monad-foldl maybe-monad
             (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
             (zip components)))))))
@@ -272,9 +261,10 @@
      `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
     (_ (match (muk-split (list term))
          ((nothing) term)
-         ((just (list components))
+         ((just (list (repr type components)))
           (muk-rebuild
-            term (map (fn (el) (muk-reify-term st el vtrans)) components)))))))
+            (repr type (map (fn (el) (muk-reify-term st el vtrans))
+                            components))))))))
 (define (muk-reify vtrans vrs states)
   (forl st <- states
         reify = (fn (term) (muk-reify-term st term vtrans))
