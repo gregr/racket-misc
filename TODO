@@ -17,8 +17,18 @@ markout:
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
 
+type:
+  uniform destructured representation for aggregates
+    some way to recover constructors
+  generic value->type
+    deep aggregate types
+
 kanren:
+  disquality based on nested (type, val) representations
+    potential to find inequality faster and eliminate redundancies
+  redefine < in terms of compare
   remove deps upon use
+  convenient admission of function interpretations
   support alternative search strategies
   constraints
     optional occurs-check?
