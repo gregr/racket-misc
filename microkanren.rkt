@@ -275,14 +275,6 @@
          ((just (list components))
           (muk-rebuild
             term (map (fn (el) (muk-reify-term st el vtrans)) components)))))))
-(def (muk-reify-var st vr vtrans)
-  vr = (muk-sub-get-var st vr)
-  (if (muk-var? vr) (vtrans vr)
-    (match (muk-split (list vr))
-      ((nothing) vr)
-      ((just (list components))
-       (muk-rebuild
-         vr (map (fn (vr) (muk-reify-var st vr vtrans)) components))))))
 (define (muk-reify vtrans vrs states)
   (forl st <- states
         reify = (fn (term) (muk-reify-term st term vtrans))
