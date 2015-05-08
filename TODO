@@ -27,7 +27,6 @@ repr:
     boxes
     streams
     undefined
-  more precise numeric types
   deep aggregate reprs
   generic ordering
 

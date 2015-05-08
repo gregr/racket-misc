@@ -1,5 +1,12 @@
 #lang racket/base
 (provide
+  numeric-type-natural
+  numeric-type-integer
+  numeric-type-exact
+  numeric-type-inexact
+  numeric-type-complex-exact
+  numeric-type-complex-inexact
+  number->type
   repr
   repr->value
   repr-type->constructor
@@ -19,13 +26,29 @@
 
 (record repr type components)
 
+(define numeric-type-natural '(number real exact integer natural))
+(define numeric-type-integer '(number real exact integer))
+(define numeric-type-exact '(number real exact))
+(define numeric-type-inexact '(number real inexact))
+(define numeric-type-complex-exact '(number complex exact))
+(define numeric-type-complex-inexact '(number complex inexact))
+
+(define (number->type num)
+  (if (real? num)
+    (if (exact? num)
+      (if (integer? num)
+        (if (<= 0 num) numeric-type-natural numeric-type-integer)
+        numeric-type-exact)
+      numeric-type-inexact)
+    (if (exact? num) numeric-type-complex-exact numeric-type-complex-inexact)))
+
 (def (struct->type val)
   (values sty _) = (struct-info val)
   sty)
 (define repr-entries
   `((,void? ,(const 'void) ,identity)
     (,symbol? ,(const 'symbol) ,identity)
-    (,number? ,(const 'number) ,identity)
+    (,number? ,number->type ,identity)
     (,null? ,(const 'nil) ,identity)
     (,pair? ,(const 'pair) ,(fn ((cons a d)) (list a d)))
     (,vector? ,(const 'vector) ,vector->list)
@@ -43,7 +66,7 @@
   (match type
     ('void identity)
     ('symbol identity)
-    ('number identity)
+    (`(number . ,_) identity)
     ('nil identity)
     ('pair (curry apply cons))
     ('vector list->vector)
@@ -71,7 +94,7 @@
     expected-reprs = (map (curry apply repr)
       `((void ,(void))
         (symbol name)
-        (number 4)
+        (,numeric-type-natural 4)
         (nil ())
         (pair ((5 . a) (6)))
         (vector (7 8 9))
