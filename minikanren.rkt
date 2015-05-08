@@ -67,6 +67,21 @@
     ((_ arg (pattern gs ...) ...)
      (let ((param arg)) (disj* (match1e param pattern gs ...) ...)))))
 
+(define (interp-type val)
+  (if (muk-term? val) (muk-func-app 'type (list val))
+    (cond
+      ((void? val) 'void)
+      ((symbol? val) 'symbol)
+      ((number? val) 'number)
+      ((null? val) 'nil)
+      ((pair? val) 'pair)
+      ((vector? val) 'vector)
+      ((hash? val) 'hash)
+      ((set? val) 'set)
+      ((struct? val) (lets (values sty _) = (struct-info val)
+                           sty))
+      (else 'unknown))))
+
 (define (interp-=/= . or-diseqs)
   (match (monad-foldl maybe-monad
           (fn (st (cons e0 e1)) (muk-unify-and-update st e0 e1))
@@ -80,15 +95,15 @@
                      (cons vr val))
        (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
 
-(define (interp-+ a b)
-  (if (or (muk-term? a) (muk-term? b)) (muk-func-app '+ (list a b))
-    (+ a b)))
-(define (interp-< a b)
-  (if (or (muk-term? a) (muk-term? b)) (muk-func-app '< (list a b))
-    (< a b)))
+(define ((interp-numeric-op name op) a b)
+  (if (or (muk-term? a) (muk-term? b)) (muk-func-app name (list a b))
+    (if (and (number? a) (number? b)) (op a b) (void))))
+(define interp-+ (interp-numeric-op '+ +))
+(define interp-< (interp-numeric-op '< <))
 
 (define interpretations
   (hash
+    'type interp-type
     '=/= interp-=/=
     '+ interp-+
     '< interp-<
@@ -96,6 +111,10 @@
 
 (define with-constraints (interpret interpretations))
 
+(define (type val) (muk-func-app 'type (list val)))
+(define (typeo val ty) (== ty (type val)))
+(define (symbolo val) (typeo val 'symbol))
+(define (numbero val) (typeo val 'number))
 (define (ino domain . xs)
   (forf goal = (conj*)
         x <- xs
@@ -113,10 +132,12 @@
       (all-diffo `(,a . ,dd))
       (all-diffo `(,ad . ,dd)))))
 (define (+o a b a+b)
-  (== (muk-func-app '+ (list a b)) a+b))
+  (conj* (numbero a) (numbero b) (numbero a+b)
+         (== (muk-func-app '+ (list a b)) a+b)))
 (define (<o a b)
-  (== (muk-func-app '< (list a b)) #t))
-(define (<=o a b) (conde ((== a b)) ((<o a b))))
+  (conj* (numbero a) (numbero b) (== (muk-func-app '< (list a b)) #t)))
+(define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
+
 (module+ test
   (check-equal?
     (run* (x y) (== (cons (list x 3) 5) (cons (list 4 y) 5)))
@@ -163,6 +184,10 @@
     (run* (w x y z) with-constraints (ino (range 3) w x y z)
           (all-diffo (list w x y z)))
     '())
+  (check-equal?
+    (run* (w x y z) with-constraints (symbolo x) (symbolo z) (+o y y w)
+          (ino (list 5 'five) x y z))
+    '((10 five 5 five)))
   (lets
     ;   S E N D
     ; + M O R E
