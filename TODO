@@ -19,20 +19,6 @@ markout:
 
 kanren:
   remove deps upon use
-    possibly gather relevant func-deps during muk-sub-add? can then also scrap muk-sub-prefix
-  alternative constraint system approach based on interpretation of function terms
-    type-of, all-diff, etc.
-    muk-term = muk-var name | muk-function name [muk-term] | constants/aggregates
-    interpretation result type: no-result-yet | actual-result result | simplification new-term
-    implementation:
-      unnesting of function terms; introduce new variables
-      build unnested term substitutions
-      dependency graph linking terms to their muk-var arguments
-        learning something new about such an argument triggers re-application of the function
-      application of functions:
-        actual result? unify with expected result from substitution and erase term entry
-        simplifies to a new term? replace the existing term entry in the substitution
-        no result yet? be patient, return the same substitution
   support alternative search strategies
   constraints
     optional occurs-check?
