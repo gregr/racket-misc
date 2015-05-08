@@ -18,10 +18,6 @@ markout:
       simplest quick fix; not a long term solution
 
 repr:
-  support more types
-    booleans
-    characters
-    strings
   not sure about these
     byte strings
     boxes

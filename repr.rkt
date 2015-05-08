@@ -47,7 +47,10 @@
   sty)
 (define repr-entries
   `((,void? ,(const 'void) ,identity)
+    (,boolean? ,(const 'boolean) ,identity)
     (,symbol? ,(const 'symbol) ,identity)
+    (,char? ,(const 'char) ,identity)
+    (,string? ,(const 'string) ,identity)
     (,number? ,number->type ,identity)
     (,null? ,(const 'nil) ,identity)
     (,pair? ,(const 'pair) ,(fn ((cons a d)) (list a d)))
@@ -65,7 +68,10 @@
 (define (repr-type->constructor type)
   (match type
     ('void identity)
+    ('boolean identity)
     ('symbol identity)
+    ('char identity)
+    ('string identity)
     (`(number . ,_) identity)
     ('nil identity)
     ('pair (curry apply cons))
@@ -81,7 +87,10 @@
   (lets
     vals = (list
              (void)
+             #f
              'name
+             #\c
+             "string"
              4
              '()
              (cons (cons 5 'a) (cons 6 '()))
@@ -89,19 +98,24 @@
              (hash 'one 1 'two 2)
              (set 'three 'four)
              (repr 'repr-type 'repr-component)
-             (box 'box))
-    (list v0 v1 v2 v3 v4 v5 v6 v7 v8 v9) = vals
+             (box 'box)
+             )
+    (list vvoid vbool vsym vchar vstring vnum vnil
+          vpair vvec vhash vset vstruct vunk) = vals
     expected-reprs = (map (curry apply repr)
       `((void ,(void))
+        (boolean #f)
         (symbol name)
+        (char #\c)
+        (string "string")
         (,numeric-type-natural 4)
         (nil ())
         (pair ((5 . a) (6)))
         (vector (7 8 9))
-        (hash ,(hash->list v6))
-        (set ,(set->list v7))
-        (,(struct->type v8) (repr-type repr-component))
-        (unknown ,v9)))
+        (hash ,(hash->list vhash))
+        (set ,(set->list vset))
+        (,(struct->type vstruct) (repr-type repr-component))
+        (unknown ,vunk)))
     reprs = (map value->repr vals)
     (begin
       (check-equal? (map repr->value reprs) vals)
