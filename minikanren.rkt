@@ -219,4 +219,10 @@
       (run* (a b c) with-constraints
             (send-more-moneyo (list a 5 6 b 1 0 c 2)))
       '((9 7 8))))
+  (check-match
+    (run* (p r) with-constraints
+      (=/= '(1 2) `(,p ,r))
+      (== 1 p)
+      (symbolo r))
+    `((1 ,r : ((type ,r) == symbol) ((=/= (,r . 2)) == #t))))
   )
