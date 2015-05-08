@@ -17,11 +17,19 @@ markout:
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
 
-type:
-  uniform destructured representation for aggregates
-    some way to recover constructors
-  generic value->type
-    deep aggregate types
+repr:
+  support more types
+    booleans
+    characters
+    strings
+  not sure about these
+    byte strings
+    boxes
+    streams
+    undefined
+  more precise numeric types
+  deep aggregate reprs
+  generic ordering
 
 kanren:
   disquality based on nested (type, val) representations
