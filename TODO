@@ -18,10 +18,14 @@ markout:
       simplest quick fix; not a long term solution
 
 repr:
-  deep aggregate reprs
-  generic ordering
+  procedure reprs
+  any<, any<=, and type-specific comparison operators
+    approximate for structs using object-name?
 
 kanren:
+  and/or/not?
+  redefine =/= in terms of 'or'
+    will eliminate more redundancies
   redefine < in terms of compare
   remove deps upon use
   convenient admission of function interpretations
