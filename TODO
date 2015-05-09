@@ -18,7 +18,6 @@ markout:
       simplest quick fix; not a long term solution
 
 repr:
-  procedure reprs
   any<, any<=, and type-specific comparison operators
     approximate for structs using object-name?
 

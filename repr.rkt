@@ -59,6 +59,7 @@
     (,hash? ,(const 'hash) ,hash->list) ; TODO: order?
     (,set? ,(const 'set) ,set->list)    ; TODO: order?
     (,struct? ,struct->type ,(compose1 cdr vector->list struct->vector))
+    (,procedure? ,(const 'procedure) ,identity)
     (,(const #t) ,(const 'unknown) ,identity)))
 
 (define (value->repr val)
@@ -80,6 +81,7 @@
     ('hash make-immutable-hash)
     ('set list->set)
     ((? struct-type?) (curry apply (struct-type-make-constructor type)))
+    ('procedure identity)
     ('unknown identity)))
 (def (repr->value (repr type components))
   ((repr-type->constructor type) components))
@@ -99,10 +101,11 @@
              (hash 'one 1 'two 2)
              (set 'three 'four)
              (repr 'repr-type 'repr-component)
+             identity
              (box 'box)
              )
     (list vvoid vbool vsym vchar vstring vnum vnil
-          vpair vvec vhash vset vstruct vunk) = vals
+          vpair vvec vhash vset vstruct vproc vunk) = vals
     expected-reprs = (map (curry apply repr)
       `((void ,(void))
         (boolean #f)
@@ -116,6 +119,7 @@
         (hash ,(hash->list vhash))
         (set ,(set->list vset))
         (,(struct->type vstruct) (repr-type repr-component))
+        (procedure ,vproc)
         (unknown ,vunk)))
     reprs = (map value->repr vals)
     (begin
