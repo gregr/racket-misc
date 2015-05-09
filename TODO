@@ -22,7 +22,6 @@ repr:
   generic ordering
 
 kanren:
-  re-normalize func app results to calculate fixpoint
   disquality based on nested (type, val) representations
     potential to find inequality faster and eliminate redundancies
   redefine < in terms of compare
