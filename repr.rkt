@@ -1,15 +1,16 @@
 #lang racket/base
 (provide
+  number->type
   numeric-type-natural
   numeric-type-integer
   numeric-type-exact
   numeric-type-inexact
   numeric-type-complex-exact
   numeric-type-complex-inexact
-  number->type
   repr
   repr->value
   repr-type->constructor
+  struct->type
   value->repr
   )
 
