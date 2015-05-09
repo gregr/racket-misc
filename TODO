@@ -18,20 +18,22 @@ markout:
       simplest quick fix; not a long term solution
 
 repr:
-  not sure about these
-    byte strings
-    boxes
-    streams
-    undefined
   deep aggregate reprs
   generic ordering
 
 kanren:
+  re-normalize func app results to calculate fixpoint
+    need deterministic =/= arg ordering to avoid infinite loop
   disquality based on nested (type, val) representations
     potential to find inequality faster and eliminate redundancies
   redefine < in terms of compare
   remove deps upon use
   convenient admission of function interpretations
+  reification
+    deterministic sub-func ordering
+    ignore irrelevant sub-funcs
+    prettier function-based constraints
+      also prune more redundancies
   support alternative search strategies
   constraints
     optional occurs-check?
