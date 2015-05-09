@@ -17,9 +17,6 @@ markout:
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
 
-repr:
-  use hash<?, set<?
-
 kanren:
   and/or/not?
   redefine =/= in terms of 'or'

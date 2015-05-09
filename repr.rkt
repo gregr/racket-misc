@@ -15,6 +15,7 @@
   )
 
 (require
+  "comparison.rkt"
   "record.rkt"
   "sugar.rkt"
   racket/function
@@ -56,8 +57,8 @@
     (,null? ,(const 'nil) ,identity)
     (,pair? ,(const 'pair) ,(fn ((cons a d)) (list a d)))
     (,vector? ,(const 'vector) ,vector->list)
-    (,hash? ,(const 'hash) ,hash->list) ; TODO: order?
-    (,set? ,(const 'set) ,set->list)    ; TODO: order?
+    (,hash? ,(const 'hash) ,hash->list-sorted)
+    (,set? ,(const 'set) ,set->list-sorted)
     (,struct? ,struct->type ,(compose1 cdr vector->list struct->vector))
     (,procedure? ,(const 'procedure) ,identity)
     (,(const #t) ,(const 'unknown) ,identity)))
@@ -99,7 +100,7 @@
              (cons (cons 5 'a) (cons 6 '()))
              #(7 8 9)
              (hash 'one 1 'two 2)
-             (set 'three 'four)
+             (set 'one 'three 'four)
              (repr 'repr-type 'repr-component)
              identity
              (box 'box)
@@ -116,8 +117,8 @@
         (nil ())
         (pair ((5 . a) (6)))
         (vector (7 8 9))
-        (hash ,(hash->list vhash))
-        (set ,(set->list vset))
+        (hash ,(hash->list-sorted vhash))
+        (set ,(set->list-sorted vset))
         (,(struct->type vstruct) (repr-type repr-component))
         (procedure ,vproc)
         (unknown ,vunk)))
