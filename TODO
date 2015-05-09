@@ -18,8 +18,7 @@ markout:
       simplest quick fix; not a long term solution
 
 repr:
-  any<, any<=, and type-specific comparison operators
-    approximate for structs using object-name?
+  use hash<?, set<?
 
 kanren:
   and/or/not?
