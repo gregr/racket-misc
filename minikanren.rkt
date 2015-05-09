@@ -12,6 +12,7 @@
   "maybe.rkt"
   "microkanren.rkt"
   "monad.rkt"
+  "repr.rkt"
   "sugar.rkt"
   racket/list
   (except-in racket/match ==)
@@ -69,18 +70,9 @@
 
 (define (interp-type val)
   (if (muk-term? val) (muk-func-app 'type (list val))
-    (cond
-      ((void? val) 'void)
-      ((symbol? val) 'symbol)
-      ((number? val) 'number)
-      ((null? val) 'nil)
-      ((pair? val) 'pair)
-      ((vector? val) 'vector)
-      ((hash? val) 'hash)
-      ((set? val) 'set)
-      ((struct? val) (lets (values sty _) = (struct-info val)
-                           sty))
-      (else 'unknown))))
+    (lets (repr type components) = (value->repr val)
+          components = (if (list? components) (map interp-type components) '())
+          (list type components))))
 
 (define (interp-=/= . or-diseqs)
   (match (monad-foldl maybe-monad
@@ -113,8 +105,9 @@
 
 (define (type val) (muk-func-app 'type (list val)))
 (define (typeo val ty) (== ty (type val)))
-(define (symbolo val) (typeo val 'symbol))
-(define (numbero val) (typeo val 'number))
+(define (symbolo val) (typeo val '(symbol ())))
+(define (numbero val)
+  (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
 (define (ino domain . xs)
   (forf goal = (conj*)
         x <- xs
@@ -224,5 +217,5 @@
       (=/= '(1 2) `(,p ,r))
       (== 1 p)
       (symbolo r))
-    `((1 ,r : ((type ,r) == symbol) ((=/= (,r . 2)) == #t))))
+    `((1 ,r : ((type ,r) == (symbol ())) ((=/= (,r . 2)) == #t))))
   )
