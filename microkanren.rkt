@@ -213,6 +213,8 @@
           reprs <- (muk-split (list e0 e1))
           components = (forl (repr type components) <- reprs
                              (list* type components))
+          (list l0 l1) = (map length components)
+          _ <- (if (= l0 l1) (just (void)) (nothing))
           (monad-foldl maybe-monad
             (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
             (zip components)))))))
@@ -318,6 +320,9 @@
 (module+ test
   (define (reify-states name states)
     (muk-reify muk-var->symbol (list (muk-var name)) states))
+  (check-equal?
+    (muk-take-all ((== '#(a b) '#(c)) muk-state-empty))
+    '())
   (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
     (muk-take-all ((call/var one-and-two) muk-state-empty))
