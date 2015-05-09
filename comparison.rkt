@@ -22,6 +22,10 @@
   set<=?
   struct<?
   struct<=?
+
+  assoc-sorted
+  hash->list-sorted
+  set->list-sorted
   )
 
 (require
@@ -106,6 +110,10 @@
     (,struct? ,(struct<? any<?))
     (,procedure? ,never<?)
     (,(const #t) ,never<?)))
+
+(define (assoc-sorted assc) (sort assc (pair<? any<? any<?)))
+(define (hash->list-sorted hsh) (assoc-sorted (hash->list hsh)))
+(define (set->list-sorted st) (sort (set->list st) any<?))
 
 (module+ test
   (struct thing (one two) #:transparent)
