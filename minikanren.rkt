@@ -162,7 +162,11 @@
   ; TODO: re-enable with deterministic sub-func reification order
   ;(check-match
     ;(run 1 (q) with-constraints (all-diffo `(2 3 ,q)))
-    ;`((,q : ((=/= (,q 2)) == #t) ((=/= (,q 3)) == #t))))
+    ;`((,q :
+          ;((type ,q) == ,r)
+          ;((=/= (,r ((number real exact integer natural) ())) (,q 3)) == #t)
+          ;((=/= (,r ((number real exact integer natural) ())) (,q 2)) == #t)
+          ;)))
   (define (rembero x ls out)
     (conde
       ((== '() ls) (== '() out))
