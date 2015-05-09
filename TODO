@@ -22,8 +22,6 @@ repr:
   generic ordering
 
 kanren:
-  disquality based on nested (type, val) representations
-    potential to find inequality faster and eliminate redundancies
   redefine < in terms of compare
   remove deps upon use
   convenient admission of function interpretations

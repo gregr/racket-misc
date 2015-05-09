@@ -113,6 +113,7 @@
 (define (symbolo val) (typeo val '(symbol ())))
 (define (numbero val)
   (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
+(define (full-repr val) (list (type val) val))
 (define (ino domain . xs)
   (forf goal = (conj*)
         x <- xs
@@ -120,7 +121,8 @@
               (forf goal = (disj*)
                     el <- domain
                     (disj goal (== x el))))))
-(define (=/= e0 e1) (== #t (muk-func-app '=/= (list (list e0 e1)))))
+(define (=/= e0 e1)
+  (== #t (muk-func-app '=/= (list (list (full-repr e0) (full-repr e1))))))
 (define (all-diffo xs)
   (matche xs
     ('())
@@ -223,5 +225,5 @@
       (=/= '(1 2) `(,p ,r))
       (== 1 p)
       (symbolo r))
-    `((1 ,r : ((type ,r) == (symbol ())) ((=/= (,r 2)) == #t))))
+    `((1 ,r : ((type ,r) == (symbol ())))))
   )
