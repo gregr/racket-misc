@@ -30,10 +30,12 @@ kanren:
     example: unification of type-encoded values eliminates the need for type constraints
       (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
       or
-      (symbolo x) ===> (exist (val) (== x (('(number real exact integer natural) ()) val)))
+      (naturalo x) ===> (exist (val) (== x (('(number real exact integer natural) ()) val)))
       where x is a val that has been lifted by full-repr
     not even 1st class =/= is necessary with the right encoding
       but =/= being 1st class may be much more efficient for many structures
+    alternative to functions: implicit encodings that take effect on all unified values
+      reification can then perform decoding
   redefine < in terms of compare
   remove deps upon use
   convenient admission of function interpretations
