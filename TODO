@@ -18,9 +18,22 @@ markout:
       simplest quick fix; not a long term solution
 
 kanren:
-  and/or/not?
-  redefine =/= in terms of 'or'
-    will eliminate more redundancies
+  =/= might be best implemented as a 1st class constraint after all
+    simplification based on 'views':
+      (=/= ((view a c) (view b c))) implies (=/= (a b))
+      generalizes to multiple arg variations:
+        (=/= ((view a b c) (view a d e))) implies (=/= (b d) (c e))
+        suggesting unification over func-app structure, but this is getting complicated
+  maybe function terms are really a bad idea after all
+    the benefit they provide is also provided by encoding values
+  encodings (such as full-repr) instead of additional constraint system layers
+    example: unification of type-encoded values eliminates the need for type constraints
+      (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
+      or
+      (symbolo x) ===> (exist (val) (== x (('(number real exact integer natural) ()) val)))
+      where x is a val that has been lifted by full-repr
+    not even 1st class =/= is necessary with the right encoding
+      but =/= being 1st class may be much more efficient for many structures
   redefine < in terms of compare
   remove deps upon use
   convenient admission of function interpretations
