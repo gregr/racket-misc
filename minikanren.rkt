@@ -35,12 +35,17 @@
     ((_ (x0 xs ...) gs ...)
      (call/var (lambda (x0) (exist (xs ...) gs ...))))))
 
+(define-syntax run-depth
+  (syntax-rules ()
+    ((_ n depth (xs ...) gs ...)
+     (muk-reify muk-var->symbol (map muk-var (range (length '(xs ...))))
+       (muk-take n (muk-eval muk-state-empty (exist (xs ...) gs ...) depth))))))
+(define-syntax run*-depth
+  (syntax-rules () ((_ body ...) (run-depth -1 body ...))))
 (define-syntax run
   (syntax-rules ()
-    ((_ n (xs ...) gs ...)
-     (muk-reify muk-var->symbol
-                (map muk-var (range (length '(xs ...))))
-                (muk-take n ((exist (xs ...) gs ...) muk-state-empty))))))
+    ((_ n body ...)
+     (run-depth n 1 body ...))))
 (define-syntax run*
   (syntax-rules () ((_ body ...) (run -1 body ...))))
 
@@ -149,16 +154,17 @@
     (matche ls
       ('() (== rs lsrs))
       ((cons l0 ms) (exist (msrs)
-                      (== (cons l0 msrs) lsrs)
-                      (appendo ms rs msrs)))))
+                      (appendo ms rs msrs)
+                      (== (cons l0 msrs) lsrs)))))
   (check-equal?
-    (run* (x y) (appendo x y (range 1 6)))
-    '((() (1 2 3 4 5))
-      ((1) (2 3 4 5))
-      ((1 2) (3 4 5))
-      ((1 2 3) (4 5))
-      ((1 2 3 4) (5))
-      ((1 2 3 4 5) ())))
+    (list->set (run* (x y) (appendo x y (range 1 6))))
+    (list->set
+      '((() (1 2 3 4 5))
+        ((1) (2 3 4 5))
+        ((1 2) (3 4 5))
+        ((1 2 3) (4 5))
+        ((1 2 3 4) (5))
+        ((1 2 3 4 5) ()))))
   ; TODO: re-enable with deterministic sub-func reification order
   ;(check-match
     ;(run 1 (q) with-constraints (all-diffo `(2 3 ,q)))
@@ -183,8 +189,9 @@
     (run* (q) with-constraints (rembero 'a '(a b c) '(a b c)))
     '())
   (check-equal?
-    (run* (x y) with-constraints (ino (range 3) x y) (all-diffo (list x y)))
-    '((0 1) (0 2) (1 0) (1 2) (2 0) (2 1)))
+    (list->set
+      (run* (x y) with-constraints (ino (range 3) x y) (all-diffo (list x y))))
+    (list->set '((0 1) (0 2) (1 0) (1 2) (2 0) (2 1))))
   (check-equal?
     (run* (w x y z) with-constraints (ino (range 3) w x y z)
           (all-diffo (list w x y z)))
@@ -200,29 +207,29 @@
     ; M O N E Y
     add-digitso = (fn (augend addend carry-in carry-out digit)
       (exist (partial-sum sum)
-        (+o augend addend partial-sum)
-        (+o partial-sum carry-in sum)
-        (conde
-          ((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
-          ((<=o sum 9) (== carry-out 0) (== digit sum)))
-        (ino (range 19) partial-sum)
-        (ino (range 20) sum)
-        ))
+        (conj*-seq
+          (+o augend addend partial-sum)
+          (+o partial-sum carry-in sum)
+          (conde
+            ((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
+            ((<=o sum 9) (== carry-out 0) (== digit sum)))
+          (ino (range 19) partial-sum)
+          (ino (range 20) sum))))
     send-more-moneyo = (fn (letters)
       (exist (s e n d m o r y carry0 carry1 carry2)
-        (== letters (list s e n d m o r y))
-        (all-diffo letters)
-        (add-digitso s m carry2 m o)
-        (add-digitso e o carry1 carry2 n)
-        (add-digitso n r carry0 carry1 e)
-        (add-digitso d e 0 carry0 y)
-        (ino (range 1 10) s m)
-        (ino (range 10) e n d o r y)
-        (ino (range 2) carry0 carry1 carry2)
-        ))
+        (conj*-seq
+          (== letters (list s e n d m o r y))
+          (all-diffo letters)
+          (add-digitso s m carry2 m o)
+          (add-digitso e o carry1 carry2 n)
+          (add-digitso n r carry0 carry1 e)
+          (add-digitso d e 0 carry0 y)
+          (ino (range 1 10) s m)
+          (ino (range 10) e n d o r y)
+          (ino (range 2) carry0 carry1 carry2))))
     (check-equal?
-      (run* (a b c) with-constraints
-            (send-more-moneyo (list a 5 6 b 1 0 c 2)))
+      (run*-depth 1000 (a b c) with-constraints
+        (send-more-moneyo (list a 5 6 b 1 0 c 2)))
       '((9 7 8))))
   (check-match
     (run* (p r) with-constraints

@@ -18,8 +18,6 @@ markout:
       simplest quick fix; not a long term solution
 
 kanren:
-  experiment with concurrent conjunction
-  parameterized iterative deepening
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
       (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))

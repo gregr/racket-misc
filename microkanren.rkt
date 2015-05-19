@@ -4,10 +4,13 @@
   ==
   call/var
   conj
+  conj-seq
   conj*
+  conj*-seq
   disj
   disj*
   interpret
+  muk-eval
   muk-func-app
   muk-state-empty
   muk-sub-get-var
@@ -34,6 +37,7 @@
   "sugar.rkt"
   racket/dict
   racket/function
+  racket/list
   racket/set
   (except-in racket/match ==)
   )
@@ -83,18 +87,56 @@
                   (list s0 s1)))
       '(g f e))))
 
+(records muk-computation
+  (muk-success)
+  (muk-conj-conc c0 c1)
+  (muk-conj-seq c0 c1)
+  )
+
+(define (muk-step-depth st comp depth)
+  (define next-depth (- depth 1))
+  (if (= depth 0) (list (list st comp))
+    (append*
+      (match comp
+        ((muk-success) (list (list (list st comp))))
+        ((muk-conj-conc c0 c1)
+         (forl (list st c0) <- (muk-step-depth st c0 depth)
+               (forl (list st c1) <- (muk-step-depth st c1 depth)
+                     (list st (match* (c0 c1)
+                                (((muk-success) _) c1)
+                                ((_ (muk-success)) c0)
+                                ((_ _) (muk-conj-conc c0 c1)))))))
+        ((muk-conj-seq c0 c1)
+         (forl (list st c0) <- (muk-step-depth st c0 depth)
+               (match c0
+                 ((muk-success) (muk-step-depth st c1 depth))
+                 (_ (list (list st (muk-conj-seq c0 c1)))))))
+        (_ (forl (list st comp) <- (comp st)
+                 (muk-step-depth st comp next-depth)))))))
+
+(def (muk-eval-loop pending depth)
+  (list finished pending) =
+  (forf
+    (list finished unfinished) = '(() ())
+    (list st comp) <- (append* (forl (list st comp) <- pending
+                                     (muk-step-depth st comp depth)))
+    (match comp
+      ((muk-success) (list (list* st finished) unfinished))
+      (_ (list finished (list* (list st comp) unfinished)))))
+  (append finished (if (null? pending)
+                     '() (thunk (muk-eval-loop pending depth)))))
+
+(define (muk-eval st comp (depth 1))
+  (muk-eval-loop (list (list st comp)) depth))
+
+(define conj muk-conj-conc)
+(define conj-seq muk-conj-seq)
+(define ((disj g0 g1) st) (list (list st g0) (list st g1)))
+
+(define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
+
 (define muk-mzero '())
-(define (muk-mplus ss1 ss2)
-  (match ss1
-    ('() ss2)
-    ((? procedure?) (thunk (muk-mplus ss2 (ss1))))
-    ((cons st ss) (list* st (muk-mplus ss ss2)))))
-(define (muk-unit st) (list* st muk-mzero))
-(define (muk-bind ss goal)
-  (match ss
-    ('() muk-mzero)
-    ((? procedure?) (thunk (muk-bind (ss) goal)))
-    ((cons st ss) (muk-mplus (goal st) (muk-bind ss goal)))))
+(define (muk-unit st) (list* (list st (muk-success)) muk-mzero))
 
 (define (muk-split aggs)
   (forf components = (nothing)
@@ -285,33 +327,31 @@
     ((just st) (muk-unit st))))
 
 (define ((call/var f) st)
-  ((f (:.* st 'next-var)) (:~* st muk-var-next 'next-var)))
-
-(define ((conj g0 g1) st) (muk-bind (g0 st) g1))
-(define ((disj g0 g1) st) (muk-mplus (g0 st) (g1 st)))
+  (list (list (:~* st muk-var-next 'next-var) (f (:.* st 'next-var)))))
 
 (define ((interpret interpretations) st)
   (muk-unit (muk-state-interpret st interpretations)))
 
 (define-syntax Zzz
-  (syntax-rules () ((_ goal) (lambda (st) (thunk (goal st))))))
+  (syntax-rules () ((_ goal) (lambda (st) (list (list st goal))))))
 
 (define-syntax conj*
   (syntax-rules ()
     ((_) muk-unit)
-    ((_ g0) g0)
-    ((_ g0 gs ...) (conj g0 (conj* gs ...)))))
-(define-syntax disj*-cont
-  (syntax-rules ()
     ((_ g0) (Zzz g0))
-    ((_ g0 gs ...) (disj (Zzz g0) (disj*-cont gs ...)))))
+    ((_ g0 gs ...) (conj (Zzz g0) (conj* gs ...)))))
 (define-syntax disj*
   (syntax-rules ()
     ((_) (const muk-mzero))
-    ((_ g0) g0)
-    ((_ gs ...) (disj*-cont gs ...))))
+    ((_ g0) (Zzz g0))
+    ((_ g0 gs ...) (disj (Zzz g0) (disj* gs ...)))))
 
-(define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
+(define-syntax conj*-seq
+  (syntax-rules ()
+    ((_) muk-unit)
+    ((_ g0) (Zzz g0))
+    ((_ g0 gs ...) (conj-seq (Zzz g0) (conj* gs ...)))))
+
 (define (muk-take n ss)
   (if (= 0 n) '()
     (match (muk-force ss)
@@ -320,31 +360,31 @@
 (define (muk-take-all ss) (muk-take -1 ss))
 
 (module+ test
+  (define (run comp) (muk-eval muk-state-empty comp))
   (define (reify-states name states)
     (muk-reify muk-var->symbol (list (muk-var name)) states))
   (check-equal?
-    (muk-take-all ((== '#(a b) '#(c)) muk-state-empty))
+    (muk-take-all (run (== '#(a b) '#(c))))
     '())
   (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
-    (muk-take-all ((call/var one-and-two) muk-state-empty))
+    (muk-take-all (run (call/var one-and-two)))
     '())
   (check-equal?
-    (reify-states 0 (muk-take-all
-                      ((call/var (fn (x) (== x x))) muk-state-empty)))
+    (reify-states 0 (muk-take-all (run (call/var (fn (x) (== x x))))))
     '((_.0)))
   (define (fives x) (disj* (== x 5) (fives x)))
   (check-equal?
-    (reify-states 0 (muk-take 1 ((call/var fives) muk-state-empty)))
+    (reify-states 0 (muk-take 1 (run (call/var fives))))
     '((5)))
   (define (sixes x) (disj* (== x 6) (sixes x)))
   (define fives-and-sixes
     (call/var (lambda (x) (disj (fives x) (sixes x)))))
   (lets
-    (list st0 st1) = (muk-take 2 (fives-and-sixes muk-state-empty))
+    (list st0 st1) = (muk-take 2 (run fives-and-sixes))
     (check-equal?
-      (reify-states 0 (list st0 st1))
-      '((5) (6)))
+      (list->set (reify-states 0 (list st0 st1)))
+      (list->set '((5) (6))))
     )
   (record thing one two)
   (for_
@@ -353,7 +393,6 @@
             (lambda (x) (call/var
                           (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
     (check-equal?
-      (reify-states
-        0 (muk-take 1 (rel muk-state-empty)))
+      (reify-states 0 (muk-take 1 (run rel)))
       `((,(build 1 2)))))
   )
