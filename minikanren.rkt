@@ -177,9 +177,6 @@
     (check-equal? actual expected)))
 
 (define (poso n) (exist (a d) (== `(,a . ,d) n)))
-(define (gt1o n) (conde
-                   ((== '(2) n))
-                   ((exist (a d) (== `(, a . ,d) n) (poso d)))))
 
 (define (full-addero p a b r c)
   (conde
