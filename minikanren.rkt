@@ -23,7 +23,10 @@
     ))
 
 (module+ test
-  (require rackunit))
+  (require
+    "list.rkt"
+    rackunit
+    ))
 
 (define-syntax conde
   (syntax-rules ()
@@ -142,6 +145,165 @@
 (define (<o a b)
   (conj* (numbero a) (numbero b) (== (muk-func-app '< (list a b)) #t)))
 (define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
+
+(define (nat->bits nat)
+  (if (zero? nat) '()
+    (lets
+      (values bit nat) =
+      (if (odd? nat) (values 1 (- nat 1)) (values 2 (- nat 2)))
+      (list* bit (nat->bits (quotient nat 2))))))
+
+(module+ test
+  (check-equal?
+    (list (nat->bits 6) (nat->bits 7) (nat->bits 8) (nat->bits 9))
+    '((2 2) (1 1 1) (2 1 1) (1 2 1))))
+
+(define (nat<o a b)
+  (conde
+    ((== '() a) (exist (b0 bd) (== `(,b0 . ,bd) b)))
+    ((exist (a0 ad b0 bd)
+      (== `(,a0 . ,ad) a) (== `(,b0 . ,bd) b)
+      (conde ((nat<o ad bd))
+             ((== ad bd) (== 1 a0) (== 2 b0)))))))
+
+(module+ test
+  (lets
+    (list actual expected) =
+    (zip (forl
+           (list a b) <- '((0 0) (0 1) (1 0) (1 1) (1 2) (2 1) (2 2)
+                           (3 3) (3 4) (4 3) (4 4) (4 5) (5 4) (5 5))
+           (list (pair? (run* (r) (nat<o (nat->bits a) (nat->bits b))))
+                 (< a b))))
+    (check-equal? actual expected)))
+
+(define (poso n) (exist (a d) (== `(,a . ,d) n)))
+(define (gt1o n) (conde
+                   ((== '(2) n))
+                   ((exist (a d) (== `(, a . ,d) n) (poso d)))))
+
+(define (full-addero p a b r c)
+  (conde
+    ((== 0 p) (== 1 a) (== 1 b) (== 2 r) (== 0 c))
+    ((== 0 p) (== 1 a) (== 2 b) (== 1 r) (== 1 c))
+    ((== 0 p) (== 2 a) (== 1 b) (== 1 r) (== 1 c))
+    ((== 0 p) (== 2 a) (== 2 b) (== 2 r) (== 1 c))
+    ((== 1 p) (== 1 a) (== 1 b) (== 1 r) (== 1 c))
+    ((== 1 p) (== 1 a) (== 2 b) (== 2 r) (== 1 c))
+    ((== 1 p) (== 2 a) (== 1 b) (== 2 r) (== 1 c))
+    ((== 1 p) (== 2 a) (== 2 b) (== 1 r) (== 2 c))
+    ((== 2 p) (== 1 a) (== 1 b) (== 2 r) (== 1 c))
+    ((== 2 p) (== 1 a) (== 2 b) (== 1 r) (== 2 c))
+    ((== 2 p) (== 2 a) (== 1 b) (== 1 r) (== 2 c))
+    ((== 2 p) (== 2 a) (== 2 b) (== 2 r) (== 2 c))))
+
+(define (addero p a b r)
+  (conde
+    ((== 0 p) (== '() a) (== b r))
+    ((== 0 p) (== '() b) (poso a) (== a r))
+    ((== 1 p) (== '() a) (addero 0 '(1) b r))
+    ((== 1 p) (== '() b) (poso a) (addero 0 a '(1) r))
+    ((== 2 p) (== '() a) (addero 0 '(2) b r))
+    ((== 2 p) (== '() b) (poso a) (addero 0 a '(2) r))
+    ((exist (a0 ad b0 bd r0 rd c)
+      (== `(,a0 . ,ad) a) (== `(,b0 . ,bd) b) (== `(,r0 . ,rd) r)
+      (full-addero p a0 b0 r0 c)
+      (addero c ad bd rd)))))
+
+(define (nat-addo a b r) (addero 0 a b r))
+(define (nat-subo a b r) (nat-addo r b a))
+
+(module+ test
+  (lets
+    (list actual expected) =
+    (zip (forl
+           (list a b) <- '((0 0) (0 1) (1 0) (1 2) (2 1) (2 2) (3 4) (6 6))
+           (list (run*-depth 1000 (r) (nat-addo (nat->bits a) (nat->bits b) r))
+                 `((,(nat->bits (+ a b)))))))
+    (check-equal? actual expected))
+  (lets
+    (list actual expected) =
+    (zip (forl
+           (list a b) <- '((0 0) (1 0) (2 1) (2 2) (3 1) (4 1) (4 2) (4 3)
+                           (5 1) (5 2) (6 6) (7 1) (7 2) (7 3) (7 4) (7 5))
+           (list (run*-depth 1000 (r) (nat-subo (nat->bits a) (nat->bits b) r))
+                 `((,(nat->bits (- a b)))))))
+    (check-equal? actual expected))
+  )
+
+(define (nat-doubleo n r) (nat-addo n n r))
+
+(define (nat-mulo a b r)
+  (conde
+    ((== '() a) (== '() r))
+    ((poso a) (== '() b) (== '() r))
+    ((exist (a0 ad r-later-half r-later r-current)
+      (== `(,a0 . ,ad) a) (poso b)
+      (nat-mulo ad b r-later-half)
+      (nat-doubleo r-later-half r-later)
+      (conde
+        ((== 1 a0) (== b r-current))
+        ((== 2 a0) (nat-doubleo b r-current)))
+      (nat-addo r-current r-later r)
+      ))))
+
+(define (nat-divo a b q r)
+  (exist (mr) (nat<o r b) (nat-mulo b q mr) (nat-addo r mr a)))
+
+(module+ test
+  (lets
+    (list actual expected) =
+    (zip (forl
+           (list a b) <- '((0 0) (0 1) (1 0) (1 2) (2 1) (2 2) (3 4) (6 6))
+           (list (run*-depth 1000 (r) (nat-mulo (nat->bits a) (nat->bits b) r))
+                 `((,(nat->bits (* a b)))))))
+    (check-equal? actual expected))
+  ; slow test
+  ;(lets
+    ;(list actual expected) =
+    ;(zip (forl
+           ;(list a b) <- '((0 1) (1 1) (1 2) (2 1) (3 2) (3 4) (4 2))
+           ;`(,(run-depth 1 1 (q r) (nat-divo (nat->bits a) (nat->bits b) q r))
+              ;((,(nat->bits (quotient a b)) ,(nat->bits (remainder a b)))))))
+    ;(check-equal? actual expected))
+  )
+
+(define (nat-squareo n r) (nat-mulo n n r))
+
+(define (nat-expo b p r)
+  (conde
+    ((== '() p) (== '(1) r))
+    ((exist (p0 pd r-current r-later-sqrt r-later)
+      (== `(,p0 . ,pd) p)
+      (nat-expo b pd r-later-sqrt)
+      (nat-squareo r-later-sqrt r-later)
+      (conde
+        ((== 1 p0) (== b r-current))
+        ((== 2 p0) (nat-squareo b r-current)))
+      (nat-mulo r-current r-later r)))))
+
+(define (nat-logo b a p r)
+  (exist (mr) (nat<o r a) (nat-expo b p mr) (nat-subo a mr r)))
+
+(module+ test
+  (lets
+    (list actual expected) =
+    (zip (forl
+           (list a b) <- '((1 0) (1 1) (1 2) (2 1) (2 2) (2 3) (3 2))
+           (list (run*-depth 100 (r) (nat-expo (nat->bits a) (nat->bits b) r))
+                 `((,(nat->bits (expt a b)))))))
+    (check-equal? actual expected))
+  ; slow test
+  ;(lets
+    ;(list actual expected) =
+    ;(zip (forl
+           ;(list b a) <- '((0 1) (1 1) ;(1 2) (2 1)
+                           ;)
+           ;(list p r) <- '((0 0) (0 0) ;(0 1) (0 0)
+                           ;)
+           ;`(,(run-depth 1 1 (p r) (nat-logo (nat->bits b) (nat->bits a) p r))
+              ;((,(nat->bits p) ,(nat->bits r))))))
+    ;(check-equal? actual expected))
+  )
 
 (module+ test
   (check-equal?
