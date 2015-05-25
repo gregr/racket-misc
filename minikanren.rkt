@@ -278,9 +278,6 @@
         ((== 2 p0) (nat-squareo b r-current)))
       (nat-mulo r-current r-later r)))))
 
-(define (nat-logo b a p r)
-  (exist (mr) (nat<o r a) (nat-expo b p mr) (nat-subo a mr r)))
-
 (module+ test
   (lets
     (list actual expected) =
