@@ -364,37 +364,39 @@
     (run* (w x y z) with-constraints (symbolo x) (symbolo z) (+o y y w)
           (ino (list 5 'five) x y z))
     '((10 five 5 five)))
-  (lets
-    ;   S E N D
-    ; + M O R E
-    ; ---------
-    ; M O N E Y
-    add-digitso = (fn (augend addend carry-in carry-out digit)
-      (exist (partial-sum sum)
-        (conj*-seq
-          (+o augend addend partial-sum)
-          (+o partial-sum carry-in sum)
-          (conde
-            ((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
-            ((<=o sum 9) (== carry-out 0) (== digit sum)))
-          (ino (range 19) partial-sum)
-          (ino (range 20) sum))))
-    send-more-moneyo = (fn (letters)
-      (exist (s e n d m o r y carry0 carry1 carry2)
-        (conj*-seq
-          (== letters (list s e n d m o r y))
-          (all-diffo letters)
-          (add-digitso s m carry2 m o)
-          (add-digitso e o carry1 carry2 n)
-          (add-digitso n r carry0 carry1 e)
-          (add-digitso d e 0 carry0 y)
-          (ino (range 1 10) s m)
-          (ino (range 10) e n d o r y)
-          (ino (range 2) carry0 carry1 carry2))))
-    (check-equal?
-      (run*-depth 1000 (a b c) with-constraints
-        (send-more-moneyo (list a 5 6 b 1 0 c 2)))
-      '((9 7 8))))
+  ; slow test
+  ;(lets
+    ;;   S E N D
+    ;; + M O R E
+    ;; ---------
+    ;; M O N E Y
+    ;add-digitso = (fn (augend addend carry-in carry-out digit)
+      ;(exist (partial-sum sum)
+        ;(+o augend addend partial-sum)
+        ;(+o partial-sum carry-in sum)
+        ;(conde
+          ;((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
+          ;((<=o sum 9) (== carry-out 0) (== digit sum)))
+        ;(ino (range 19) partial-sum)
+        ;(ino (range 20) sum)))
+    ;send-more-moneyo = (fn (letters)
+      ;(exist (s e n d m o r y carry0 carry1 carry2)
+        ;(== letters (list s e n d m o r y))
+        ;(all-diffo letters)
+        ;(ino (range 2) carry0)
+        ;(ino (range 10) e d y)
+        ;(add-digitso d e 0 carry0 y)
+        ;(ino (range 2) carry1 carry2)
+        ;(ino (range 10) n o)
+        ;(add-digitso e o carry1 carry2 n)
+        ;(ino (range 10) r)
+        ;(add-digitso n r carry0 carry1 e)
+        ;(ino (range 1 10) s m)
+        ;(add-digitso s m carry2 m o)))
+    ;(check-equal?
+      ;(run*-depth 4000 (a b c d e f) with-constraints
+        ;(send-more-moneyo (list a b c d 1 0 e f)))
+      ;'((9 5 6 7 8 2))))
   (check-match
     (run* (p r) with-constraints
       (=/= '(1 2) `(,p ,r))
