@@ -243,8 +243,16 @@
       (nat-addo r-current r-later r)
       ))))
 
+(define (gt1o n) (conde ((== '(2) n))
+                        ((exist (a d) (== `(, a . ,d) n) (poso d)))))
+
 (define (nat-divo a b q r)
-  (exist (mr) (nat<o r b) (nat-mulo b q mr) (nat-addo r mr a)))
+  (conde
+    ((== '(1) b) (== '() r) (== a q))
+    ((exist (mr) (gt1o b)
+      (nat-mulo b q mr)
+      (nat<o r b)
+      (nat-subo a mr r)))))
 
 (module+ test
   (lets
