@@ -31,14 +31,12 @@ kanren:
   implicit views
     view, unview
     tagging
-    arithmetic
     =/=
     constraint-like reification
   denotational interpreters for running functional programs relationally
     this is not like the embedded relational interpreter for finding quines
-      more like curry
     SICP-style, so hopefully faster than embedded relational interpreter
-    try eager and lazy versions
+    by-need evaluation, minicurry
   remove function terms
   constraints
     optional occurs-check?
