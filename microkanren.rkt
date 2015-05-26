@@ -10,19 +10,24 @@
   disj
   disj*
   interpret
+  muk-conj-conc
+  muk-conj-seq
   muk-eval
   muk-func-app
+  muk-mzero
+  muk-reify
   muk-state-empty
   muk-sub-get-var
   muk-sub-prefix
+  muk-success
   muk-take
   muk-take-all
   muk-term?
   muk-unify-and-update
+  muk-unit
   muk-var
   muk-var?
   muk-var->symbol
-  muk-reify
   Zzz
   )
 
