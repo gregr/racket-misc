@@ -21,9 +21,6 @@
 ; syntactic sugar for if, tag-case, general match
 ; logic terms
   ; exist, logic vars
-  ; ==
-  ; conj
-  ; conj-seq
 ; denote : syntax -> env -> logic-result -> st -> [st]
 ;   or?
 ; denote : syntax -> env -> st -> [st]
@@ -49,7 +46,6 @@
                                       param <- params
                                       (env-add env param #f)))
 (define env-empty (hash))
-
 
 (def (denote-application senv head tail)
   dproc = (denote-with senv head)
@@ -119,15 +115,30 @@
 (define denote-head (denote-special-proc 'head 1 car))
 (define denote-tail (denote-special-proc 'tail 1 cdr))
 
+(define denote-== (denote-special-proc '== 2 equal?))
+(define (denote-conj senv tail)
+  (if (not (list? tail))
+    (error (format "invalid conjunction: ~a" `(conj . ,tail)))
+    (lets args = (map (curry denote-with senv) tail)
+          (lambda (env) (andmap (app1 env) args)))))
+(define (denote-seq senv tail)
+  (match tail
+    ((list body) (denote-with senv body))
+    ((cons c0 tail)
+     (lets dc0 = (denote-with senv c0)
+           dtail = (denote-seq senv tail)
+           (lambda (env)
+             (if (dc0 env) (dtail env) (error "sequential conjunction failure")))))
+    (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
 (define (denote-disj senv tail)
   (match tail
     ('() (lambda (_) (error "disjunction failure")))
-    (`(((== ,lhs ,rhs) ,body) . ,tail)
-      (lets (list dlhs drhs dbody) =
-            (map (curry denote-with senv) (list lhs rhs body))
-            dtail = (denote-disj senv tail)
-            (fn (env) (if (apply equal? (map (app1 env) (list dlhs drhs)))
-                        (dbody env) (dtail env)))))
+    ((cons (? list? (? (compose1 (curry < 0) length)) head) tail)
+     (lets (list conditions body) = (list-init+last head)
+           dconj = (denote-conj senv conditions)
+           dbody = (denote-with senv body)
+           dtail = (denote-disj senv tail)
+           (lambda (env) (if (dconj env) (dbody env) (dtail env)))))
     (_ (error (format "invalid disjunction: ~a" `(disj . ,tail))))))
 
 (define senv-new (hash
@@ -138,6 +149,9 @@
                    'pair denote-pair
                    'head denote-head
                    'tail denote-tail
+                   '== denote-==
+                   'conj denote-conj
+                   'seq denote-seq
                    'disj denote-disj
                    ))
 
