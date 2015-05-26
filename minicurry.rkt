@@ -22,35 +22,26 @@
 ; logic terms
   ; exist, logic vars
   ; ==
-  ; disj
   ; conj
   ; conj-seq
 ; denote : syntax -> env -> logic-result -> st -> [st]
 ;   or?
 ; denote : syntax -> env -> st -> [st]
 
+(define ((app1 arg) f) (f arg))
 (define (atom? x)
   (ormap (lambda (p) (p x)) (list symbol? boolean? number? string? char?)))
 
-(define (tagged tag payload) (hash 'tag tag 'payload payload))
-
-(define val-unit (hash))
-(define val-nil (tagged 'nil val-unit))
-(define (val-cons head tail) (tagged 'pair (hash 'head head 'tail tail)))
+(define val-unit '())
+(define val-nil '())
+(define val-cons cons)
 (define denote-unit (const val-unit))
 (define (build-cons fst snd) (val-cons (build-datum fst) (build-datum snd)))
 (define (build-datum stx) (match stx
                             ((? atom?) stx)
                             ('() val-nil)
                             ((cons fst snd) (build-cons fst snd))))
-
-(define (pretty-datum datum)
-  (match datum
-    ((? hash?)
-     (forl
-       (cons key val) <- (hash->list datum)
-       (list key (pretty-datum val))))
-    (_ datum)))
+(define pretty-datum identity)
 
 (define (env-get env ident) (dict-get env ident))
 (define (env-add env ident val) (dict-set env ident val))
@@ -59,39 +50,18 @@
                                       (env-add env param #f)))
 (define env-empty (hash))
 
+
 (def (denote-application senv head tail)
   dproc = (denote-with senv head)
   dargs = (map (curry denote-with senv) tail)
   (lambda (env)
     (forf proc = (dproc env)
-          arg <- (map (lambda (arg) (arg env)) dargs)
+          arg <- (map (app1 env) dargs)
           (proc arg))))
 (define (denote-quote _ tail)
   (match tail
     ((list single) (const (build-datum single)))
     (_ (error (format "invalid quote: ~a" `(quote . ,tail))))))
-(define (denote-radd senv tail)
-  (match tail
-    ((list rec key val)
-     (lets
-       drec = (denote-with senv rec)
-       dkey = (denote-with senv key)
-       dval = (denote-with senv val)
-       (lambda (env) (hash-set (drec env) (dkey env) (dval env)))))))
-(define (denote-rremove senv tail)
-  (match tail
-    ((list rec key)
-     (lets
-       drec = (denote-with senv rec)
-       dkey = (denote-with senv key)
-       (lambda (env) (hash-remove (drec env) (dkey env)))))))
-(define (denote-rget senv tail)
-  (match tail
-    ((list rec key)
-     (lets
-       drec = (denote-with senv rec)
-       dkey = (denote-with senv key)
-       (lambda (env) (hash-ref (drec env) (dkey env)))))))
 
 (define (denote-lam senv tail)
   (match tail
@@ -130,13 +100,45 @@
         (dbody env)))
     (err)))
 
+(define ((denote-special-proc proc-name nargs proc) senv tail)
+  (match tail
+    ((? list? (? (compose1 (curry = nargs) length)))
+     (lets args = (map (curry denote-with senv) tail)
+           (lambda (env) (apply proc (map (app1 env) args)))))
+    (_ (error (format "'~a' expects ~a argument(s): ~a"
+                      proc-name nargs `(,proc-name . ,tail))))))
+(define denote-type
+  (denote-special-proc 'type 1
+    (lambda (arg)
+      (cond ((null? arg) 'nil)
+            ((pair? arg) 'pair)
+            ((atom? arg) 'atom)
+            ((procedure? arg) 'procedure)
+            (else (error (format "cannot determine type of: ~a" arg)))))))
+(define denote-pair (denote-special-proc 'pair 2 cons))
+(define denote-head (denote-special-proc 'head 1 car))
+(define denote-tail (denote-special-proc 'tail 1 cdr))
+
+(define (denote-disj senv tail)
+  (match tail
+    ('() (lambda (_) (error "disjunction failure")))
+    (`(((== ,lhs ,rhs) ,body) . ,tail)
+      (lets (list dlhs drhs dbody) =
+            (map (curry denote-with senv) (list lhs rhs body))
+            dtail = (denote-disj senv tail)
+            (fn (env) (if (apply equal? (map (app1 env) (list dlhs drhs)))
+                        (dbody env) (dtail env)))))
+    (_ (error (format "invalid disjunction: ~a" `(disj . ,tail))))))
+
 (define senv-new (hash
                    'quote denote-quote
                    'lam denote-lam
                    'letr denote-letr
-                   'record-add denote-radd
-                   'record-remove denote-rremove
-                   'record-get denote-rget
+                   'type denote-type
+                   'pair denote-pair
+                   'head denote-head
+                   'tail denote-tail
+                   'disj denote-disj
                    ))
 
 (define (denote-identifier senv ident)
@@ -167,51 +169,40 @@
 (module+ test
   (check-equal?
     (pretty-datum (denote-eval '(quote (a b))))
-    '((tag pair)
-      (payload ((head a)
-                (tail ((tag pair)
-                       (payload ((head b)
-                                 (tail ((tag nil)
-                                        (payload ())))))))))))
+    '(a b))
   (check-equal?
     (pretty-datum (denote-eval '((lam (x y) x) 5 (quote (a b c)))))
     5)
   (check-equal?
     (pretty-datum
-      (denote-eval '((lam (rec val) (record-add rec 'result val)) () 5)))
-    '((result 5)))
+      (denote-eval '((lam (rec val) (type 'sym)) () 5)))
+    'atom)
   (check-equal?
     (pretty-datum
-      (denote-eval '((lam (rec val)
-                      (record-remove (record-add rec 'result val) 'result))
-                     () 5)))
+      (denote-eval '((lam (rec val) (pair val rec)) () 5)))
+    '(5))
+  (check-equal?
+    (pretty-datum
+      (denote-eval '((lam (rec val) (head (pair val rec))) () 4)))
+    4)
+  (check-equal?
+    (pretty-datum
+      (denote-eval '((lam (rec val) (tail (pair val rec))) () 4)))
     '())
-  (check-equal?
-    (pretty-datum
-      (denote-eval '((lam (rec val)
-                      (record-get (record-add rec 'result val) 'result))
-                     () 5)))
-    5)
   (check-equal?
     (pretty-datum
       (denote-eval
         '(letr
-           ((tag-dispatch datum choices)
-              ((record-get choices (record-get datum 'tag))
-               (record-get datum 'payload)))
-           ((even? xs)
-              (tag-dispatch xs
-                (record-add (record-add ()
-                  'pair (lam (payload) (odd? (record-get payload 'tail))))
-                  'nil (lam (_) #t))))
-           ((odd? xs)
-              (tag-dispatch xs
-                (record-add (record-add ()
-                  'pair (lam (payload) (even? (record-get payload 'tail))))
-                  'nil (lam (_) #f))))
-           (record-add (record-add ()
-             'is-even (even? '(a b c)))
-             'is-odd (odd? '(a b c)))
-           )))
+           ((list-case xs nil-case pair-case)
+              (disj ((== 'nil (type xs)) (nil-case '()))
+                    ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
+           ((even? xs) (list-case xs
+                                  (lam (_) #t)
+                                  (lam (hd tl) (odd? tl))))
+           ((odd? xs) (list-case xs
+                                 (lam (_) #f)
+                                 (lam (hd tl) (even? tl))))
+           (pair (pair 'is-even (pair (even? '(a b c)) ()))
+                 (pair (pair 'is-odd (pair (odd? '(a b c)) ())) ())))))
     '((is-even #f) (is-odd #t)))
   )
