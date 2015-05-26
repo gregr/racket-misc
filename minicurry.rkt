@@ -299,5 +299,23 @@
              (pair (pair 'is-even (pair (even? '(a b c)) ()))
                    (pair (pair 'is-odd (pair (odd? '(a b c)) ())) ()))))))
     '((((is-even #f) (is-odd #t)))))
-  ; TODO: append, last in terms of append
+  (check-equal?
+    (run 4 (q r s)
+      (denote-eval
+        `(== ,q
+           (letr
+             ((list-case xs nil-case pair-case)
+              (disj ((== 'nil (type xs)) (nil-case '()))
+                    ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
+             ((append xs ys)
+              (list-case xs
+                         (lam (_) ys)
+                         (lam (hd tl) (pair hd (append tl ys)))))
+             (seq (== (append ,r ,s) '(1 2 3))
+                  (append '(a b c) '(d e f)))))))
+    '(((a b c d e f) () (1 2 3))
+      ((a b c d e f) (1) (2 3))
+      ((a b c d e f) (1 2) (3))
+      ((a b c d e f) (1 2 3) ())))
+  ; TODO: last in terms of append
   )
