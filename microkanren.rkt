@@ -93,7 +93,7 @@
       '(g f e))))
 
 (records muk-computation
-  (muk-success)
+  (muk-success result)
   (muk-conj-conc c0 c1)
   (muk-conj-seq c0 c1)
   )
@@ -103,18 +103,18 @@
   (if (= depth 0) (list (list st comp))
     (append*
       (match comp
-        ((muk-success) (list (list (list st comp))))
+        ((muk-success _) (list (list (list st comp))))
         ((muk-conj-conc c0 c1)
          (forl (list st c0) <- (muk-step-depth st c0 depth)
                (forl (list st c1) <- (muk-step-depth st c1 depth)
                      (list st (match* (c0 c1)
-                                (((muk-success) _) c1)
-                                ((_ (muk-success)) c0)
+                                (((muk-success _) _) c1)
+                                ((_ (muk-success _)) c0)
                                 ((_ _) (muk-conj-conc c0 c1)))))))
         ((muk-conj-seq c0 c1)
          (forl (list st c0) <- (muk-step-depth st c0 depth)
                (match c0
-                 ((muk-success) (muk-step-depth st c1 depth))
+                 ((muk-success _) (muk-step-depth st c1 depth))
                  (_ (list (list st (muk-conj-seq c0 c1)))))))
         (_ (forl (list st comp) <- (comp st)
                  (muk-step-depth st comp next-depth)))))))
@@ -126,7 +126,7 @@
     (list st comp) <- (append* (forl (list st comp) <- pending
                                      (muk-step-depth st comp depth)))
     (match comp
-      ((muk-success) (list (list* st finished) unfinished))
+      ((muk-success _) (list (list* st finished) unfinished))
       (_ (list finished (list* (list st comp) unfinished)))))
   (append finished (if (null? pending)
                      '() (thunk (muk-eval-loop pending depth)))))
@@ -141,7 +141,8 @@
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
 
 (define muk-mzero '())
-(define (muk-unit st) (list* (list st (muk-success)) muk-mzero))
+(define (muk-unit st (result (void)))
+  (list* (list st (muk-success result)) muk-mzero))
 
 (define (muk-split aggs)
   (forf components = (nothing)
