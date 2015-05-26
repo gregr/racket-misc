@@ -20,7 +20,7 @@
 ; TODO:
 ; syntactic sugar for if, tag-case, general match
 ; logic terms
-  ; exist, logic vars
+  ; logic vars
 ; denote : syntax -> env -> logic-result -> st -> [st]
 ;   or?
 ; denote : syntax -> env -> st -> [st]
@@ -61,7 +61,7 @@
 
 (define (denote-lam senv tail)
   (match tail
-    ((list (? list? params) body)
+    ((list (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
      (foldr (lambda (param body)
               (lambda (env)
                 (lambda (arg) (body (env-add env param arg)))))
@@ -115,7 +115,28 @@
 (define denote-head (denote-special-proc 'head 1 car))
 (define denote-tail (denote-special-proc 'tail 1 cdr))
 
+(define ((eval-seq dc0 dtail) env)
+  (if (dc0 env) (dtail env) (error "sequential conjunction failure")))
+(define ((denote-conj+seq error-msg) senv tail)
+  (match tail
+    ((? list? (? (compose1 (curry < 0) length)) tail)
+     (lets (list conditions body) = (list-init+last tail)
+           dconj = (denote-conj senv conditions)
+           dbody = (denote-with senv body)
+           (eval-seq dconj dbody)))
+    (_ (error error-msg))))
+
 (define denote-== (denote-special-proc '== 2 equal?))
+(define (denote-exist senv tail)
+  (match tail
+    ((cons (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
+     (lets senv = (env-extend senv params)
+           error-msg = (format "invalid 'exist': ~a" `(exist ,params . ,body))
+           dbody = ((denote-conj+seq error-msg) senv body)
+           (lambda (env) (dbody (forf env = env
+                                      param <- params
+                                      (env-add env param param))))))
+    (_ (format "invalid 'exist': ~a" `(exist . ,tail)))))
 (define (denote-conj senv tail)
   (if (not (list? tail))
     (error (format "invalid conjunction: ~a" `(conj . ,tail)))
@@ -127,8 +148,7 @@
     ((cons c0 tail)
      (lets dc0 = (denote-with senv c0)
            dtail = (denote-seq senv tail)
-           (lambda (env)
-             (if (dc0 env) (dtail env) (error "sequential conjunction failure")))))
+           (eval-seq dc0 dtail)))
     (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
 (define (denote-disj senv tail)
   (match tail
@@ -150,6 +170,7 @@
                    'head denote-head
                    'tail denote-tail
                    '== denote-==
+                   'exist denote-exist
                    'conj denote-conj
                    'seq denote-seq
                    'disj denote-disj
@@ -203,6 +224,10 @@
     (pretty-datum
       (denote-eval '((lam (rec val) (tail (pair val rec))) () 4)))
     '())
+  (check-equal?
+    (pretty-datum
+      (denote-eval '((exist (a b) (== #t #t) (pair a (pair b ()))))))
+    '(a b))
   (check-equal?
     (pretty-datum
       (denote-eval
