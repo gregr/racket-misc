@@ -6,6 +6,8 @@
   matche
   run
   run*
+  run-depth
+  run*-depth
   )
 
 (require
