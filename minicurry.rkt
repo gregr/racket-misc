@@ -129,19 +129,27 @@
               (eval-all-args gargs)))))
     (_ (error (format "'~a' expects ~a argument(s): ~a"
                       proc-name nargs `(,proc-name . ,tail))))))
-; TODO: handle logic vars
 (define denote-type
   (denote-special-proc 'type 1
     (lambda (arg)
-      (muk-value
-        (cond ((null? arg) 'nil)
-              ((pair? arg) 'pair)
-              ((atom? arg) 'atom)
-              ((procedure? arg) 'procedure)
-              (else (error (format "cannot determine type of: ~a" arg))))))))
+      (if (muk-var? arg)
+        (disj (conj-seq (== '() arg) (muk-value 'nil))
+              (conj-seq (call/var (lambda (a0) (call/var (lambda (d0)
+                (== `(,a0 . ,d0) arg))))) (muk-value 'pair)))
+        (muk-value
+          (cond ((null? arg) 'nil)
+                ((pair? arg) 'pair)
+                (else (error (format "cannot determine type of: ~a"
+                                     arg)))))))))
+(define ((eval-pair-proc proc) pr)
+  (if (muk-var? pr)
+    (call/var (lambda (a0) (call/var (fn (d0)
+      actual-pair = `(,a0 . ,d0)
+      (conj-seq (== actual-pair pr) (muk-value (proc actual-pair)))))))
+    (muk-value (proc pr))))
 (define denote-pair (denote-special-proc 'pair 2 (compose1 muk-value cons)))
-(define denote-head (denote-special-proc 'head 1 (compose1 muk-value car)))
-(define denote-tail (denote-special-proc 'tail 1 (compose1 muk-value cdr)))
+(define denote-head (denote-special-proc 'head 1 (eval-pair-proc car)))
+(define denote-tail (denote-special-proc 'tail 1 (eval-pair-proc cdr)))
 
 (define ((eval-seq dc0 dtail) env) (conj-seq (dc0 env) (dtail env)))
 (define ((denote-conj+seq error-msg) senv tail)
@@ -258,6 +266,15 @@
       (denote-eval
         `((exist (a b) (== 1 a) (== 2 b) (== ,q (pair a (pair b ())))))))
     '(((1 2))))
+  (check-equal?
+    (run* (q r) (denote-eval `(== ,r (type ,q))))
+    '((() nil) ((_.2 . _.3) pair)))
+  (check-equal?
+    (run* (q r) (denote-eval `(== ,r (head ,q))))
+    '(((_.1 . _.3) _.1)))
+  (check-equal?
+    (run* (q r) (denote-eval `(== ,r (tail ,q))))
+    '(((_.2 . _.1) _.1)))
   (check-equal?
     (run* (q)
       (denote-eval
