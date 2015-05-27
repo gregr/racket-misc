@@ -33,10 +33,9 @@ kanren:
     tagging
     =/=
     constraint-like reification
-  denotational interpreters for running functional programs relationally
-    this is not like the embedded relational interpreter for finding quines
-    SICP-style, so hopefully faster than embedded relational interpreter
-    by-need evaluation, minicurry
+  minicurry
+    improve concurrency for search cutoff
+    by-need evaluation?
   remove function terms
   constraints
     optional occurs-check?
