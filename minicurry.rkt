@@ -25,7 +25,6 @@
 
 ; TODO:
 ; syntactic sugar for if, tag-case, general match
-; more concurrency to cut off backward searches
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -81,8 +80,8 @@
     gapp = ((eval-goal-cont (eval-application gargs)) gproc)
     (call/var
       (lambda (r0)
-        (conj-seq (apply-special-proc == (list (muk-value r0) gapp))
-                  (muk-value r0))))))
+        (conj (apply-special-proc == (list (muk-value r0) gapp))
+              (muk-value r0))))))
 (define (denote-quote _ tail)
   (match tail
     ((list single) (const (muk-value (build-datum single))))
@@ -318,7 +317,7 @@
                    (pair (pair 'is-odd (pair (odd? '(a b c)) ())) ()))))))
     '((((is-even #f) (is-odd #t)))))
   (check-equal?
-    (run 4 (q r s)
+    (run* (q r s)
       (denote-eval
         `(== ,q
            (letr
@@ -336,7 +335,7 @@
       ((a b c d e f) (1 2) (3))
       ((a b c d e f) (1 2 3) ())))
   (check-equal?
-    (run 1 (q)
+    (run* (q)
       (denote-eval
         `(letr
            ((list-case xs nil-case pair-case)
