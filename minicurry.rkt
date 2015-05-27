@@ -76,10 +76,14 @@
 (def (denote-application senv head tail)
   dproc = (denote-with senv head)
   dargs = (map (curry denote-with senv) tail)
-  (lambda (env)
-    (lets gproc = (dproc env)
-          gargs = (map (app1 env) dargs)
-          ((eval-goal-cont (eval-application gargs)) gproc))))
+  (fn (env)
+    gproc = (dproc env)
+    gargs = (map (app1 env) dargs)
+    gapp = ((eval-goal-cont (eval-application gargs)) gproc)
+    (call/var
+      (lambda (r0)
+        (conj-seq (apply-special-proc == (list (muk-value r0) gapp))
+                  (muk-value r0))))))
 (define (denote-quote _ tail)
   (match tail
     ((list single) (const (muk-value (build-datum single))))
@@ -129,14 +133,15 @@
     ((cons garg gargs)
      ((eval-goal-cont
         (lambda (arg) (eval-all-args gargs (list* arg rargs)))) garg))))
+(def (apply-special-proc proc gargs)
+  ((eval-goal-cont (lambda (args) (apply proc args))) (eval-all-args gargs)))
 (define ((denote-special-proc proc-name nargs proc) senv tail)
   (match tail
     ((? list? (? (compose1 (curry = nargs) length)))
      (lets args = (map (curry denote-with senv) tail)
            (fn (env)
              gargs = (map (app1 env) args)
-             ((eval-goal-cont (lambda (args) (apply proc args)))
-              (eval-all-args gargs)))))
+             (apply-special-proc proc gargs))))
     (_ (error (format "'~a' expects ~a argument(s): ~a"
                       proc-name nargs `(,proc-name . ,tail))))))
 (define denote-type
