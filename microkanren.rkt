@@ -109,7 +109,7 @@
                (forl (list st c1) <- (muk-step-depth st c1 depth)
                      (list st (match* (c0 c1)
                                 (((muk-success _) _) c1)
-                                ((_ (muk-success _)) c0)
+                                ((_ (muk-success _)) (muk-conj-seq c0 c1))
                                 ((_ _) (muk-conj-conc c0 c1)))))))
         ((muk-conj-seq c0 c1)
          (forl (list st c0) <- (muk-step-depth st c0 depth)
