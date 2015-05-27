@@ -34,8 +34,7 @@ kanren:
     =/=
     constraint-like reification
   minicurry
-    improve concurrency for search cutoff
-    by-need evaluation?
+    strictness?
   remove function terms
   constraints
     optional occurs-check?
