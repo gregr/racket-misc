@@ -15,6 +15,7 @@
   muk-eval
   muk-func-app
   muk-mzero
+  muk-pause
   muk-reify
   muk-state-empty
   muk-sub-get-var
@@ -96,6 +97,7 @@
   (muk-success result)
   (muk-conj-conc c0 c1)
   (muk-conj-seq c0 c1)
+  (muk-pause paused)
   )
 
 (define (muk-step-depth st comp depth)
@@ -116,6 +118,7 @@
                (match c0
                  ((muk-success _) (muk-step-depth st c1 depth))
                  (_ (list (list st (muk-conj-seq c0 c1)))))))
+        ((muk-pause paused) (list (list (list st paused))))
         (_ (forl (list st comp) <- (comp st)
                  (muk-step-depth st comp next-depth)))))))
 
