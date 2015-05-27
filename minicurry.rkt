@@ -25,6 +25,7 @@
 
 ; TODO:
 ; syntactic sugar for if, tag-case, general match
+; more concurrency to cut off backward searches
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -317,5 +318,20 @@
       ((a b c d e f) (1) (2 3))
       ((a b c d e f) (1 2) (3))
       ((a b c d e f) (1 2 3) ())))
-  ; TODO: last in terms of append
+  (check-equal?
+    (run 1 (q)
+      (denote-eval
+        `(letr
+           ((list-case xs nil-case pair-case)
+            (disj ((== 'nil (type xs)) (nil-case '()))
+                  ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
+           ((append xs ys)
+            (list-case xs
+                       (lam (_) ys)
+                       (lam (hd tl) (pair hd (append tl ys)))))
+           ((last xs) (exist (ys result)
+                             (== (append ys (pair result ())) xs)
+                             result))
+           ((== ,q (last '(1 2 3)))))))
+    '((3)))
   )
