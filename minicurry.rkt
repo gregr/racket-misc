@@ -58,12 +58,21 @@
     ((muk-conj-conc _ _) (error "misplaced concurrent conjunction"))
     (_ (forl (list st comp) <- (value-goal st)
              (list st ((eval-goal-cont cont) comp))))))
+(define ((eval-logic-var-cont cont) value)
+  (if (muk-var? value)
+    (lambda (st) (cont (muk-sub-get-var st value)))
+    (const (cont value))))
 (define ((eval-application gargs) proc)
   (match gargs
     ('() (muk-value proc))
     ((cons garg gargs)
-     ((eval-goal-cont
-        (compose1 (eval-goal-cont (eval-application gargs)) proc)) garg))))
+     (lambda (st)
+       (((eval-goal-cont
+           (((eval-logic-var-cont
+               (lambda (actual-proc)
+                 (compose1 (eval-goal-cont (eval-application gargs))
+                           actual-proc))) proc) st))
+         garg) st)))))
 (def (denote-application senv head tail)
   dproc = (denote-with senv head)
   dargs = (map (curry denote-with senv) tail)
@@ -267,6 +276,10 @@
       (denote-eval
         `((exist (a b) (== 1 a) (== 2 b) (== ,q (pair a (pair b ())))))))
     '(((1 2))))
+  (check-equal?
+    (run* (q)
+      (denote-eval `(== ,q (exist (f) (seq (== f (lam (x) x)) (f 11))))))
+    '((11)))
   (check-equal?
     (run* (q r) (denote-eval `(== ,r (type ,q))))
     '((() nil) ((_.2 . _.3) pair)))
