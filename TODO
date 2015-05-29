@@ -20,8 +20,6 @@ markout:
 
 kanren:
   measure substitution size growth
-  maybe try weak-key hashes to allow garbage collection of substitutions
-    may be especially effective with idempotent substitutions
   compare efficiency of idempotent substitutions
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
