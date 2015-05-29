@@ -16,8 +16,13 @@ markout:
   seem to need height management, not just width
     draw tables twice, measuring the first time to provide measurement the second time?
       simplest quick fix; not a long term solution
+  http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
 kanren:
+  measure substitution size growth
+  maybe try weak-key hashes to allow garbage collection of substitutions
+    may be especially effective with idempotent substitutions
+  compare efficiency of idempotent substitutions
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
       (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
@@ -34,9 +39,16 @@ kanren:
     =/=
     constraint-like reification
   minicurry
-    strictness?
+    syntactic sugar
+    benchmarks?
+      particularly related to substitution size once this is measurable
+    maybe try extending microkanren with by-need suspended computations, triggered by pause
+      appropriate suspension to be unfrozen is identified by a key provided by pause
   remove function terms
   constraints
+    CHR
+      https://en.wikipedia.org/wiki/Constraint_Handling_Rules
+      Adding CHR to Curry: https://www.informatik.uni-kiel.de/~mh/papers/WLP06.pdf
     optional occurs-check?
     https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
       interesting sub-thread between torkel and pereira
