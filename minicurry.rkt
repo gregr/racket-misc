@@ -25,7 +25,6 @@
 
 ; TODO:
 ; syntactic sugar for general match, more general letr
-; application-like laziness for other constructs
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -239,17 +238,18 @@
 (define denote-head (denote-special-proc 'head 1 #t (eval-pair-proc car)))
 (define denote-tail (denote-special-proc 'tail 1 #t (eval-pair-proc cdr)))
 
-(define ((eval-seq dc0 dtail) env) (conj-seq (dc0 env) (dtail env)))
+(define ((eval-seq strict? dc0 dtail) env)
+  (possibly-strict strict? (conj-seq (dc0 env) (dtail env))))
 (define (denote-conj+seq strict? senv tail)
   (match tail
     ((? list? (? (compose1 (curry < 0) length)))
      (lets (list conditions body) = (list-init+last tail)
-           dbody = (denote-with senv body strict?)
+           dbody = (denote-with senv body #t)
            (if (null? conditions) dbody
-             (eval-seq (denote-conj #t senv conditions) dbody))))
+             (eval-seq strict? (denote-conj #t senv conditions) dbody))))
     (_ (error (format "invalid conjunction sequence: ~a" tail)))))
 
-(define denote-== (denote-special-proc '== 2 #t ==))
+(define denote-== (denote-special-proc '== 2 #f ==))
 (define (denote-exist strict? senv tail)
   (match tail
     ((cons (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
@@ -275,8 +275,8 @@
     ((list body) (denote-with senv body strict?))
     ((cons c0 tail)
      (lets dc0 = (denote-with senv c0 #t)
-           dtail = (denote-seq strict? senv tail)
-           (eval-seq dc0 dtail)))
+           dtail = (denote-seq #t senv tail)
+           (eval-seq strict? dc0 dtail)))
     (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
 (define (denote-disj strict? senv tail)
   (match tail
