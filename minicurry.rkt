@@ -94,6 +94,20 @@
   (match tail
     ((list single) (const (muk-value (build-datum single))))
     (_ (error (format "invalid quote: ~a" `(quote . ,tail))))))
+(define (denote-quasi-datum error-msg strict? senv stx)
+  (match stx
+    (`(unquote . ,tail) (match tail
+                         ((list single) (denote-with senv single strict?))
+                         (_ (error error-msg))))
+    (`(,head . ,tail)
+      (wrap-special-proc (compose1 muk-value cons)
+        (map (curry denote-quasi-datum error-msg #f senv) (list head tail))))
+    (_ (const (muk-value (build-datum stx))))))
+(def (denote-quasiquote strict? senv tail)
+  error-msg = (format "invalid quote: ~a" `(quote . ,tail))
+  (match tail
+    ((list single) (denote-quasi-datum error-msg strict? senv single))
+    (_ (error error-msg))))
 
 (define (denote-lam _ senv tail)
   (match tail
@@ -141,15 +155,16 @@
         (lambda (arg) (eval-all-args gargs (list* arg rargs)))) garg))))
 (def (apply-special-proc proc gargs)
   ((eval-goal-cont (lambda (args) (apply proc args))) (eval-all-args gargs)))
-(define ((denote-special-proc proc-name nargs strict-args? proc) strict? senv tail)
+(define ((wrap-special-proc proc dargs) env)
+  (apply-special-proc proc (map (app1 env) dargs)))
+(define ((denote-special-proc proc-name nargs strict-args? proc)
+         strict? senv tail)
   (match tail
     ((? list? (? (compose1 (curry = nargs) length)))
-     (lets args = (map (lambda (arg)
-                         (denote-with senv arg (and strict-args? strict?)))
-                       tail)
-           (fn (env)
-             gargs = (map (app1 env) args)
-             (apply-special-proc proc gargs))))
+     (lets dargs = (map (lambda (arg)
+                          (denote-with senv arg (and strict-args? strict?)))
+                        tail)
+           (wrap-special-proc proc dargs)))
     (_ (error (format "'~a' expects ~a argument(s): ~a"
                       proc-name nargs `(,proc-name . ,tail))))))
 (define denote-type
@@ -223,6 +238,7 @@
 
 (define senv-new (hash
                    'quote denote-quote
+                   'quasiquote denote-quasiquote
                    'lam denote-lam
                    'letr denote-letr
                    'type denote-type
@@ -284,9 +300,11 @@
       (denote-eval `(== ,q ((lam (rec val) (tail (pair val rec))) () 4))))
     '((())))
   (check-equal?
+    (run* (q) (denote-eval `(== ,q `(a ,(pair 'b 'c) (d e)))))
+    '(((a (b . c) (d e)))))
+  (check-equal?
     (run* (q)
-      (denote-eval
-        `((exist (a b) (== 1 a) (== 2 b) (== ,q (pair a (pair b ())))))))
+      (denote-eval `((exist (a b) (== 1 a) (== 2 b) (== ,q `(,a ,b))))))
     '(((1 2))))
   (check-equal?
     (run* (q)
@@ -322,8 +340,8 @@
              ((odd? xs) (list-case xs
                                    (lam (_) #f)
                                    (lam (hd tl) (even? tl))))
-             (pair (pair 'is-even (pair (even? '(a b c)) ()))
-                   (pair (pair 'is-odd (pair (odd? '(a b c)) ())) ()))))))
+             `((is-even ,(even? '(a b c)))
+               (is-odd ,(odd? '(a b c))))))))
     '((((is-even #f) (is-odd #t)))))
   (check-equal?
     (run* (q r s)
