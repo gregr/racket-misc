@@ -24,7 +24,8 @@
     ))
 
 ; TODO:
-; syntactic sugar for if, tag-case, general match, more general letr
+; syntactic sugar for general match, more general letr
+; application-like laziness for other constructs
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -78,15 +79,17 @@
           ((eval-goal-cont (compose1 (eval-goal-cont (eval-application gargs))
                                      actual-proc)) garg)))
       (eval-logic-var proc)))))
+(define (possibly-strict strict? gbody)
+  (if strict? gbody
+    (call/var
+      (lambda (r0)
+        (conj (apply-special-proc == (list (muk-value r0) gbody))
+              (muk-value r0))))))
 (def ((build-application strict? dproc dargs) env)
   gproc = (dproc env)
   gargs = (map (app1 env) dargs)
   gapp = ((eval-goal-cont (eval-application gargs)) gproc)
-  (if strict? gapp
-    (call/var
-      (lambda (r0)
-        (conj (apply-special-proc == (list (muk-value r0) gapp))
-              (muk-value r0))))))
+  (possibly-strict strict? gapp))
 (def (denote-application strict? senv head tail)
   dproc = (denote-with senv head #t)
   dargs = (map (curry denote-with senv) tail)
@@ -180,6 +183,20 @@
             (build-application strict? (build-lam senv `(,param) dbody)
                                `(,darg))))
     (err)))
+(define (denote-if strict? senv tail)
+  (match tail
+    ((list condition true false)
+     (lets
+       dtail = (map (denote-with-strictness #t senv) tail)
+       (fn (env)
+         (list gcond gtrue gfalse) = (map (app1 env) dtail)
+         body = (lambda (cnd)
+          (if (muk-var? cnd)
+            (disj (conj-seq (== #t cnd) gtrue) (conj-seq (== #f cnd) gfalse))
+            (match cnd (#t gtrue) (#f gfalse)
+              (_ (error (format "non-boolean if condition: ~a" cnd))))))
+         (possibly-strict strict? ((eval-application `(,gcond)) body)))))
+    (_ (error (format "invalid if statement: ~a" `(if . ,tail))))))
 
 (define (eval-all-args gargs (rargs '()))
   (match gargs
@@ -276,6 +293,7 @@
                    'letr denote-letr
                    'let denote-let
                    'let* denote-let*
+                   'if denote-if
                    'type denote-type
                    'pair denote-pair
                    'head denote-head
@@ -334,6 +352,10 @@
   (check-equal?
     (run* (q) (denote-eval `(== ,q (let* (val 7) (pr (pair val ())) pr))))
     '(((7))))
+  (check-equal?
+    (run* (q c) (denote-eval `(== ,q (if ,c (pair (if #t 3 4) (if #f 3 4))
+                                       'else))))
+    '((else #f) ((3 . 4) #t)))
   (check-equal?
     (run* (q)
       (denote-eval `(== ,q ((lam (rec val) (head (pair val rec))) () 4))))
