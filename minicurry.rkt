@@ -24,7 +24,7 @@
     ))
 
 ; TODO:
-; syntactic sugar for if, tag-case, general match
+; syntactic sugar for if, tag-case, general match, more general letr
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -78,18 +78,19 @@
           ((eval-goal-cont (compose1 (eval-goal-cont (eval-application gargs))
                                      actual-proc)) garg)))
       (eval-logic-var proc)))))
+(def ((build-application strict? dproc dargs) env)
+  gproc = (dproc env)
+  gargs = (map (app1 env) dargs)
+  gapp = ((eval-goal-cont (eval-application gargs)) gproc)
+  (if strict? gapp
+    (call/var
+      (lambda (r0)
+        (conj (apply-special-proc == (list (muk-value r0) gapp))
+              (muk-value r0))))))
 (def (denote-application strict? senv head tail)
   dproc = (denote-with senv head #t)
   dargs = (map (curry denote-with senv) tail)
-  (fn (env)
-    gproc = (dproc env)
-    gargs = (map (app1 env) dargs)
-    gapp = ((eval-goal-cont (eval-application gargs)) gproc)
-    (if strict? gapp
-      (call/var
-        (lambda (r0)
-          (conj (apply-special-proc == (list (muk-value r0) gapp))
-                (muk-value r0)))))))
+  (build-application strict? dproc dargs))
 (define (denote-quote strict? senv tail)
   (match tail
     ((list single) (const (muk-value (build-datum single))))
@@ -146,6 +147,19 @@
                   (set-box! bx proc))
         (dbody env)))
     (err)))
+(define (denote-let strict? senv tail)
+  (define (err) (error (format "invalid let: ~a" `(let . ,tail))))
+  (if (and (not (null? tail)) (list? tail))
+    (lets
+      (list assignments body) = (list-init+last tail)
+      (list params args) =
+      (zip-default '(() ()) (forl assignment <- assignments
+                                  (match assignment
+                                    ((list _ _) assignment)
+                                    (_ (err)))))
+      (build-application strict? (denote-lam strict? senv `(,params ,body))
+                         (map (denote-with-strictness #f senv) args)))
+    (err)))
 
 (define (eval-all-args gargs (rargs '()))
   (match gargs
@@ -161,10 +175,9 @@
          strict? senv tail)
   (match tail
     ((? list? (? (compose1 (curry = nargs) length)))
-     (lets dargs = (map (lambda (arg)
-                          (denote-with senv arg (and strict-args? strict?)))
-                        tail)
-           (wrap-special-proc proc dargs)))
+     (wrap-special-proc
+       proc (map (denote-with-strictness (and strict-args? strict?) senv)
+                 tail)))
     (_ (error (format "'~a' expects ~a argument(s): ~a"
                       proc-name nargs `(,proc-name . ,tail))))))
 (define denote-type
@@ -241,6 +254,7 @@
                    'quasiquote denote-quasiquote
                    'lam denote-lam
                    'letr denote-letr
+                   'let denote-let
                    'type denote-type
                    'pair denote-pair
                    'head denote-head
@@ -273,6 +287,8 @@
        ((just (? procedure? denote-special))
         (denote-special strict? senv tail))
        (_ (denote-application strict? senv head tail))))))
+(define ((denote-with-strictness strict? senv) stx)
+  (denote-with senv stx strict?))
 
 (define (denote stx) (denote-with senv-new stx #t))
 (define (denote-eval stx) ((denote stx) env-empty))
@@ -290,6 +306,9 @@
     '((5 (a b c))))
   (check-equal?
     (run* (q) (denote-eval `(== ,q ((lam (rec val) (pair val rec)) () 6))))
+    '(((6))))
+  (check-equal?
+    (run* (q) (denote-eval `(== ,q (let (rec ()) (val 6) (pair val rec)))))
     '(((6))))
   (check-equal?
     (run* (q)
