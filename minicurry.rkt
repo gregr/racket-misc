@@ -110,15 +110,16 @@
     ((list single) (denote-quasi-datum error-msg strict? senv single))
     (_ (error error-msg))))
 
+(define (build-lam senv params dbody)
+  (foldr (lambda (param body)
+           (lambda (env)
+             (muk-value
+               (lambda (arg) (body (env-add env param (muk-value arg)))))))
+         dbody params))
 (define (denote-lam _ senv tail)
   (match tail
     ((list (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
-     (foldr (lambda (param body)
-              (lambda (env)
-                (muk-value
-                  (lambda (arg) (body (env-add env param (muk-value arg)))))))
-            (denote-with (env-extend senv params) body #t)
-            params))
+     (build-lam senv params (denote-with (env-extend senv params) body #t)))
     (_ (error (format "invalid lam: ~a" `(lam . ,tail))))))
 (define (denote-letr strict? senv tail)
   (define (err) (error (format "invalid letr: ~a" `(letr . ,tail))))
@@ -159,6 +160,25 @@
                                     (_ (err)))))
       (build-application strict? (denote-lam strict? senv `(,params ,body))
                          (map (denote-with-strictness #f senv) args)))
+    (err)))
+(define (denote-let* strict? senv tail)
+  (define (err) (error (format "invalid let*: ~a" `(let* . ,tail))))
+  (if (and (not (null? tail)) (list? tail))
+    (lets
+      (list assignments body) = (list-init+last tail)
+      (list senv rdassignments) =
+      (forf (list senv rdassignments) = (list senv '())
+            assignment <- assignments
+            (match assignment
+              ((list param arg)
+               (lets senv = (env-extend senv `(,param))
+                     rdassignment = (list param (denote-with senv arg #f))
+                     (list senv (list* rdassignment rdassignments))))
+              (_ (err))))
+      (forf dbody = (denote-with senv body #t)
+            (list param darg) <- rdassignments
+            (build-application strict? (build-lam senv `(,param) dbody)
+                               `(,darg))))
     (err)))
 
 (define (eval-all-args gargs (rargs '()))
@@ -255,6 +275,7 @@
                    'lam denote-lam
                    'letr denote-letr
                    'let denote-let
+                   'let* denote-let*
                    'type denote-type
                    'pair denote-pair
                    'head denote-head
@@ -310,6 +331,9 @@
   (check-equal?
     (run* (q) (denote-eval `(== ,q (let (rec ()) (val 6) (pair val rec)))))
     '(((6))))
+  (check-equal?
+    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr (pair val ())) pr))))
+    '(((7))))
   (check-equal?
     (run* (q)
       (denote-eval `(== ,q ((lam (rec val) (head (pair val rec))) () 4))))
