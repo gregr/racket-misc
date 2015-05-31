@@ -19,6 +19,7 @@ markout:
   http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
 kanren:
+  optimized 'ino' for relational arithmetic
   measure substitution size growth
   compare efficiency of idempotent substitutions
   encodings (such as full-repr) instead of additional constraint system layers
@@ -37,7 +38,6 @@ kanren:
     =/=
     constraint-like reification
   minicurry
-    syntactic sugar
     benchmarks?
       particularly related to substitution size once this is measurable
     maybe try extending microkanren with by-need suspended computations, triggered by pause
