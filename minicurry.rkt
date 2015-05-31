@@ -337,12 +337,16 @@
            dtail = (denote-seq #t senv tail)
            (build-seq strict? dc0 dtail)))
     (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
+(def (build-disj strict? dalternatives)
+  (list dinitial dfinal) = (list-init+last dalternatives)
+  (possibly-strict
+    strict? (foldr (lambda (dhead dtail)
+                     (lambda (env) (disj (dhead env) (dtail env))))
+                   dfinal dinitial)))
 (define (denote-disj strict? senv tail)
   (match tail
-    ((list head) (denote-conj+seq strict? senv head))
-    ((cons head tail) (lets dhead = (denote-conj+seq strict? senv head)
-                            dtail = (denote-disj strict? senv tail)
-                            (lambda (env) (disj (dhead env) (dtail env)))))
+    ((? list? (? (compose1 (curry < 0) length) tail))
+     (build-disj strict? (map (curry denote-conj+seq #t senv) tail)))
     (_ (error (format "invalid disjunction: ~a" `(disj . ,tail))))))
 
 (define senv-new (hash
