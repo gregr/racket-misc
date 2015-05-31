@@ -26,6 +26,7 @@
     ))
 
 ; TODO: more general letr
+; TODO: unquote-splicing
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -33,7 +34,7 @@
          (list muk-var? symbol? boolean? number? string? char?)))
 
 (define ((muk-value val) st) (muk-unit st val))
-(define val-unit '())
+(define val-unit (void))
 (define val-nil '())
 (define val-cons cons)
 (define denote-unit (const (muk-value val-unit)))
@@ -444,13 +445,13 @@
       (denote-eval `(== ,q ((lam (x y) (seq (== ,r y) x)) 5 (quote (a b c))))))
     '((5 (a b c))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q ((lam (rec val) (pair val rec)) () 6))))
+    (run* (q) (denote-eval `(== ,q ((lam (rec val) (pair val rec)) '() 6))))
     '(((6))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let (rec ()) (val 6) (pair val rec)))))
+    (run* (q) (denote-eval `(== ,q (let (rec '()) (val 6) (pair val rec)))))
     '(((6))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr (pair val ())) pr))))
+    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr (pair val '())) pr))))
     '(((7))))
   (check-equal?
     (run* (q c) (denote-eval `(== ,q (if ,c (pair (if #t 3 4) (if #f 3 4))
@@ -458,11 +459,11 @@
     '((else #f) ((3 . 4) #t)))
   (check-equal?
     (run* (q)
-      (denote-eval `(== ,q ((lam (rec val) (head (pair val rec))) () 4))))
+      (denote-eval `(== ,q ((lam (rec val) (head (pair val rec))) '() 4))))
     '((4)))
   (check-equal?
     (run* (q)
-      (denote-eval `(== ,q ((lam (rec val) (tail (pair val rec))) () 4))))
+      (denote-eval `(== ,q ((lam (rec val) (tail (pair val rec))) '() 4))))
     '((())))
   (check-equal?
     (run* (q) (denote-eval `(== ,q `(a ,(pair 'b 'c) (d e)))))
@@ -527,7 +528,7 @@
       ((append xs ys) (match xs
                         ('() ys)
                         (`(,hd . ,tl) (pair hd (append tl ys)))))
-      ((last (append xs (pair result ()))) result)
+      ((last (append xs `(,result))) result)
       ((foldl f acc xs) (match xs
                            ('() acc)
                            (`(,y . ,ys) (foldl f (f y acc) ys))))
