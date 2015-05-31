@@ -25,7 +25,7 @@
     ))
 
 ; TODO:
-; match, match*, matching let*
+; match, match*
 ; more general letr
 
 (define ((app1 arg) f) (f arg))
@@ -149,8 +149,7 @@
              (foldr (curry build-conj #t) (last dmatches)
                     (list-init dmatches)))
   build-match =
-  (fn (conditions body)
-    dbody = (denote-with senv body #t)
+  (fn (conditions dbody)
     dcond0 = (if (null? conditions) #f (denote-conj #t senv conditions))
     (build-exist
       pattern-idents
@@ -173,7 +172,7 @@
            (? list? (? (compose1 (curry < 0) length) tail)))
      (lets (list conditions body) = (list-init+last tail)
            (list params senv build-match) = (pattern-matcher senv patterns)
-           dbody = (build-match conditions body)
+           dbody = (build-match conditions (denote-with senv body #t))
            (build-lam senv params dbody)))
     (_ (error (format "invalid lam: ~a" `(lam . ,tail))))))
 (define (denote-letr strict? senv tail)
@@ -225,15 +224,18 @@
       (forf (list senv rdassignments) = (list senv '())
             assignment <- assignments
             (match assignment
-              ((list param arg)
-               (lets senv = (env-extend senv `(,param))
-                     rdassignment = (list param (denote-with senv arg #f))
+              ((list pattern arg)
+               (lets (list (list param) senv build-match) =
+                     (pattern-matcher senv (list pattern))
+                     rdassignment = (list param (denote-with senv arg #f)
+                                          build-match)
                      (list senv (list* rdassignment rdassignments))))
               (_ (err))))
       (forf dbody = (denote-with senv body #t)
-            (list param darg) <- rdassignments
-            (build-application strict? (build-lam senv `(,param) dbody)
-                               `(,darg))))
+            (list param darg build-match) <- rdassignments
+            dbody = (build-match '() dbody)
+            (build-application
+              strict? (build-lam senv `(,param) dbody) `(,darg))))
     (err)))
 (define (denote-if strict? senv tail)
   (match tail
@@ -450,6 +452,11 @@
                                         (`(,a b ,c) '(8 b 7))
                                      (pair a c)))))
     '(((8 . 7))))
+  (check-equal?
+    (run* (q) (denote-eval `(== ,q (let* (`(,a b ,c) `(4 b 5))
+                                         (`(,d . ,e) (pair c a))
+                                     `(,d ,e 3)))))
+    '(((5 4 3))))
   (check-equal?
     (run* (q)
       (denote-eval
