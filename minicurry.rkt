@@ -123,8 +123,7 @@
       (`(quote ,_) '())
       (`(quasiquote ,stx)
        (append* (map pattern->identifiers (unquote-pats stx))))
-      (`(,head . ,tail)
-       (append* (map pattern->identifiers (list head tail))))
+      (`(,head . ,tail) (append* (map pattern->identifiers tail)))
       (_ '()))))
 
 (def (pattern-matcher senv patterns)
@@ -515,9 +514,7 @@
       ((append xs ys) (match xs
                         ('() ys)
                         (`(,hd . ,tl) (pair hd (append tl ys)))))
-      ((last xs) (exist (ys result)
-                        (== (append ys (pair result ())) xs)
-                        result)))
+      ((last (append xs (pair result ()))) result))
     (begin
       (check-equal?
         (run* (q)
