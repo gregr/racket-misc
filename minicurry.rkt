@@ -527,7 +527,27 @@
       ((append xs ys) (match xs
                         ('() ys)
                         (`(,hd . ,tl) (pair hd (append tl ys)))))
-      ((last (append xs (pair result ()))) result))
+      ((last (append xs (pair result ()))) result)
+      ((foldl f acc xs) (match xs
+                           ('() acc)
+                           (`(,y . ,ys) (foldl f (f y acc) ys))))
+      ((foldr f acc xs) (match xs
+                           ('() acc)
+                           (`(,y . ,ys) (f y (foldr f acc ys)))))
+      ((cons a b) (pair a b))
+      ((map f xs) (foldr (compose cons f) '() xs))
+      ((rev xs) (foldl cons '() xs))  ; not well-behaved when run backwards
+      ((reverse xs) (match xs
+                      ('() '())
+                      (`(,y . ,ys) (append (reverse ys) `(,y)))))
+      ((compose f g x) (f (g x)))
+      ((filter p xs) (match xs
+                       ('() '())
+                       ((pair y ys)
+                        (let (zs (filter p ys))
+                          (if (p y) (pair y zs) zs)))))
+      ((member element (append xs (pair element ys))) ())
+      )
     (begin
       (check-equal?
         (run* (q)
@@ -555,4 +575,55 @@
           (denote-eval `(letr ,@shared
                           ((== ,q (last '(1 2 3)))))))
         '((3)))
+      (check-equal?
+        (run* (q)
+          (denote-eval `(letr ,@shared
+                          ((== ,q (reverse '(1 2 3)))))))
+        '(((3 2 1))))
+      (check-equal?
+        (run* (q)
+          (denote-eval `(letr ,@shared
+                          ((== (rev '(1 2 3)) (reverse '(1 2 3)))))))
+        '((_.0)))
+      (check-equal?
+        (run* (q) (denote-eval
+          `(== ,q (letr ,@shared
+                    (map reverse '((a b c) (1 2 3)))))))
+        '((((c b a) (3 2 1)))))
+      (check-equal?
+        (run* (q) (denote-eval
+          `(letr ,@shared
+             (== '((c b a) (3 2 1)) (map reverse '((a b c) ,q))))))
+        '(((1 2 3))))
+      (check-equal?
+        (run* (q) (denote-eval
+          `(letr ,@shared
+             (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
+        '((3)))
+      (check-equal?
+        (run* (q) (denote-eval
+          `(letr ,@shared
+                 ((next-day day) (match day
+                                   ('mon 'tue)
+                                   ('tue 'wed)
+                                   ('wed 'thur)
+                                   ('thur 'fri)
+                                   ('fri 'sat)
+                                   ('sat 'sun)))
+                 ((weekday? day) (match day
+                                   ('mon #t)
+                                   ('tue #t)
+                                   ('wed #t)
+                                   ('thur #t)
+                                   ('fri #t)
+                                   ('sat #f)
+                                   ('sun #f)))
+            (== '() (filter (compose weekday? next-day) '(,q))))))
+        '((sat) (fri)))
+      (check-equal?
+        (run* (q) (denote-eval
+          `(letr ,@shared
+             (conj (member ,q '(1 2 3))
+                   (member ,q '(2 3 4))))))
+        '((2) (3)))
       )))
