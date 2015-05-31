@@ -25,7 +25,7 @@
     ))
 
 ; TODO:
-; match, match*
+; match
 ; more general letr
 
 (define ((app1 arg) f) (f arg))
@@ -166,7 +166,7 @@
              (muk-value
                (lambda (arg) (body (env-add env param (muk-value arg)))))))
          dbody params))
-(define (denote-lam _ senv tail)
+(define ((denote-lam-err err) _ senv tail)
   (match tail
     ((cons (? list? (? (compose1 (curry < 0) length) patterns))
            (? list? (? (compose1 (curry < 0) length) tail)))
@@ -174,7 +174,11 @@
            (list params senv build-match) = (pattern-matcher senv patterns)
            dbody = (build-match conditions (denote-with senv body #t))
            (build-lam senv params dbody)))
-    (_ (error (format "invalid lam: ~a" `(lam . ,tail))))))
+    (_ (err))))
+(define (denote-lam strict? senv tail)
+  ((denote-lam-err
+     (lambda () (error (format "invalid lam: ~a" `(lam . ,tail)))))
+   strict? senv tail))
 (define (denote-letr strict? senv tail)
   (define (err) (error (format "invalid letr: ~a" `(letr . ,tail))))
   (if (and (not (null? tail)) (list? tail))
@@ -237,6 +241,16 @@
             (build-application
               strict? (build-lam senv `(,param) dbody) `(,darg))))
     (err)))
+
+(define (denote-match* strict? senv tail)
+  (define (err) (error (format "invalid match*: ~a" `(match* . ,tail))))
+  (match tail
+    ((cons (? list? (? (compose1 (curry < 0) length) args))
+           (? list? (? (compose1 (curry < 0) length) alternatives)))
+     (lets dlams = (map (curry (denote-lam-err err) strict? senv) alternatives)
+           (build-application strict? (build-disj #t dlams)
+                              (map (denote-with-strictness #f senv) args))))
+    (_ (err))))
 (define (denote-if strict? senv tail)
   (match tail
     ((list condition true false)
@@ -356,6 +370,7 @@
                    'letr denote-letr
                    'let denote-let
                    'let* denote-let*
+                   'match* denote-match*
                    'if denote-if
                    'type denote-type
                    'pair denote-pair
@@ -462,6 +477,11 @@
                                      `(,d ,e 3)))))
     '(((5 4 3))))
   (check-equal?
+    (run* (q) (denote-eval `(== ,q (match* (17 (pair 3 'a))
+                                     ((17 `(,x . a)) x)
+                                     ((x `(3 . ,y)) (pair x y))))))
+    '((3) ((17 . a))))
+  (check-equal?
     (run* (q)
       (denote-eval
         `(== ,q
@@ -474,9 +494,9 @@
     '(((list-case xs nil-case pair-case)
        (disj ((== 'nil (type xs)) (nil-case '()))
              ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
-      ((even? xs) (list-case xs
-                             (lam (_) #t)
-                             (lam (hd tl) (odd? tl))))
+      ((even? xs) (match* (xs)
+                    (('()) #t)
+                    ((`(,hd . ,tl)) (odd? tl))))
       ((odd? xs) (list-case xs
                             (lam (_) #f)
                             (lam (hd tl) (even? tl))))
