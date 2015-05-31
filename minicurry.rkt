@@ -506,19 +506,15 @@
 
   (lets
     shared =
-    '(((list-case xs nil-case pair-case)
-       (disj ((== 'nil (type xs)) (nil-case '()))
-             ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
-      ((even? xs) (match* (xs)
-                    (('()) #t)
-                    ((`(,hd . ,tl)) (odd? tl))))
-      ((odd? xs) (list-case xs
-                            (lam (_) #f)
-                            (lam (hd tl) (even? tl))))
-      ((append xs ys)
-       (list-case xs
-                  (lam (_) ys)
-                  (lam (hd tl) (pair hd (append tl ys)))))
+    '(((even? xs) (match xs
+                    ('() #t)
+                    (`(,hd . ,tl) (odd? tl))))
+      ((odd? xs) (match xs
+                   ('() #f)
+                   (`(,hd . ,tl) (even? tl))))
+      ((append xs ys) (match xs
+                        ('() ys)
+                        (`(,hd . ,tl) (pair hd (append tl ys)))))
       ((last xs) (exist (ys result)
                         (== (append ys (pair result ())) xs)
                         result)))
