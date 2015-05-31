@@ -238,7 +238,9 @@
 (define denote-head (denote-special-proc 'head 1 #t (eval-pair-proc car)))
 (define denote-tail (denote-special-proc 'tail 1 #t (eval-pair-proc cdr)))
 
-(define ((eval-seq strict? dc0 dtail) env)
+(define ((build-conj strict? dc0 dtail) env)
+  (possibly-strict strict? (conj (dc0 env) (dtail env))))
+(define ((build-seq strict? dc0 dtail) env)
   (possibly-strict strict? (conj-seq (dc0 env) (dtail env))))
 (define (denote-conj+seq strict? senv tail)
   (match tail
@@ -246,21 +248,23 @@
      (lets (list conditions body) = (list-init+last tail)
            dbody = (denote-with senv body #t)
            (if (null? conditions) dbody
-             (eval-seq strict? (denote-conj #t senv conditions) dbody))))
+             (build-seq strict? (denote-conj #t senv conditions) dbody))))
     (_ (error (format "invalid conjunction sequence: ~a" tail)))))
 
 (define denote-== (denote-special-proc '== 2 #f ==))
+(define (build-exist params dbody)
+  (forf dbody = dbody
+        param <- params
+        (lambda (env)
+          (call/var (lambda (x0)
+                      (dbody (env-add env param (muk-value x0))))))))
 (define (denote-exist strict? senv tail)
   (match tail
     ((cons (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
      (lets senv = (env-extend senv params)
            error-msg = (format "invalid 'exist': ~a" `(exist ,params . ,body))
            dbody = (denote-conj+seq strict? senv body)
-           (forf dbody = dbody
-                 param <- params
-                 (lambda (env)
-                   (call/var (lambda (x0)
-                               (dbody (env-add env param (muk-value x0)))))))))
+           (build-exist params dbody)))
     (_ (format "invalid 'exist': ~a" `(exist . ,tail)))))
 (define (denote-conj strict? senv tail)
   (match tail
@@ -268,7 +272,7 @@
      (lets (list prefixes body) = (list-init+last tail)
            dprefixes = (map (lambda (arg) (denote-with senv arg #t)) prefixes)
            dbody = (denote-with senv body strict?)
-           (lambda (env) (foldr conj (dbody env) (map (app1 env) dprefixes)))))
+           (foldr (curry build-conj #t) dbody dprefixes)))
     (_ (error (format "invalid conjunction: ~a" `(conj . ,tail))))))
 (define (denote-seq strict? senv tail)
   (match tail
@@ -276,7 +280,7 @@
     ((cons c0 tail)
      (lets dc0 = (denote-with senv c0 #t)
            dtail = (denote-seq #t senv tail)
-           (eval-seq strict? dc0 dtail)))
+           (build-seq strict? dc0 dtail)))
     (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
 (define (denote-disj strict? senv tail)
   (match tail
