@@ -24,9 +24,7 @@
     rackunit
     ))
 
-; TODO:
-; match
-; more general letr
+; TODO: more general letr
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -242,8 +240,15 @@
               strict? (build-lam senv `(,param) dbody) `(,darg))))
     (err)))
 
-(define (denote-match* strict? senv tail)
-  (define (err) (error (format "invalid match*: ~a" `(match* . ,tail))))
+(define (denote-match strict? senv tail)
+  (define (err) (error (format "invalid match: ~a" `(match . ,tail))))
+  (match tail
+    ((cons arg alternatives)
+     (lets lam-tails = (forl (cons pattern tail) <- alternatives
+                             (cons (list pattern) tail))
+           ((denote-match*-err err) strict? senv (cons (list arg) lam-tails))))
+    (_ (err))))
+(define ((denote-match*-err err) strict? senv tail)
   (match tail
     ((cons (? list? (? (compose1 (curry < 0) length) args))
            (? list? (? (compose1 (curry < 0) length) alternatives)))
@@ -251,6 +256,10 @@
            (build-application strict? (build-disj #t dlams)
                               (map (denote-with-strictness #f senv) args))))
     (_ (err))))
+(define (denote-match* strict? senv tail)
+  ((denote-match*-err
+     (lambda () (error (format "invalid match*: ~a" `(match* . ,tail)))))
+   strict? senv tail))
 (define (denote-if strict? senv tail)
   (match tail
     ((list condition true false)
@@ -370,6 +379,7 @@
                    'letr denote-letr
                    'let denote-let
                    'let* denote-let*
+                   'match denote-match
                    'match* denote-match*
                    'if denote-if
                    'type denote-type
@@ -476,6 +486,11 @@
                                          (`(,d . ,e) (pair c a))
                                      `(,d ,e 3)))))
     '(((5 4 3))))
+  (check-equal?
+    (run* (q) (denote-eval `(== ,q (match (pair 3 'a)
+                                     (`(,x . a) x)
+                                     (`(3 . ,y) y)))))
+    '((a) (3)))
   (check-equal?
     (run* (q) (denote-eval `(== ,q (match* (17 (pair 3 'a))
                                      ((17 `(,x . a)) x)
