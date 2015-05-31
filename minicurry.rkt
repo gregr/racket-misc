@@ -16,6 +16,7 @@
   racket/function
   racket/list
   (except-in racket/match ==)
+  racket/set
   )
 
 (module+ test
@@ -127,21 +128,33 @@
       (_ '()))))
 
 (def (pattern-matcher senv patterns)
-  (list arg-idents pattern-identss m-arg-patterns) =
+  new-ident = (lambda () (gensym 'match-param))
+  (list params pattern-identss m-arg-patterns) =
   (zip-default '(() () ())
                (forl pattern <- patterns
                      (if (symbol? pattern)
                        (list pattern '() (nothing))
-                       (lets arg-ident = (gensym 'match-arg)
-                             (list arg-ident (pattern->identifiers pattern)
-                                   (just (list arg-ident pattern)))))))
-  pattern-idents = (append* pattern-identss)
+                       (lets param = (new-ident)
+                             (list param (pattern->identifiers pattern)
+                                   (just (list param pattern)))))))
+  pattern-idents = (list->set (append* pattern-identss))
+  (list params m-arg-patterns) =
+  (zip-default '(() ())
+    (forl param <- params
+          mppat <- m-arg-patterns
+          (match mppat
+            ((nothing)
+             (if (set-member? pattern-idents param)
+               (lets actual-param = (new-ident)
+                     (list actual-param (just (list actual-param param))))
+               (list param (nothing))))
+            ((? just?) (list param mppat)))))
   arg-patterns = (maybe-filter m-arg-patterns)
-  senv = (env-extend senv (append arg-idents pattern-idents))
+  senv = (env-extend senv (append params (set->list pattern-idents)))
   dmatches =
-  (forl (list arg-ident pattern) <- arg-patterns
+  (forl (list param pattern) <- arg-patterns
         dpattern = (denote-with senv pattern)
-        (wrap-special-proc == (list (denote-with senv arg-ident) dpattern)))
+        (wrap-special-proc == (list (denote-with senv param) dpattern)))
   dmatch = (if (null? dmatches) #f
              (foldr (curry build-conj #t) (last dmatches)
                     (list-init dmatches)))
@@ -155,7 +168,7 @@
                             ((not dcond0) dmatch)
                             (else (build-conj dmatch dcond0)))
               (build-seq #t dcond dbody)))))
-  (list arg-idents senv build-match))
+  (list params senv build-match))
 
 (define (build-lam senv params dbody)
   (foldr (lambda (param body)
