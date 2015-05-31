@@ -464,55 +464,50 @@
            (letr ((test x y) x)
                  (test 3 4)))))
     '((3)))
-  (check-equal?
-    (run* (q)
-      (denote-eval
-        `(== ,q
-           (letr
-             ((list-case xs nil-case pair-case)
-              (disj ((== 'nil (type xs)) (nil-case '()))
-                    ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
-             ((even? xs) (list-case xs
-                                    (lam (_) #t)
-                                    (lam (hd tl) (odd? tl))))
-             ((odd? xs) (list-case xs
-                                   (lam (_) #f)
-                                   (lam (hd tl) (even? tl))))
-             `((is-even ,(even? '(a b c)))
-               (is-odd ,(odd? '(a b c))))))))
-    '((((is-even #f) (is-odd #t)))))
-  (check-equal?
-    (run* (q r s)
-      (denote-eval
-        `(== ,q
-           (letr
-             ((list-case xs nil-case pair-case)
-              (disj ((== 'nil (type xs)) (nil-case '()))
-                    ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
-             ((append xs ys)
-              (list-case xs
-                         (lam (_) ys)
-                         (lam (hd tl) (pair hd (append tl ys)))))
-             (seq (== (append ,r ,s) '(1 2 3))
-                  (append '(a b c) '(d e f)))))))
-    '(((a b c d e f) () (1 2 3))
-      ((a b c d e f) (1) (2 3))
-      ((a b c d e f) (1 2) (3))
-      ((a b c d e f) (1 2 3) ())))
-  (check-equal?
-    (run* (q)
-      (denote-eval
-        `(letr
-           ((list-case xs nil-case pair-case)
-            (disj ((== 'nil (type xs)) (nil-case '()))
-                  ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
-           ((append xs ys)
-            (list-case xs
-                       (lam (_) ys)
-                       (lam (hd tl) (pair hd (append tl ys)))))
-           ((last xs) (exist (ys result)
-                             (== (append ys (pair result ())) xs)
-                             result))
-           ((== ,q (last '(1 2 3)))))))
-    '((3)))
-  )
+
+  (lets
+    shared =
+    '(((list-case xs nil-case pair-case)
+       (disj ((== 'nil (type xs)) (nil-case '()))
+             ((== 'pair (type xs)) (pair-case (head xs) (tail xs)))))
+      ((even? xs) (list-case xs
+                             (lam (_) #t)
+                             (lam (hd tl) (odd? tl))))
+      ((odd? xs) (list-case xs
+                            (lam (_) #f)
+                            (lam (hd tl) (even? tl))))
+      ((append xs ys)
+       (list-case xs
+                  (lam (_) ys)
+                  (lam (hd tl) (pair hd (append tl ys)))))
+      ((last xs) (exist (ys result)
+                        (== (append ys (pair result ())) xs)
+                        result)))
+    (begin
+      (check-equal?
+        (run* (q)
+          (denote-eval
+            `(== ,q
+                 (letr ,@shared
+                   `((is-even ,(even? '(a b c)))
+                     (is-odd ,(odd? '(a b c))))))))
+        '((((is-even #f) (is-odd #t)))))
+      (check-equal?
+        (run* (q)
+          (denote-eval `(== ,q (letr ,@shared
+                                 (append '(a b c) '(d e f))))))
+        '(((a b c d e f))))
+      (check-equal?
+        (run* (r s)
+          (denote-eval `(letr ,@shared
+                          (== (append ,r ,s) '(1 2 3)))))
+        '((() (1 2 3))
+          ((1) (2 3))
+          ((1 2) (3))
+          ((1 2 3) ())))
+      (check-equal?
+        (run* (q)
+          (denote-eval `(letr ,@shared
+                          ((== ,q (last '(1 2 3)))))))
+        '((3)))
+      )))
