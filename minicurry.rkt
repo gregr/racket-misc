@@ -14,6 +14,7 @@
   "sugar.rkt"
   racket/dict
   racket/function
+  racket/list
   (except-in racket/match ==)
   )
 
@@ -24,7 +25,8 @@
     ))
 
 ; TODO:
-; syntactic sugar for general match, more general letr
+; match, match*, matching let*
+; more general letr
 
 (define ((app1 arg) f) (f arg))
 (define (atom? x)
@@ -112,6 +114,53 @@
     ((list single) (denote-quasi-datum error-msg strict? senv single))
     (_ (error error-msg))))
 
+(define (pattern->identifiers pat)
+  (define (unquote-pats stx)
+    (match stx
+      ((list 'unquote pat) (list pat))
+      (`(,head . ,tail) (append (unquote-pats head) (unquote-pats tail)))
+      (_ '())))
+  (if (symbol? pat) (list pat)
+    (match pat
+      (`(quote ,_) '())
+      (`(quasiquote ,stx)
+       (append* (map pattern->identifiers (unquote-pats stx))))
+      (`(,head . ,tail)
+       (append* (map pattern->identifiers (list head tail))))
+      (_ '()))))
+
+(def (pattern-matcher senv patterns)
+  (list arg-idents pattern-identss m-arg-patterns) =
+  (zip-default '(() () ())
+               (forl pattern <- patterns
+                     (if (symbol? pattern)
+                       (list pattern '() (nothing))
+                       (lets arg-ident = (gensym 'match-arg)
+                             (list arg-ident (pattern->identifiers pattern)
+                                   (just (list arg-ident pattern)))))))
+  pattern-idents = (append* pattern-identss)
+  arg-patterns = (maybe-filter m-arg-patterns)
+  senv = (env-extend senv (append arg-idents pattern-idents))
+  dmatches =
+  (forl (list arg-ident pattern) <- arg-patterns
+        dpattern = (denote-with senv pattern)
+        (wrap-special-proc == (list (denote-with senv arg-ident) dpattern)))
+  dmatch = (if (null? dmatches) #f
+             (foldr (curry build-conj #t) (last dmatches)
+                    (list-init dmatches)))
+  build-match =
+  (fn (conditions body)
+    dbody = (denote-with senv body #t)
+    dcond0 = (if (null? conditions) #f (denote-conj #t senv conditions))
+    (build-exist
+      pattern-idents
+      (if (not (or dmatch dcond0)) dbody
+        (lets dcond = (cond ((not dmatch) dcond0)
+                            ((not dcond0) dmatch)
+                            (else (build-conj dmatch dcond0)))
+              (build-seq #t dcond dbody)))))
+  (list arg-idents senv build-match))
+
 (define (build-lam senv params dbody)
   (foldr (lambda (param body)
            (lambda (env)
@@ -120,8 +169,12 @@
          dbody params))
 (define (denote-lam _ senv tail)
   (match tail
-    ((list (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)
-     (build-lam senv params (denote-with (env-extend senv params) body #t)))
+    ((cons (? list? (? (compose1 (curry < 0) length) patterns))
+           (? list? (? (compose1 (curry < 0) length) tail)))
+     (lets (list conditions body) = (list-init+last tail)
+           (list params senv build-match) = (pattern-matcher senv patterns)
+           dbody = (build-match conditions body)
+           (build-lam senv params dbody)))
     (_ (error (format "invalid lam: ~a" `(lam . ,tail))))))
 (define (denote-letr strict? senv tail)
   (define (err) (error (format "invalid letr: ~a" `(letr . ,tail))))
@@ -155,12 +208,12 @@
   (if (and (not (null? tail)) (list? tail))
     (lets
       (list assignments body) = (list-init+last tail)
-      (list params args) =
+      (list patterns args) =
       (zip-default '(() ()) (forl assignment <- assignments
                                   (match assignment
                                     ((list _ _) assignment)
                                     (_ (err)))))
-      (build-application strict? (denote-lam strict? senv `(,params ,body))
+      (build-application strict? (denote-lam strict? senv `(,patterns ,body))
                          (map (denote-with-strictness #f senv) args)))
     (err)))
 (define (denote-let* strict? senv tail)
@@ -388,6 +441,15 @@
   (check-equal?
     (run* (q r) (denote-eval `(== ,r (tail ,q))))
     '(((_.2 . _.1) _.1)))
+  (check-equal?
+    (run* (q)
+      (denote-eval `(== ,q ((lam (4 `(,a b ,c)) (pair a c)) 4 '(8 b 9)))))
+    '(((8 . 9))))
+  (check-equal?
+    (run* (q) (denote-eval `(== ,q (let (4 4)
+                                        (`(,a b ,c) '(8 b 7))
+                                     (pair a c)))))
+    '(((8 . 7))))
   (check-equal?
     (run* (q)
       (denote-eval
