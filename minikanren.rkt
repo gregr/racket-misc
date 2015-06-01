@@ -11,11 +11,13 @@
   )
 
 (require
+  "list.rkt"
   "maybe.rkt"
   "microkanren.rkt"
   "monad.rkt"
   "repr.rkt"
   "sugar.rkt"
+  racket/function
   racket/list
   (except-in racket/match ==)
   racket/set
@@ -159,6 +161,44 @@
   (check-equal?
     (list (nat->bits 6) (nat->bits 7) (nat->bits 8) (nat->bits 9))
     '((2 2) (1 1 1) (2 1 1) (1 2 1))))
+
+(define ((nat-ino nats . lexprs) st)
+  (define (compressed-nats st)
+    (def (get-lvar st)
+         (list (list st lvar)) = ((call/var identity) st)
+         (list st lvar))
+    (let loop ((nats nats) (st st) (cur-result '()) (results '()))
+      (if (null? nats) (list st results)
+        (lets
+          results = (if (member '() nats)
+                      (list* (reverse cur-result) results)
+                      results)
+          nats = (filter-not null? nats)
+          (list firsts nats) =
+          (zip-default '(() ()) (forl nat <- nats
+                                      (list (first nat) (rest nat))))
+          bits = (list->set firsts)
+          (list st next) =
+          (cond
+            ((= 2 (set-count bits)) (get-lvar st))
+            ((set-member? bits 1) (list st 1))
+            (else (list st 2)))
+          cur-result = (list* next cur-result)
+          (loop nats st cur-result results)))))
+  (list
+    (forf (list st goal) = (list st (conj*))
+          lexpr <- lexprs
+          (list st domain) = (compressed-nats st)
+          (list st (conj goal (ino domain lexpr))))))
+
+(module+ test
+  (check-equal?
+    (run* (q) (nat-ino (list (nat->bits 6)
+                             (nat->bits 7)
+                             (nat->bits 8)
+                             (nat->bits 9))
+                       q))
+    '(((_.1 _.2)) ((_.1 _.2 1)))))
 
 (define (nat<o a b)
   (conde
