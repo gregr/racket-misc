@@ -207,6 +207,7 @@
       (== `(,a0 . ,ad) a) (== `(,b0 . ,bd) b)
       (conde ((nat<o ad bd))
              ((== ad bd) (== 1 a0) (== 2 b0)))))))
+(define (nat<=o a b) (conde ((nat<o a b)) ((== a b))))
 
 (module+ test
   (lets
