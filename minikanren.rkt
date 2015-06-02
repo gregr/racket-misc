@@ -407,6 +407,45 @@
     (run* (w x y z) with-constraints (symbolo x) (symbolo z) (+o y y w)
           (ino (list 5 'five) x y z))
     '((10 five 5 five)))
+
+  ; slow test (faster without compression)
+  ;(lets
+    ;;   S E N D
+    ;; + M O R E
+    ;; ---------
+    ;; M O N E Y
+    ;;nat-ino = ino  ; toggle state compression
+    ;nat-range = (lambda (rmin rmax) (map nat->bits (range rmin rmax)))
+    ;add-digitso = (fn (augend addend carry-in carry-out digit)
+      ;(exist (partial-sum sum)
+        ;(nat-addo augend addend partial-sum)
+        ;(nat-addo partial-sum carry-in sum)
+        ;(conde
+          ;((nat<o (nat->bits 9) sum) (== carry-out (nat->bits 1)) (nat-addo digit (nat->bits 10) sum))
+          ;((nat<=o sum (nat->bits 9)) (== carry-out (nat->bits 0)) (== digit sum)))
+        ;(nat-ino (nat-range 0 19) partial-sum)
+        ;(nat-ino (nat-range 0 20) sum)))
+    ;send-more-moneyo = (fn (letters)
+      ;(exist (s e n d m o r y carry0 carry1 carry2)
+        ;(== letters (list s e n d m o r y))
+        ;(all-diffo letters)
+        ;(nat-ino (nat-range 0 2) carry0)
+        ;(nat-ino (nat-range 0 10) e d y)
+        ;(add-digitso d e (nat->bits 0) carry0 y)
+        ;(nat-ino (nat-range 0 2) carry1 carry2)
+        ;(nat-ino (nat-range 0 10) n o)
+        ;(add-digitso e o carry1 carry2 n)
+        ;(nat-ino (nat-range 0 10) r)
+        ;(add-digitso n r carry0 carry1 e)
+        ;(nat-ino (nat-range 1 10) s m)
+        ;(add-digitso s m carry2 m o)))
+    ;(check-equal?
+      ;(run*-depth 1000 (a b c d e f) with-constraints
+        ;(send-more-moneyo (forl result <- (list a b c d 1 0 8 2)
+                                ;(if (muk-var? result) result
+                                  ;(nat->bits result)))))
+      ;'((9 5 6 7 8 2))))
+
   ; slow test
   ;(lets
     ;;   S E N D
@@ -440,6 +479,7 @@
       ;(run*-depth 4000 (a b c d e f) with-constraints
         ;(send-more-moneyo (list a b c d 1 0 e f)))
       ;'((9 5 6 7 8 2))))
+
   (check-match
     (run* (p r) with-constraints
       (=/= '(1 2) `(,p ,r))

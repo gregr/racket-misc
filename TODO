@@ -19,7 +19,6 @@ markout:
   http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
 kanren:
-  optimized 'ino' for relational arithmetic
   measure substitution size growth
   compare efficiency of idempotent substitutions
   encodings (such as full-repr) instead of additional constraint system layers
