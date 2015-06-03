@@ -53,7 +53,7 @@
 
 (define (((eval-goal-cont cont) value-goal) st)
   (match value-goal
-    ((muk-success value) ((cont value) st))
+    ((muk-success value) (list (list st (cont value))))
     ((muk-conj-seq c0 c1)
      (list (list st (muk-conj-seq c0 ((eval-goal-cont cont) c1)))))
     ((muk-conj-conc c0 c1)
@@ -503,7 +503,7 @@
     (run* (q) (denote-eval `(== ,q (match (pair 3 'a)
                                      (`(,x . a) x)
                                      (`(3 . ,y) y)))))
-    '((a) (3)))
+    '((3) (a)))
   (check-equal?
     (run* (q) (denote-eval `(== ,q (match* (17 (pair 3 'a))
                                      ((17 `(,x . a)) x)
@@ -622,7 +622,7 @@
                                    ('sat #f)
                                    ('sun #f)))
             (== '() (filter (compose weekday? next-day) '(,q))))))
-        '((sat) (fri)))
+        '((fri) (sat)))
       (check-equal?
         (run* (q) (denote-eval
           `(letr ,@shared
