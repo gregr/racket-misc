@@ -71,15 +71,13 @@
           (list (list st (muk-pause (loop result))))
           ((muk-value result) st))))
     (muk-value value)))
-(define ((eval-application gargs) proc)
-  (match gargs
-    ('() (muk-value proc))
-    ((cons garg gargs)
-     ((eval-goal-cont
-        (lambda (actual-proc)
-          ((eval-goal-cont (compose1 (eval-goal-cont (eval-application gargs))
-                                     actual-proc)) garg)))
-      (eval-logic-var proc)))))
+(define (eval-application gproc gargs)
+  (define (eval-app1 garg gproc)
+    ((eval-goal-cont
+       (lambda (arg) ((eval-goal-cont (compose1 (eval-goal-cont (app1 arg))
+                                                eval-logic-var))
+                      gproc))) garg))
+  (foldl eval-app1 gproc gargs))
 (define (possibly-strict strict? gbody)
   (if strict? gbody
     (call/var
@@ -89,7 +87,7 @@
 (def ((build-application strict? dproc dargs) env)
   gproc = (dproc env)
   gargs = (map (app1 env) dargs)
-  gapp = ((eval-goal-cont (eval-application gargs)) gproc)
+  gapp = (eval-application gproc gargs)
   (possibly-strict strict? gapp))
 (def (denote-application strict? senv head tail)
   dproc = (denote-with senv head #t)
@@ -503,7 +501,7 @@
     (run* (q) (denote-eval `(== ,q (match (pair 3 'a)
                                      (`(,x . a) x)
                                      (`(3 . ,y) y)))))
-    '((3) (a)))
+    '((a) (3)))
   (check-equal?
     (run* (q) (denote-eval `(== ,q (match* (17 (pair 3 'a))
                                      ((17 `(,x . a)) x)
@@ -622,7 +620,7 @@
                                    ('sat #f)
                                    ('sun #f)))
             (== '() (filter (compose weekday? next-day) '(,q))))))
-        '((fri) (sat)))
+        '((sat) (fri)))
       (check-equal?
         (run* (q) (denote-eval
           `(letr ,@shared
