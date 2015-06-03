@@ -285,7 +285,7 @@
             (disj (conj-seq (== #t cnd) gtrue) (conj-seq (== #f cnd) gfalse))
             (match cnd (#t gtrue) (#f gfalse)
               (_ (error (format "non-boolean if condition: ~a" cnd))))))
-         (possibly-strict strict? ((eval-application `(,gcond)) body)))))
+         (possibly-strict strict? ((eval-goal-cont body) gcond)))))
     (_ (error (format "invalid if statement: ~a" `(if . ,tail))))))
 
 (define (eval-all-args gargs (rargs '()))
