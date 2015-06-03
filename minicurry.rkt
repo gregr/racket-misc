@@ -525,28 +525,26 @@
       ((odd? xs) (match xs
                    ('() #f)
                    (`(,hd . ,tl) (even? tl))))
-      ((append xs ys) (match xs
-                        ('() ys)
-                        (`(,hd . ,tl) (pair hd (append tl ys)))))
-      ((last (append xs `(,result))) result)
+      ((cons a b) (pair a b))
+      ((single x) `(,x))
+      ((flip f x y) (f y x))
+      ((compose f g x) (f (g x)))
+
       ((foldl f acc xs) (match xs
                            ('() acc)
                            (`(,y . ,ys) (foldl f (f y acc) ys))))
       ((foldr f acc xs) (match xs
                            ('() acc)
                            (`(,y . ,ys) (f y (foldr f acc ys)))))
-      ((cons a b) (pair a b))
+
       ((map f xs) (foldr (compose cons f) '() xs))
+      ((filter p? xs) (foldr (lam (y ys) (if (p? y) (cons y ys) ys)) '() xs))
+
+      ((append xs ys) (foldr cons ys xs))
       ((rev xs) (foldl cons '() xs))  ; not well-behaved when run backwards
-      ((reverse xs) (match xs
-                      ('() '())
-                      (`(,y . ,ys) (append (reverse ys) `(,y)))))
-      ((compose f g x) (f (g x)))
-      ((filter p xs) (match xs
-                       ('() '())
-                       ((pair y ys)
-                        (let (zs (filter p ys))
-                          (if (p y) (pair y zs) zs)))))
+      ((reverse xs) (foldr (compose (flip append) single) '() xs))
+      ((last (append xs `(,result))) result)
+
       ((member element (append xs (pair element ys))) ())
       )
     (begin
@@ -576,6 +574,10 @@
           (denote-eval `(letr ,@shared
                           ((== ,q (last '(1 2 3)))))))
         '((3)))
+      (check-equal?
+        (run 1 (q) (denote-eval
+                     `(letr ,@shared (== '(1 2 3) (rev ,q)))))
+        '(((3 2 1))))
       (check-equal?
         (run* (q)
           (denote-eval `(letr ,@shared
