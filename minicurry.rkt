@@ -317,7 +317,6 @@
                 ((pair? arg) 'pair)
                 (else (error (format "cannot determine type of: ~a"
                                      arg)))))))))
-(define denote-pair (denote-special-proc 'pair 2 #f (compose1 muk-value cons)))
 
 (define ((build-conj strict? dc0 dtail) env)
   (possibly-strict strict? (conj (dc0 env) (dtail env))))
@@ -386,7 +385,6 @@
                    'match* denote-match*
                    'if denote-if
                    'type denote-type
-                   'pair denote-pair
                    '== denote-==
                    'exist denote-exist
                    'conj denote-conj
@@ -433,20 +431,20 @@
       (denote-eval `(== ,q ((lam (x y) (seq (== ,r y) x)) 5 (quote (a b c))))))
     '((5 (a b c))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q ((lam (rec val) (pair val rec)) '() 6))))
+    (run* (q) (denote-eval `(== ,q ((lam (rec val) `(,val . ,rec)) '() 6))))
     '(((6))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let (rec '()) (val 6) (pair val rec)))))
+    (run* (q) (denote-eval `(== ,q (let (rec '()) (val 6) `(,val . ,rec)))))
     '(((6))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr (pair val '())) pr))))
+    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr `(,val)) pr))))
     '(((7))))
   (check-equal?
-    (run* (q c) (denote-eval `(== ,q (if ,c (pair (if #t 3 4) (if #f 3 4))
+    (run* (q c) (denote-eval `(== ,q (if ,c `(,(if #t 3 4) . ,(if #f 3 4))
                                        'else))))
     '((else #f) ((3 . 4) #t)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q `(a ,(pair 'b 'c) (d e)))))
+    (run* (q) (denote-eval `(== ,q `(a ,`(b . c) (d e)))))
     '(((a (b . c) (d e)))))
   (check-equal?
     (run* (q)
@@ -461,27 +459,27 @@
     '((() nil) ((_.2 . _.3) pair)))
   (check-equal?
     (run* (q)
-      (denote-eval `(== ,q ((lam (4 `(,a b ,c)) (pair a c)) 4 '(8 b 9)))))
+      (denote-eval `(== ,q ((lam (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
     '(((8 . 9))))
   (check-equal?
     (run* (q) (denote-eval `(== ,q (let (4 4)
                                         (`(,a b ,c) '(8 b 7))
-                                     (pair a c)))))
+                                     `(,a . ,c)))))
     '(((8 . 7))))
   (check-equal?
     (run* (q) (denote-eval `(== ,q (let* (`(,a b ,c) `(4 b 5))
-                                         (`(,d . ,e) (pair c a))
+                                         (`(,d . ,e) `(,c . ,a))
                                      `(,d ,e 3)))))
     '(((5 4 3))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (match (pair 3 'a)
+    (run* (q) (denote-eval `(== ,q (match `(3 . a)
                                      (`(,x . a) x)
                                      (`(3 . ,y) y)))))
     '((a) (3)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (match* (17 (pair 3 'a))
+    (run* (q) (denote-eval `(== ,q (match* (17 `(3 . a))
                                      ((17 `(,x . a)) x)
-                                     ((x `(3 . ,y)) (pair x y))))))
+                                     ((x `(3 . ,y)) `(,x . ,y))))))
     '((3) ((17 . a))))
   (check-equal?
     (run* (q)
@@ -499,7 +497,7 @@
       ((odd? xs) (match xs
                    ('() #f)
                    (`(,hd . ,tl) (even? tl))))
-      ((cons a b) (pair a b))
+      ((cons a b) `(,a . ,b))
       ((single x) `(,x))
       ((flip f x y) (f y x))
       ((compose f g x) (f (g x)))
@@ -519,7 +517,7 @@
       ((reverse xs) (foldr (compose (flip append) single) '() xs))
       ((last (append xs `(,result))) result)
 
-      ((member element (append xs (pair element ys))) ())
+      ((member element (append xs (cons element ys))) ())
       )
     (begin
       (check-equal?
