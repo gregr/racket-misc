@@ -317,15 +317,7 @@
                 ((pair? arg) 'pair)
                 (else (error (format "cannot determine type of: ~a"
                                      arg)))))))))
-(define ((eval-pair-proc proc) pr)
-  (if (muk-var? pr)
-    (call/var (lambda (a0) (call/var (fn (d0)
-      actual-pair = `(,a0 . ,d0)
-      (conj-seq (== actual-pair pr) (muk-value (proc actual-pair)))))))
-    (muk-value (proc pr))))
 (define denote-pair (denote-special-proc 'pair 2 #f (compose1 muk-value cons)))
-(define denote-head (denote-special-proc 'head 1 #t (eval-pair-proc car)))
-(define denote-tail (denote-special-proc 'tail 1 #t (eval-pair-proc cdr)))
 
 (define ((build-conj strict? dc0 dtail) env)
   (possibly-strict strict? (conj (dc0 env) (dtail env))))
@@ -395,8 +387,6 @@
                    'if denote-if
                    'type denote-type
                    'pair denote-pair
-                   'head denote-head
-                   'tail denote-tail
                    '== denote-==
                    'exist denote-exist
                    'conj denote-conj
@@ -456,14 +446,6 @@
                                        'else))))
     '((else #f) ((3 . 4) #t)))
   (check-equal?
-    (run* (q)
-      (denote-eval `(== ,q ((lam (rec val) (head (pair val rec))) '() 4))))
-    '((4)))
-  (check-equal?
-    (run* (q)
-      (denote-eval `(== ,q ((lam (rec val) (tail (pair val rec))) '() 4))))
-    '((())))
-  (check-equal?
     (run* (q) (denote-eval `(== ,q `(a ,(pair 'b 'c) (d e)))))
     '(((a (b . c) (d e)))))
   (check-equal?
@@ -477,12 +459,6 @@
   (check-equal?
     (run* (q r) (denote-eval `(== ,r (type ,q))))
     '((() nil) ((_.2 . _.3) pair)))
-  (check-equal?
-    (run* (q r) (denote-eval `(== ,r (head ,q))))
-    '(((_.1 . _.3) _.1)))
-  (check-equal?
-    (run* (q r) (denote-eval `(== ,r (tail ,q))))
-    '(((_.2 . _.1) _.1)))
   (check-equal?
     (run* (q)
       (denote-eval `(== ,q ((lam (4 `(,a b ,c)) (pair a c)) 4 '(8 b 9)))))
