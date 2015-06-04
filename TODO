@@ -21,6 +21,31 @@ markout:
 kanren:
   measure substitution size growth
   compare efficiency of idempotent substitutions
+  run: optionally take a single query-var rather than a list
+    requires a change (simplification) to reify
+  clean up reify
+  constraints
+    CHR
+      https://en.wikipedia.org/wiki/Constraint_Handling_Rules
+      Adding CHR to Curry: https://www.informatik.uni-kiel.de/~mh/papers/WLP06.pdf
+    optional occurs-check?
+    https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
+      interesting sub-thread between torkel and pereira
+  minicurry
+    match scheme syntax more closely to simplify porting
+      some form of macros
+      let[*]: wrap args, allow body to be conjunction, optional let-naming for looping
+      letr: wrap args, allow body to be conjunction
+        *maybe* generalize to take arbitrary arg values, not just lambdas
+    metacircular interpreter
+      may need to wait for additional constraints
+      experiment with separating syntactic analysis from evaluation
+      quines?
+    experiment with small-step operational semantics
+    benchmarks?
+      particularly related to substitution size once this is measurable
+    maybe try extending microkanren with by-need suspended computations, triggered by pause
+      appropriate suspension to be unfrozen is identified by a key provided by pause
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
       (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
@@ -36,19 +61,8 @@ kanren:
     tagging
     =/=
     constraint-like reification
-  minicurry
-    benchmarks?
-      particularly related to substitution size once this is measurable
-    maybe try extending microkanren with by-need suspended computations, triggered by pause
-      appropriate suspension to be unfrozen is identified by a key provided by pause
   remove function terms
-  constraints
-    CHR
-      https://en.wikipedia.org/wiki/Constraint_Handling_Rules
-      Adding CHR to Curry: https://www.informatik.uni-kiel.de/~mh/papers/WLP06.pdf
-    optional occurs-check?
-    https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
-      interesting sub-thread between torkel and pereira
+  improve performance
   extended aggregate unification?
     sets and hashes with variable keys may have multiple component orderings
       unification could produce multiple possible subs
