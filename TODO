@@ -27,7 +27,9 @@ kanren:
   constraints
     CHR
       https://en.wikipedia.org/wiki/Constraint_Handling_Rules
-      Adding CHR to Curry: https://www.informatik.uni-kiel.de/~mh/papers/WLP06.pdf
+      http://www.informatik.uni-ulm.de/pm/fileadmin/pm/home/fruehwirth/constraint-handling-rules-book.html
+      http://chr.informatik.uni-ulm.de/~webchr/
+      http://www.csse.monash.edu.au/~mbanda/papers/refined.pdf
     optional occurs-check?
     https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
       interesting sub-thread between torkel and pereira
