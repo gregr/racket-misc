@@ -347,8 +347,8 @@
 (define-syntax conj*
   (syntax-rules ()
     ((_) muk-unit)
-    ((_ g0) (Zzz g0))
-    ((_ g0 gs ...) (conj (Zzz g0) (conj* gs ...)))))
+    ((_ g0) g0)
+    ((_ g0 gs ...) (conj g0 (conj* gs ...)))))
 (define-syntax disj*
   (syntax-rules ()
     ((_) (const muk-mzero))
@@ -358,8 +358,8 @@
 (define-syntax conj*-seq
   (syntax-rules ()
     ((_) muk-unit)
-    ((_ g0) (Zzz g0))
-    ((_ g0 gs ...) (conj-seq (Zzz g0) (conj* gs ...)))))
+    ((_ g0) g0)
+    ((_ g0 gs ...) (conj-seq g0 (conj* gs ...)))))
 
 (define (muk-take n ss)
   (if (= 0 n) '()
