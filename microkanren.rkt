@@ -111,6 +111,8 @@
     ((muk-conj-seq cost c0 c1) cost)
     ((muk-pause _) muk-cost-unknown)
     (_ muk-cost-unknown)))
+(define (muk-comps->cost c0 c1)
+  (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
 (define (muk-step-depth st comp depth)
   (define next-depth (- depth 1))
@@ -149,8 +151,8 @@
 (define (muk-eval st comp (depth 1))
   (muk-eval-loop (list (list st comp)) depth))
 
-(define (conj c0 c1) (muk-conj-conc muk-cost-unknown c0 c1))
-(define (conj-seq c0 c1) (muk-conj-seq muk-cost-unknown c0 c1))
+(define (conj c0 c1) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))
+(define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
 (define ((disj g0 g1) st) (list (list st g0) (list st g1)))
 
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
