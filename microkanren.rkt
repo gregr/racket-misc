@@ -9,6 +9,7 @@
   conj*-seq
   disj
   disj*
+  disj+-Zzz
   interpret
   muk-conj-conc
   muk-conj-seq
@@ -352,8 +353,12 @@
 (define-syntax disj*
   (syntax-rules ()
     ((_) (const muk-mzero))
-    ((_ g0) (Zzz g0))
-    ((_ g0 gs ...) (disj (Zzz g0) (disj* gs ...)))))
+    ((_ g0) g0)
+    ((_ g0 gs ...) (disj g0 (disj* gs ...)))))
+(define-syntax disj+-Zzz
+  (syntax-rules ()
+    ((_ g0) g0)
+    ((_ g0 gs ...) (Zzz (disj* g0 gs ...)))))
 
 (define-syntax conj*-seq
   (syntax-rules ()
@@ -382,11 +387,11 @@
   (check-equal?
     (reify-states 0 (muk-take-all (run (call/var (fn (x) (== x x))))))
     '((_.0)))
-  (define (fives x) (disj* (== x 5) (fives x)))
+  (define (fives x) (disj+-Zzz (== x 5) (fives x)))
   (check-equal?
     (reify-states 0 (muk-take 1 (run (call/var fives))))
     '((5)))
-  (define (sixes x) (disj* (== x 6) (sixes x)))
+  (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
   (define fives-and-sixes
     (call/var (lambda (x) (disj (fives x) (sixes x)))))
   (lets

@@ -34,7 +34,7 @@
 
 (define-syntax conde
   (syntax-rules ()
-    ((_ (gs ...) ...) (disj* (conj* gs ...) ...))))
+    ((_ (gs ...) ...) (disj+-Zzz (conj* gs ...) ...))))
 
 (define-syntax exist
   (syntax-rules ()
@@ -78,7 +78,7 @@
 (define-syntax matche
   (syntax-rules ()
     ((_ arg (pattern gs ...) ...)
-     (let ((param arg)) (disj* (match1e param pattern gs ...) ...)))))
+     (let ((param arg)) (disj+-Zzz (match1e param pattern gs ...) ...)))))
 
 (define (interp-type val)
   (if (muk-term? val) (muk-func-app 'type (list val))
