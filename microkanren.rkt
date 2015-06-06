@@ -96,10 +96,21 @@
 
 (records muk-computation
   (muk-success result)
-  (muk-conj-conc c0 c1)
-  (muk-conj-seq c0 c1)
+  (muk-conj-conc cost c0 c1)
+  (muk-conj-seq cost c0 c1)
   (muk-pause paused)
   )
+
+(define muk-cost-unknown #f)
+(define (muk-cost-min c0 c1)
+  (if c0 (if c1 (min c0 c1) c0) c1))
+(define (muk-computation-cost comp)
+  (match comp
+    ((muk-success _) muk-cost-unknown)
+    ((muk-conj-conc cost c0 c1) cost)
+    ((muk-conj-seq cost c0 c1) cost)
+    ((muk-pause _) muk-cost-unknown)
+    (_ muk-cost-unknown)))
 
 (define (muk-step-depth st comp depth)
   (define next-depth (- depth 1))
@@ -107,18 +118,18 @@
     (append*
       (match comp
         ((muk-success _) (list (list (list st comp))))
-        ((muk-conj-conc c0 c1)
+        ((muk-conj-conc cost c0 c1)
          (forl (list st c0) <- (muk-step-depth st c0 depth)
                (forl (list st c1) <- (muk-step-depth st c1 depth)
                      (list st (match* (c0 c1)
                                 (((muk-success _) _) c1)
-                                ((_ (muk-success _)) (muk-conj-seq c0 c1))
-                                ((_ _) (muk-conj-conc c0 c1)))))))
-        ((muk-conj-seq c0 c1)
+                                ((_ (muk-success _)) (conj-seq c0 c1))
+                                ((_ _) (conj c0 c1)))))))
+        ((muk-conj-seq cost c0 c1)
          (forl (list st c0) <- (muk-step-depth st c0 depth)
                (match c0
                  ((muk-success _) (muk-step-depth st c1 depth))
-                 (_ (list (list st (muk-conj-seq c0 c1)))))))
+                 (_ (list (list st (conj-seq c0 c1)))))))
         ((muk-pause paused) (list (list (list st paused))))
         (_ (forl (list st comp) <- (comp st)
                  (muk-step-depth st comp next-depth)))))))
@@ -138,8 +149,8 @@
 (define (muk-eval st comp (depth 1))
   (muk-eval-loop (list (list st comp)) depth))
 
-(define conj muk-conj-conc)
-(define conj-seq muk-conj-seq)
+(define (conj c0 c1) (muk-conj-conc muk-cost-unknown c0 c1))
+(define (conj-seq c0 c1) (muk-conj-seq muk-cost-unknown c0 c1))
 (define ((disj g0 g1) st) (list (list st g0) (list st g1)))
 
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
