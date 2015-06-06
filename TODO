@@ -30,9 +30,13 @@ kanren:
       http://www.informatik.uni-ulm.de/pm/fileadmin/pm/home/fruehwirth/constraint-handling-rules-book.html
       http://chr.informatik.uni-ulm.de/~webchr/
       http://www.csse.monash.edu.au/~mbanda/papers/refined.pdf
+      http://www.sciencedirect.com/science/article/pii/S0743106698100055
     optional occurs-check?
-    https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
-      interesting sub-thread between torkel and pereira
+      https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
+        interesting sub-thread between torkel and pereira
+    finite domains
+      enumerations
+      intervals
   minicurry
     match scheme syntax more closely to simplify porting
       some form of macros
@@ -48,6 +52,10 @@ kanren:
       particularly related to substitution size once this is measurable
     maybe try extending microkanren with by-need suspended computations, triggered by pause
       appropriate suspension to be unfrozen is identified by a key provided by pause
+    mode inference and optimization
+      can functional-only evaluation be detected and improved?
+      complexity indicators to guide evaluation/search; dynamic? static only?
+        static/dynamic termination checking?
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
       (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
@@ -63,8 +71,12 @@ kanren:
     tagging
     =/=
     constraint-like reification
-  remove function terms
   improve performance
+    remove function terms and complex normalization during unification
+    reduce heap allocations on critical paths
+    eq? vs. equal?
+    complexity indicators on computations to guide search; dynamic? static only?
+      static/dynamic termination checking?
   extended aggregate unification?
     sets and hashes with variable keys may have multiple component orderings
       unification could produce multiple possible subs
