@@ -19,12 +19,14 @@
   muk-pause
   muk-reify
   muk-state-empty
+  muk-step-unification
   muk-sub-get-var
   muk-sub-prefix
   muk-success
   muk-take
   muk-take-all
   muk-term?
+  muk-unification
   muk-unify-and-update
   muk-unit
   muk-var
@@ -96,17 +98,20 @@
 
 (records muk-computation
   (muk-success result)
+  (muk-unification e0 e1)
   (muk-conj-conc cost c0 c1)
   (muk-conj-seq cost c0 c1)
   (muk-pause paused)
   )
 
 (define muk-cost-unknown #f)
+(define muk-cost-unification 0)
 (define (muk-cost-min c0 c1)
   (if c0 (if c1 (min c0 c1) c0) c1))
 (define (muk-computation-cost comp)
   (match comp
     ((muk-success _) muk-cost-unknown)
+    ((muk-unification e0 e1) muk-cost-unification)
     ((muk-conj-conc cost c0 c1) cost)
     ((muk-conj-seq cost c0 c1) cost)
     ((muk-pause _) muk-cost-unknown)
@@ -373,10 +378,12 @@
         constraints = (if (null? func-apps) '() `(: ,@func-apps))
         `(,@vars ,@constraints)))
 
-(define ((== e0 e1) st)
+(define (muk-step-unification st e0 e1)
   (match (muk-unify-and-update st e0 e1)
     ((nothing) muk-mzero)
     ((just st) (muk-unit st))))
+(define ((== e0 e1) st)
+  (muk-step-unification st e0 e1))
 
 (define ((call/var f) st)
   (list (list (:~* st muk-var-next 'next-var) (f (:.* st 'next-var)))))
