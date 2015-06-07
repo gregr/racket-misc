@@ -170,8 +170,7 @@
   (list finished pending) =
   (forf
     (list finished unfinished) = '(() ())
-    (list st comp) <- (append* (forl (list st comp) <- pending
-                                     (muk-step st comp depth)))
+    (list st comp) <- (muk-step-results muk-step depth pending)
     (match comp
       ((muk-success _) (list (list* st finished) unfinished))
       (_ (list finished (list* (list st comp) unfinished)))))
