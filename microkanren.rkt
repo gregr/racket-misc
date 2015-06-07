@@ -141,6 +141,7 @@
      (muk-step-conj-conc muk-step-known cost-max st c0 c1))
     ((muk-conj-seq (? cost?) c0 c1)
      (muk-step-conj-seq muk-step-known cost-max st c0 c1))
+    ((muk-unification e0 e1) (muk-step-unification st e0 e1))
     (_ (list (list st comp)))))
 
 (define (muk-step-depth st comp depth)
