@@ -372,8 +372,7 @@
   (match (muk-unify-and-update st e0 e1)
     ((nothing) muk-mzero)
     ((just st) (muk-unit st))))
-(define ((== e0 e1) st)
-  (muk-step-unification st e0 e1))
+(define == muk-unification)
 
 (define ((call/var f) st)
   (list (list (:~* st muk-var-next 'next-var) (f (:.* st 'next-var)))))
