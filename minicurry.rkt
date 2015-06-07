@@ -52,6 +52,9 @@
 (define env-empty (hash))
 
 (define (((eval-goal-cont cont) value-goal) st)
+  (define (absorb-results results)
+    (forl (list st comp) <- results
+          (list st ((eval-goal-cont cont) comp))))
   (match value-goal
     ((muk-success value) (list (list st (cont value))))
     ((muk-conj-seq _ c0 c1)
@@ -60,8 +63,8 @@
      (list (list st (conj c0 ((eval-goal-cont cont) c1)))))
     ((muk-pause paused)
      (list (list st (muk-pause ((eval-goal-cont cont) paused)))))
-    (_ (forl (list st comp) <- (value-goal st)
-             (list st ((eval-goal-cont cont) comp))))))
+    ((muk-unification e0 e1) (absorb-results (muk-step-unification st e0 e1)))
+    (_ (absorb-results (value-goal st)))))
 (define (eval-logic-var value)
   (if (muk-var? value)
     (let loop ((value value))
