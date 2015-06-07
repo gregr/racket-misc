@@ -54,7 +54,8 @@ kanren:
       appropriate suspension to be unfrozen is identified by a key provided by pause
     mode inference and optimization
       can functional-only evaluation be detected and improved?
-      complexity indicators to guide evaluation/search; dynamic? static only?
+      make use of cost annotations
+        complexity indicators to guide evaluation/search; dynamic? static only?
         static/dynamic termination checking?
   encodings (such as full-repr) instead of additional constraint system layers
     example: unification of type-encoded values eliminates the need for type constraints
@@ -75,8 +76,12 @@ kanren:
     remove function terms and complex normalization during unification
     reduce heap allocations on critical paths
     eq? vs. equal?
-    complexity indicators on computations to guide search; dynamic? static only?
-      static/dynamic termination checking?
+    experiment with typed racket
+    explicit cost annotation for unknown goals (or to override known computational cost)
+      goals may override search strategy for their local computation tree
+        for instance, running themselves to completion if they know they terminate
+    support search priorities higher than unification?
+      probably better to just override cost of expensive unifications
   extended aggregate unification?
     sets and hashes with variable keys may have multiple component orderings
       unification could produce multiple possible subs
