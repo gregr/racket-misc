@@ -114,6 +114,21 @@
 (define (muk-comps->cost c0 c1)
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
+(define (muk-step-conj-conc cont arg st c0 c1)
+  (append* (forl (list st c0) <- (cont st c0 arg)
+                 (forl (list st c1) <- (cont st c1 arg)
+                       (list st (match* (c0 c1)
+                                  (((muk-success _) _) c1)
+                                  ((_ (muk-success _)) (conj-seq c0 c1))
+                                  ((_ _) (conj c0 c1))))))))
+(define (muk-step-conj-seq cont arg st c0 c1)
+  (append* (forl (list st c0) <- (cont st c0 arg)
+                 (match c0
+                   ((muk-success _) (cont st c1 arg))
+                   (_ (list (list st (conj-seq c0 c1))))))))
+(define (muk-step-results cont arg results)
+  (append* (forl (list st comp) <- results (cont st comp arg))))
+
 (define (muk-step-known st comp cost-max)
   (define (cost? cost) (and cost (<= cost cost-max)))
   (match comp
@@ -136,24 +151,14 @@
 (define (muk-step-depth st comp depth)
   (define next-depth (- depth 1))
   (if (= depth 0) (list (list st comp))
-    (append*
-      (match comp
-        ((muk-success _) (list (list (list st comp))))
-        ((muk-conj-conc cost c0 c1)
-         (forl (list st c0) <- (muk-step-depth st c0 depth)
-               (forl (list st c1) <- (muk-step-depth st c1 depth)
-                     (list st (match* (c0 c1)
-                                (((muk-success _) _) c1)
-                                ((_ (muk-success _)) (conj-seq c0 c1))
-                                ((_ _) (conj c0 c1)))))))
-        ((muk-conj-seq cost c0 c1)
-         (forl (list st c0) <- (muk-step-depth st c0 depth)
-               (match c0
-                 ((muk-success _) (muk-step-depth st c1 depth))
-                 (_ (list (list st (conj-seq c0 c1)))))))
-        ((muk-pause paused) (list (list (list st paused))))
-        (_ (forl (list st comp) <- (comp st)
-                 (muk-step st comp next-depth)))))))
+    (match comp
+      ((muk-success _) (list (list st comp)))
+      ((muk-conj-conc cost c0 c1)
+       (muk-step-conj-conc muk-step depth st c0 c1))
+      ((muk-conj-seq cost c0 c1)
+       (muk-step-conj-seq muk-step depth st c0 c1))
+      ((muk-pause paused) (list (list st paused)))
+      (_ (muk-step-results muk-step next-depth (comp st))))))
 
 (def (muk-step st comp depth)
   cost = (muk-computation-cost comp)
