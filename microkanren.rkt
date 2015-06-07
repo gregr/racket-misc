@@ -157,8 +157,7 @@
 
 (def (muk-step st comp depth)
   cost = (muk-computation-cost comp)
-  (if cost (lets (list st comp) = (muk-step-known st comp cost)
-                 (muk-step st comp depth))
+  (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
     (muk-step-depth st comp depth)))
 
 (def (muk-eval-loop pending depth)
