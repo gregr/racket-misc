@@ -137,21 +137,11 @@
 (define (muk-step-known st comp cost-max)
   (define (cost? cost) (and cost (<= cost cost-max)))
   (match comp
-    ((muk-conj-conc (? cost? cost) c0 c1)
-     (lets
-       (list st c0) = (muk-step-known st c0 cost)
-       (list st c1) = (muk-step-known st c1 cost)
-       (match* (c0 c1)
-         (((muk-success _) _) c1)
-         ((_ (muk-success _)) (conj-seq c0 c1))
-         ((_ _) (list st (conj c0 c1))))))
-    ((muk-conj-seq (? cost? cost) c0 c1)
-     (lets
-       (list (list st c0)) = (muk-step-known st c0 cost)
-       (match c0
-         ((muk-success _) (muk-step-known st c1 cost))
-         (_ (list st (conj-seq c0 c1))))))
-    (_ (list st comp))))
+    ((muk-conj-conc (? cost?) c0 c1)
+     (muk-step-conj-conc muk-step-known cost-max st c0 c1))
+    ((muk-conj-seq (? cost?) c0 c1)
+     (muk-step-conj-seq muk-step-known cost-max st c0 c1))
+    (_ (list (list st comp)))))
 
 (define (muk-step-depth st comp depth)
   (define next-depth (- depth 1))
