@@ -187,11 +187,16 @@
 (define (muk-unit st (result (void)))
   (list* (list st (muk-success result)) muk-mzero))
 
+(define split-entries
+  (list repr-entry-pair repr-entry-vector repr-entry-struct repr-entry-hash))
 (define (muk-split aggs)
   (forf components = (nothing)
-        pred <- (list pair? vector? struct? hash?)
+        (list found? val->type val->components) <- split-entries
         #:break (just? components)
-        (if (andmap pred aggs) (just (map value->repr aggs)) components)))
+        (if (andmap found? aggs)
+          (just (forl agg <- aggs
+                      (repr (val->type agg) (val->components agg))))
+          components)))
 (define muk-rebuild repr->value)
 
 (define (muk-term->vars term)

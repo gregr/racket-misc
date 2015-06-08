@@ -9,8 +9,13 @@
   numeric-type-complex-inexact
   (struct-out repr)
   repr->value
+  repr-entry-pair
+  repr-entry-vector
+  repr-entry-struct
+  repr-entry-hash
   repr-type->constructor
   struct->type
+  struct->components
   value->repr
   )
 
@@ -47,6 +52,13 @@
 (def (struct->type val)
   (values sty _) = (struct-info val)
   sty)
+(define (struct->components val) (cdr (vector->list (struct->vector val))))
+
+(define repr-entry-pair
+  (list pair? (const 'pair) (fn ((cons a d)) (list a d))))
+(define repr-entry-vector (list vector? (const 'vector) vector->list))
+(define repr-entry-struct (list struct? struct->type struct->components))
+(define repr-entry-hash (list hash? (const 'hash) hash->list-sorted))
 (define repr-entries
   `((,void? ,(const 'void) ,identity)
     (,boolean? ,(const 'boolean) ,identity)
@@ -55,11 +67,11 @@
     (,string? ,(const 'string) ,identity)
     (,number? ,number->type ,identity)
     (,null? ,(const 'nil) ,identity)
-    (,pair? ,(const 'pair) ,(fn ((cons a d)) (list a d)))
-    (,vector? ,(const 'vector) ,vector->list)
-    (,hash? ,(const 'hash) ,hash->list-sorted)
+    ,repr-entry-pair
+    ,repr-entry-vector
+    ,repr-entry-struct
+    ,repr-entry-hash
     (,set? ,(const 'set) ,set->list-sorted)
-    (,struct? ,struct->type ,(compose1 cdr vector->list struct->vector))
     (,procedure? ,(const 'procedure) ,identity)
     (,(const #t) ,(const 'unknown) ,identity)))
 
