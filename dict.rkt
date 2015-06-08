@@ -20,7 +20,9 @@
 (define dict-empty (hash))
 (define dict-add dict-set)
 (define (dict-get dct key)
-  (if (dict-has-key? dct key) (just (dict-ref dct key)) (nothing)))
+  (define found? #t)
+  (let ((result (dict-ref dct key (lambda () (set! found? #f)))))
+    (if found? (just result) (nothing))))
 
 (define (dict-subtract1 d0 d1)
   (for/fold ((d0 d0))
