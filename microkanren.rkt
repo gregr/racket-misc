@@ -189,7 +189,7 @@
 
 (define (muk-split aggs)
   (forf components = (nothing)
-        pred <- (list pair? vector? hash? set? struct?)
+        pred <- (list pair? vector? struct? hash?)
         #:break (just? components)
         (if (andmap pred aggs) (just (map value->repr aggs)) components)))
 (define muk-rebuild repr->value)

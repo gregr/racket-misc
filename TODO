@@ -82,9 +82,7 @@ kanren:
         for instance, running themselves to completion if they know they terminate
     support search priorities higher than unification?
       probably better to just override cost of expensive unifications
-  extended aggregate unification?
-    sets and hashes with variable keys may have multiple component orderings
-      unification could produce multiple possible subs
+  specialized hash unification: keys always treated as fully ground
 
 ===============================================================================
 = future
