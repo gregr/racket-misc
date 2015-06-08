@@ -201,7 +201,7 @@
     ((muk-func-app _ args) (recur args))
     (_ (match (muk-split (list term))
          ((nothing) (set))
-         ((just (list (repr _ components))) (recur components))))))
+         ((just (list rpr)) (recur (repr-components rpr)))))))
 
 (module+ test
   (lets
@@ -304,8 +304,7 @@
       (if (muk-var? e0) (just (muk-sub-add st e0 e1))
         (begin/with-monad maybe-monad
           reprs <- (muk-split (list e0 e1))
-          components = (forl (repr type components) <- reprs
-                             (list* type components))
+          components = (map repr-components reprs)
           (list l0 l1) = (map length components)
           _ <- (if (= l0 l1) (just (void)) (nothing))
           (monad-foldl maybe-monad

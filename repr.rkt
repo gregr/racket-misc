@@ -7,7 +7,7 @@
   numeric-type-inexact
   numeric-type-complex-exact
   numeric-type-complex-inexact
-  repr
+  (struct-out repr)
   repr->value
   repr-type->constructor
   struct->type
