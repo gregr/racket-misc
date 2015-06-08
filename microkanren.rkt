@@ -65,7 +65,7 @@
         bound-vars sub-vars sub-funcs func-deps func-interps next-var)
 (define muk-state-empty (muk-state '() (hash) (hash) (hash) (hash) (muk-var 0)))
 (define (muk-sub-get-var st vr)
-  (let loop ((sub (:.* st 'sub-vars)) (vr vr))
+  (let loop ((sub (muk-state-sub-vars st)) (vr vr))
     (match (if (muk-var? vr) (dict-get sub vr) (nothing))
       ((nothing) vr)
       ((just vr) (loop sub vr)))))
@@ -363,7 +363,7 @@
         reify = (fn (term) (muk-reify-term st term vtrans))
         vars = (map reify vrs)
         func-apps =
-        (forl (cons fterm val) <- (dict->list (:.* st 'sub-funcs))
+        (forl (cons fterm val) <- (dict->list (muk-state-sub-funcs st))
               `(,(reify fterm) == ,(reify val)))
         constraints = (if (null? func-apps) '() `(: ,@func-apps))
         `(,@vars ,@constraints)))
@@ -375,7 +375,7 @@
 (define == muk-unification)
 
 (define ((call/var f) st)
-  (list (list (:~* st muk-var-next 'next-var) (f (:.* st 'next-var)))))
+  (list (list (:~* st muk-var-next 'next-var) (f (muk-state-next-var st)))))
 
 (define ((interpret interpretations) st)
   (muk-unit (muk-state-interpret st interpretations)))
