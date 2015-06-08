@@ -69,9 +69,10 @@
     (match (if (muk-var? vr) (dict-get sub vr) (nothing))
       ((nothing) vr)
       ((just vr) (loop sub vr)))))
-(define (muk-sub-add st vr val)
-  (:~* (:~* st (lambda (bs) (dict-add bs vr val)) 'sub-vars)
-       (curry list* vr) 'bound-vars))
+(def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis nv) vr val)
+  sub-vars = (dict-add sub-vars vr val)
+  bound-vars = (list* vr bound-vars)
+  (muk-state bound-vars sub-vars sfs fds fis nv))
 (define (muk-state-interpret st interpretations)
   (:~* st (fn (func-interps)
               (forf
@@ -374,8 +375,9 @@
     ((just st) (muk-unit st))))
 (define == muk-unification)
 
-(define ((call/var f) st)
-  (list (list (:~* st muk-var-next 'next-var) (f (muk-state-next-var st)))))
+(def ((call/var f) (muk-state bvs svs sfs fds fis next-var))
+  (list (list (muk-state bvs svs sfs fds fis (muk-var-next next-var))
+              (f next-var))))
 
 (define ((interpret interpretations) st)
   (muk-unit (muk-state-interpret st interpretations)))
