@@ -304,17 +304,18 @@
   (list st e0) = (muk-normalize-term st e0)
   (list st e1) = (muk-normalize-term st e1)
   (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
-  (if (equal? e0 e1) (just st)
-    (cond
-      ((muk-var? e0) (just (muk-sub-add st e0 e1)))
-      ((muk-var? e1) (just (muk-sub-add st e1 e0)))
-      (else
-        (match* (e0 e1)
-          (((cons h0 t0) (cons h1 t1))
-           (match (muk-unify st h0 h1)
-             ((nothing) (nothing))
-             ((just st) (muk-unify st t0 t1))))
-          ((_ _)
+  (cond
+    ((eq? e0 e1) (just st))
+    ((muk-var? e0) (just (muk-sub-add st e0 e1)))
+    ((muk-var? e1) (just (muk-sub-add st e1 e0)))
+    (else
+      (match* (e0 e1)
+        (((cons h0 t0) (cons h1 t1))
+         (match (muk-unify st h0 h1)
+           ((nothing) (nothing))
+           ((just st) (muk-unify st t0 t1))))
+        ((_ _)
+         (if (equal? e0 e1) (just st)
            (begin/with-monad maybe-monad
              reprs <- (muk-split (list e0 e1))
              components = (map repr-components reprs)
