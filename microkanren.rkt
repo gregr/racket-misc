@@ -304,7 +304,6 @@
 (def (muk-unify st e0 e1)
   (list st e0) = (muk-normalize-term st e0)
   (list st e1) = (muk-normalize-term st e1)
-  (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
   (cond
     ((eq? e0 e1) (just st))
     ((muk-var? e0) (just (muk-sub-add st e0 e1)))
