@@ -414,7 +414,7 @@
     ;; + M O R E
     ;; ---------
     ;; M O N E Y
-    ;;nat-ino = ino  ; toggle state compression
+    ;nat-ino = ino  ; toggle state compression
     ;nat-range = (lambda (rmin rmax) (map nat->bits (range rmin rmax)))
     ;add-digitso = (fn (augend addend carry-in carry-out digit)
       ;(exist (partial-sum sum)
@@ -440,11 +440,8 @@
         ;(nat-ino (nat-range 1 10) s m)
         ;(add-digitso s m carry2 m o)))
     ;(check-equal?
-      ;(run*-depth 1000 (a b c d e f) with-constraints
-        ;(send-more-moneyo (forl result <- (list a b c d 1 0 8 2)
-                                ;(if (muk-var? result) result
-                                  ;(nat->bits result)))))
-      ;'((9 5 6 7 8 2))))
+      ;(run*-depth 1000 q (conj*-seq with-constraints (send-more-moneyo q)))
+      ;(list (map nat->bits (list 9 5 6 7 1 0 8 2)))))
 
   ; slow test
   ;(lets
@@ -476,8 +473,8 @@
         ;(ino (range 1 10) s m)
         ;(add-digitso s m carry2 m o)))
     ;(check-equal?
-      ;(run*-depth 4000 (a b c d e f) (conj*-seq with-constraints (send-more-moneyo (list a b c d 1 0 e f))))
-      ;'((9 5 6 7 8 2))))
+      ;(run*-depth 1000 q (conj*-seq with-constraints (send-more-moneyo q)))
+      ;'((9 5 6 7 1 0 8 2))))
 
   (check-match
     (run* (p r) (conj*-seq with-constraints
