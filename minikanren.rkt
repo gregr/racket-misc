@@ -45,8 +45,10 @@
 (define-syntax run-depth
   (syntax-rules ()
     ((_ n depth (xs ...) gs ...)
-     (muk-reify muk-var->symbol (map muk-var (range (length '(xs ...))))
-       (muk-take n (muk-eval muk-state-empty (exist (xs ...) gs ...) depth))))))
+     (run-depth n depth qvar (exist (xs ...) (== qvar (list xs ...)) gs ...)))
+    ((_ n depth qvar gs ...)
+     (muk-reify muk-var->symbol (muk-var 0)
+       (muk-take n (muk-eval muk-state-empty (exist (qvar) gs ...) depth))))))
 (define-syntax run*-depth
   (syntax-rules () ((_ body ...) (run-depth -1 body ...))))
 (define-syntax run
@@ -193,12 +195,12 @@
 
 (module+ test
   (check-equal?
-    (run* (q) (nat-ino (list (nat->bits 6)
-                             (nat->bits 7)
-                             (nat->bits 8)
-                             (nat->bits 9))
-                       q))
-    '(((_.1 _.2)) ((_.1 _.2 1)))))
+    (run* q (nat-ino (list (nat->bits 6)
+                           (nat->bits 7)
+                           (nat->bits 8)
+                           (nat->bits 9))
+                     q))
+    '((_.1 _.2) (_.1 _.2 1))))
 
 (define (nat<o a b)
   (conde
@@ -215,7 +217,7 @@
     (zip (forl
            (list a b) <- '((0 0) (0 1) (1 0) (1 1) (1 2) (2 1) (2 2)
                            (3 3) (3 4) (4 3) (4 4) (4 5) (5 4) (5 5))
-           (list (pair? (run* (r) (nat<o (nat->bits a) (nat->bits b))))
+           (list (pair? (run* r (nat<o (nat->bits a) (nat->bits b))))
                  (< a b))))
     (check-equal? actual expected)))
 
@@ -257,16 +259,16 @@
     (list actual expected) =
     (zip (forl
            (list a b) <- '((0 0) (0 1) (1 0) (1 2) (2 1) (2 2) (3 4) (6 6))
-           (list (run*-depth 1000 (r) (nat-addo (nat->bits a) (nat->bits b) r))
-                 `((,(nat->bits (+ a b)))))))
+           (list (run*-depth 1000 r (nat-addo (nat->bits a) (nat->bits b) r))
+                 `(,(nat->bits (+ a b))))))
     (check-equal? actual expected))
   (lets
     (list actual expected) =
     (zip (forl
            (list a b) <- '((0 0) (1 0) (2 1) (2 2) (3 1) (4 1) (4 2) (4 3)
                            (5 1) (5 2) (6 6) (7 1) (7 2) (7 3) (7 4) (7 5))
-           (list (run*-depth 1000 (r) (nat-subo (nat->bits a) (nat->bits b) r))
-                 `((,(nat->bits (- a b)))))))
+           (list (run*-depth 1000 r (nat-subo (nat->bits a) (nat->bits b) r))
+                 `(,(nat->bits (- a b))))))
     (check-equal? actual expected))
   )
 
@@ -302,8 +304,8 @@
     (list actual expected) =
     (zip (forl
            (list a b) <- '((0 0) (0 1) (1 0) (1 2) (2 1) (2 2) (3 4) (6 6))
-           (list (run*-depth 1000 (r) (nat-mulo (nat->bits a) (nat->bits b) r))
-                 `((,(nat->bits (* a b)))))))
+           (list (run*-depth 1000 r (nat-mulo (nat->bits a) (nat->bits b) r))
+                 `(,(nat->bits (* a b))))))
     (check-equal? actual expected))
   ; slow test
   ;(lets
@@ -311,7 +313,7 @@
     ;(zip (forl
            ;(list a b) <- '((0 1) (1 1) (1 2) (2 1) (3 2) (3 4) (4 2))
            ;`(,(run-depth 1 1 (q r) (nat-divo (nat->bits a) (nat->bits b) q r))
-              ;((,(nat->bits (quotient a b)) ,(nat->bits (remainder a b)))))))
+              ;(,(nat->bits (quotient a b)) ,(nat->bits (remainder a b))))))
     ;(check-equal? actual expected))
   )
 
@@ -334,8 +336,8 @@
     (list actual expected) =
     (zip (forl
            (list a b) <- '((1 0) (1 1) (1 2) (2 1) (2 2) (2 3) (3 2))
-           (list (run*-depth 100 (r) (nat-expo (nat->bits a) (nat->bits b) r))
-                 `((,(nat->bits (expt a b)))))))
+           (list (run*-depth 100 r (nat-expo (nat->bits a) (nat->bits b) r))
+                 `(,(nat->bits (expt a b))))))
     (check-equal? actual expected))
   ; slow test
   ;(lets
@@ -346,7 +348,7 @@
            ;(list p r) <- '((0 0) (0 0) ;(0 1) (0 0)
                            ;)
            ;`(,(run-depth 1 1 (p r) (nat-logo (nat->bits b) (nat->bits a) p r))
-              ;((,(nat->bits p) ,(nat->bits r))))))
+              ;(,(nat->bits p) ,(nat->bits r)))))
     ;(check-equal? actual expected))
   )
 
@@ -390,10 +392,10 @@
           ((== a x) (== res out))
           ((=/= a x) (== `(,a . ,res) out)))))))
   (check-equal?
-    (run* (q) (conj*-seq with-constraints (rembero 'a '(a b a c) q)))
-    '(((b c))))
+    (run* q (conj*-seq with-constraints (rembero 'a '(a b a c) q)))
+    '((b c)))
   (check-equal?
-    (run* (q) (conj*-seq with-constraints (rembero 'a '(a b c) '(a b c))))
+    (run* q (conj*-seq with-constraints (rembero 'a '(a b c) '(a b c))))
     '())
   (check-equal?
     (list->set
@@ -482,5 +484,5 @@
       (=/= '(1 2) `(,p ,r))
       (== 1 p)
       (symbolo r)))
-    `((1 ,r : ((type ,r) == (symbol ())))))
+    `(((1 ,r) : ((type ,r) == (symbol ())))))
   )

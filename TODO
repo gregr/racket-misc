@@ -21,8 +21,6 @@ markout:
 kanren:
   measure substitution size growth
   compare efficiency of idempotent substitutions
-  run: optionally take a single query-var rather than a list
-    requires a change (simplification) to reify
   clean up reify
   constraints
     CHR

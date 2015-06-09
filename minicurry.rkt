@@ -424,73 +424,73 @@
 
 (module+ test
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (quote (a b)))))
-    '(((a b))))
+    (run* q (denote-eval `(== ,q (quote (a b)))))
+    '((a b)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q ((lam (x y) x) 5 (quote (a b c))))))
-    '((5)))
+    (run* q (denote-eval `(== ,q ((lam (x y) x) 5 (quote (a b c))))))
+    '(5))
   (check-equal?
     (run* (q r)
       (denote-eval `(== ,q ((lam (x y) (seq (== ,r y) x)) 5 (quote (a b c))))))
     '((5 (a b c))))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q ((lam (rec val) `(,val . ,rec)) '() 6))))
-    '(((6))))
+    (run* q (denote-eval `(== ,q ((lam (rec val) `(,val . ,rec)) '() 6))))
+    '((6)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let (rec '()) (val 6) `(,val . ,rec)))))
-    '(((6))))
+    (run* q (denote-eval `(== ,q (let (rec '()) (val 6) `(,val . ,rec)))))
+    '((6)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let* (val 7) (pr `(,val)) pr))))
-    '(((7))))
+    (run* q (denote-eval `(== ,q (let* (val 7) (pr `(,val)) pr))))
+    '((7)))
   (check-equal?
     (run* (q c) (denote-eval `(== ,q (if ,c `(,(if #t 3 4) . ,(if #f 3 4))
                                        'else))))
     '((else #f) ((3 . 4) #t)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q `(a ,`(b . c) (d e)))))
-    '(((a (b . c) (d e)))))
+    (run* q (denote-eval `(== ,q `(a ,`(b . c) (d e)))))
+    '((a (b . c) (d e))))
   (check-equal?
-    (run* (q)
+    (run* q
       (denote-eval `((exist (a b) (== 1 a) (== 2 b) (== ,q `(,a ,b))))))
-    '(((1 2))))
+    '((1 2)))
   (check-equal?
-    (run* (q)
+    (run* q
       (denote-eval `(== ,q (exist (f) (seq (== f (lam (x) x)) (f 11))))))
-    '((11)))
+    '(11))
   (check-equal?
     (run* (q r) (denote-eval `(== ,r (type ,q))))
-    '((() nil) ((_.2 . _.3) pair)))
+    '((() nil) ((_.3 . _.4) pair)))
   (check-equal?
-    (run* (q)
+    (run* q
       (denote-eval `(== ,q ((lam (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
-    '(((8 . 9))))
+    '((8 . 9)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let (4 4)
+    (run* q (denote-eval `(== ,q (let (4 4)
                                         (`(,a b ,c) '(8 b 7))
                                      `(,a . ,c)))))
-    '(((8 . 7))))
+    '((8 . 7)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (let* (`(,a b ,c) `(4 b 5))
+    (run* q (denote-eval `(== ,q (let* (`(,a b ,c) `(4 b 5))
                                          (`(,d . ,e) `(,c . ,a))
                                      `(,d ,e 3)))))
-    '(((5 4 3))))
+    '((5 4 3)))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (match `(3 . a)
+    (run* q (denote-eval `(== ,q (match `(3 . a)
                                      (`(,x . a) x)
                                      (`(3 . ,y) y)))))
-    '((a) (3)))
+    '(a 3))
   (check-equal?
-    (run* (q) (denote-eval `(== ,q (match* (17 `(3 . a))
+    (run* q (denote-eval `(== ,q (match* (17 `(3 . a))
                                      ((17 `(,x . a)) x)
                                      ((x `(3 . ,y)) `(,x . ,y))))))
-    '((3) ((17 . a))))
+    '(3 (17 . a)))
   (check-equal?
-    (run* (q)
+    (run* q
       (denote-eval
         `(== ,q
            (letr ((test x y) x)
                  (test 3 4)))))
-    '((3)))
+    '(3))
 
   (lets
     shared =
@@ -524,18 +524,18 @@
       )
     (begin
       (check-equal?
-        (run* (q)
+        (run* q
           (denote-eval
             `(== ,q
                  (letr ,@shared
                    `((is-even ,(even? '(a b c)))
                      (is-odd ,(odd? '(a b c))))))))
-        '((((is-even #f) (is-odd #t)))))
+        '(((is-even #f) (is-odd #t))))
       (check-equal?
-        (run* (q)
+        (run* q
           (denote-eval `(== ,q (letr ,@shared
                                  (append '(a b c) '(d e f))))))
-        '(((a b c d e f))))
+        '((a b c d e f)))
       (check-equal?
         (run* (r s)
           (denote-eval `(letr ,@shared
@@ -545,41 +545,41 @@
           ((1 2) (3))
           ((1 2 3) ())))
       (check-equal?
-        (run* (q)
+        (run* q
           (denote-eval `(letr ,@shared
                           ((== ,q (last '(1 2 3)))))))
-        '((3)))
+        '(3))
       (check-equal?
-        (run 1 (q) (denote-eval
+        (run 1 q (denote-eval
                      `(letr ,@shared (== '(1 2 3) (rev ,q)))))
-        '(((3 2 1))))
+        '((3 2 1)))
       (check-equal?
-        (run* (q)
+        (run* q
           (denote-eval `(letr ,@shared
                           ((== ,q (reverse '(1 2 3)))))))
-        '(((3 2 1))))
+        '((3 2 1)))
       (check-equal?
-        (run* (q)
+        (run* q
           (denote-eval `(letr ,@shared
                           ((== (rev '(1 2 3)) (reverse '(1 2 3)))))))
-        '((_.0)))
+        '(_.0))
       (check-equal?
-        (run* (q) (denote-eval
+        (run* q (denote-eval
           `(== ,q (letr ,@shared
                     (map reverse '((a b c) (1 2 3)))))))
-        '((((c b a) (3 2 1)))))
+        '(((c b a) (3 2 1))))
       (check-equal?
-        (run* (q) (denote-eval
+        (run* q (denote-eval
           `(letr ,@shared
              (== '((c b a) (3 2 1)) (map reverse '((a b c) ,q))))))
-        '(((1 2 3))))
+        '((1 2 3)))
       (check-equal?
-        (run* (q) (denote-eval
+        (run* q (denote-eval
           `(letr ,@shared
              (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
-        '((3)))
+        '(3))
       (check-equal?
-        (run* (q) (denote-eval
+        (run* q (denote-eval
           `(letr ,@shared
                  ((next-day day) (match day
                                    ('mon 'tue)
@@ -597,11 +597,11 @@
                                    ('sat #f)
                                    ('sun #f)))
             (== '() (filter (compose weekday? next-day) '(,q))))))
-        '((sat) (fri)))
+        '(sat fri))
       (check-equal?
-        (run* (q) (denote-eval
+        (run* q (denote-eval
           `(letr ,@shared
              (conj (member ,q '(1 2 3))
                    (member ,q '(2 3 4))))))
-        '((2) (3)))
+        '(2 3))
       )))

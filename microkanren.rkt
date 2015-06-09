@@ -376,15 +376,16 @@
           (muk-rebuild
             (repr type (map (fn (el) (muk-reify-term st el vtrans))
                             components))))))))
-(define (muk-reify vtrans vrs states)
+(define (muk-reify vtrans vr states)
   (forl st <- states
         reify = (fn (term) (muk-reify-term st term vtrans))
-        vars = (map reify vrs)
+        reified-var = (reify vr)
         func-apps =
         (forl (cons fterm val) <- (dict->list (muk-state-sub-funcs st))
               `(,(reify fterm) == ,(reify val)))
         constraints = (if (null? func-apps) '() `(: ,@func-apps))
-        `(,@vars ,@constraints)))
+        (if (null? constraints) reified-var
+          `(,reified-var ,@constraints))))
 
 (define (muk-step-unification st e0 e1)
   (match (muk-unify-and-update st e0 e1)
@@ -433,7 +434,7 @@
 (module+ test
   (define (run comp) (muk-eval muk-state-empty comp))
   (define (reify-states name states)
-    (muk-reify muk-var->symbol (list (muk-var name)) states))
+    (muk-reify muk-var->symbol (muk-var name) states))
   (check-equal?
     (muk-take-all (run (== '#(a b) '#(c))))
     '())
@@ -443,11 +444,11 @@
     '())
   (check-equal?
     (reify-states 0 (muk-take-all (run (call/var (fn (x) (== x x))))))
-    '((_.0)))
+    '(_.0))
   (define (fives x) (disj+-Zzz (== x 5) (fives x)))
   (check-equal?
     (reify-states 0 (muk-take 1 (run (call/var fives))))
-    '((5)))
+    '(5))
   (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
   (define fives-and-sixes
     (call/var (lambda (x) (disj (fives x) (sixes x)))))
@@ -455,7 +456,7 @@
     (list st0 st1) = (muk-take 2 (run fives-and-sixes))
     (check-equal?
       (list->set (reify-states 0 (list st0 st1)))
-      (list->set '((5) (6))))
+      (list->set '(5 6)))
     )
   (record thing one two)
   (for_
@@ -465,5 +466,5 @@
                           (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
     (check-equal?
       (reify-states 0 (muk-take 1 (run rel)))
-      `((,(build 1 2)))))
+      `(,(build 1 2))))
   )
