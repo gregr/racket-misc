@@ -68,11 +68,11 @@
   (define sub (muk-state-sub-vars st))
   (let loop ((vr vr))
     (if (muk-var? vr)
-      (let ((result (dict-ref sub (muk-var-name vr) vr)))
+      (let ((result (hash-ref sub (muk-var-name vr) vr)))
         (if (eq? result vr) vr (loop result)))
       vr)))
 (def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis nv) vr val)
-  sub-vars = (dict-add sub-vars (muk-var-name vr) val)
+  sub-vars = (hash-set sub-vars (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
   (muk-state bound-vars sub-vars sfs fds fis nv))
 (define (muk-state-interpret st interpretations)
@@ -80,7 +80,7 @@
               (forf
                 interps = func-interps
                 (cons name op) <- (dict->list interpretations)
-                (dict-set interps name op)))
+                (hash-set interps name op)))
        'func-interps))
 (def (muk-sub-prefix (muk-state vars-old _ _ _ _ _)
                      (muk-state vars-new _ _ _ _ _))
@@ -240,12 +240,12 @@
        (lets
          term-var = next-var
          next-var = (muk-var-next next-var)
-         sub-funcs = (dict-add sub-funcs term term-var)
+         sub-funcs = (hash-set sub-funcs term term-var)
          func-deps = (forf
            func-deps = func-deps
            vr <- (muk-term->vars term)
-           deps = (set-add (dict-ref func-deps vr (set)) term)
-           (dict-set func-deps vr deps))
+           deps = (set-add (hash-ref func-deps vr (set)) term)
+           (hash-set func-deps vr deps))
          st = (muk-state
                 bvars sub-vars sub-funcs func-deps func-interps next-var)
          (list st term-var)))
@@ -266,7 +266,7 @@
     ((muk-var _) (list st (muk-sub-get-var st term)))
     ((muk-func-app name args)
      (lets (list st normalized) = (normalize-get st args)
-           op = (dict-ref func-interps name)
+           op = (hash-ref func-interps name)
            new-term = (apply op normalized)
            (if (equal? new-term term) (list st new-term)
              (muk-normalize st new-term))))
@@ -335,9 +335,9 @@
       (forf func-deps = func-deps
             old-var <- (muk-term->vars term-old)
             ; TODO: if empty, remove completely
-            (dict-update func-deps old-var
+            (hash-update func-deps old-var
                          (fn (terms) (set-remove terms term-old))))
-      sub-funcs = (dict-remove sub-funcs term-old)
+      sub-funcs = (hash-remove sub-funcs term-old)
       st = (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var)
       (list st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
@@ -350,11 +350,11 @@
         (lets
           (muk-state
             bvars sub-vars sub-funcs func-deps func-interps next-var) = st-new
-          (if (dict-empty? func-deps) (just st-new)
+          (if (hash-empty? func-deps) (just st-new)
             (begin/monad
               new = (muk-sub-prefix st-old st-new)
               fterms = (foldl set-union (set)
-                              (forl vr <- new (dict-ref func-deps vr (set))))
+                              (forl vr <- new (hash-ref func-deps vr (set))))
               st-new-new <- (monad-foldl maybe-monad muk-func-app-update st-new
                                          (set->list fterms))
               (loop (list st-new st-new-new)))))))))
@@ -382,7 +382,7 @@
         reify = (fn (term) (muk-reify-term st term vtrans))
         reified-var = (reify vr)
         func-apps =
-        (forl (cons fterm val) <- (dict->list (muk-state-sub-funcs st))
+        (forl (cons fterm val) <- (hash->list (muk-state-sub-funcs st))
               `(,(reify fterm) == ,(reify val)))
         constraints = (if (null? func-apps) '() `(: ,@func-apps))
         (if (null? constraints) reified-var
