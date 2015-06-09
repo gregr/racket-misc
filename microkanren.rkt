@@ -358,6 +358,7 @@
                                          (set->list fterms))
               (loop (list st-new st-new-new)))))))))
 
+(define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (number->string name))))
 (def (muk-reify-term st term vtrans)
@@ -366,6 +367,7 @@
     ((muk-var _) (vtrans term))
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)
                         (muk-reify-term st tl vtrans)))
+    ((? no-split?) term)
     ((muk-func-app name args)
      `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
     (_ (match (muk-split (list term))
