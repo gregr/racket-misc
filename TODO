@@ -18,10 +18,26 @@ markout:
       simplest quick fix; not a long term solution
   http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
+sugar:
+  support 'values' patterns in more positions for efficiency
+    forf accumulator
+    letn
+
 kanren:
-  measure substitution size growth
-  compare efficiency of idempotent substitutions
-  clean up reify
+  run-with-config
+    eval-loop
+      shape of the state
+        substitution, constraint store, etc.
+      unify
+        control over which structures are internally unified
+      constraints (optional)
+        including occurs-check
+      depth (if sensible WRT eval-loop)
+    reify
+      also shape of the state
+  try take #f rather than take -1
+  reification that does not depend on variables having names
+  test efficiency of nameless variables
   constraints
     CHR
       https://en.wikipedia.org/wiki/Constraint_Handling_Rules
@@ -44,8 +60,8 @@ kanren:
     metacircular interpreter
       may need to wait for additional constraints
       experiment with separating syntactic analysis from evaluation
+      experiment with small-step operational semantics
       quines?
-    experiment with small-step operational semantics
     benchmarks?
       particularly related to substitution size once this is measurable
     maybe try extending microkanren with by-need suspended computations, triggered by pause
@@ -71,9 +87,9 @@ kanren:
     =/=
     constraint-like reification
   improve performance
+    measure substitution size growth
+    compare efficiency of idempotent substitutions
     remove function terms and complex normalization during unification
-    reduce heap allocations on critical paths
-    eq? vs. equal?
     experiment with typed racket
     explicit cost annotation for unknown goals (or to override known computational cost)
       goals may override search strategy for their local computation tree
