@@ -47,8 +47,9 @@
     ((_ n depth (xs ...) gs ...)
      (run-depth n depth qvar (exist (xs ...) (== qvar (list xs ...)) gs ...)))
     ((_ n depth qvar gs ...)
-     (muk-reify muk-var->symbol (muk-var 0)
-       (muk-take n (muk-eval muk-state-empty (exist (qvar) gs ...) depth))))))
+     (forl st <- (muk-take n (muk-eval muk-state-empty
+                                       (exist (qvar) gs ...) depth))
+           (muk-reify muk-var->symbol (muk-var 0) st)))))
 (define-syntax run*-depth
   (syntax-rules () ((_ body ...) (run-depth -1 body ...))))
 (define-syntax run

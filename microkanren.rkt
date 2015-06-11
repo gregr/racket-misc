@@ -377,16 +377,15 @@
           (muk-rebuild
             (repr type (map (fn (el) (muk-reify-term st el vtrans))
                             components))))))))
-(define (muk-reify vtrans vr states)
-  (forl st <- states
-        reify = (fn (term) (muk-reify-term st term vtrans))
-        reified-var = (reify vr)
-        func-apps =
-        (forl (cons fterm val) <- (hash->list (muk-state-sub-funcs st))
-              `(,(reify fterm) == ,(reify val)))
-        constraints = (if (null? func-apps) '() `(: ,@func-apps))
-        (if (null? constraints) reified-var
-          `(,reified-var ,@constraints))))
+(def (muk-reify vtrans vr st)
+  reify = (fn (term) (muk-reify-term st term vtrans))
+  reified-var = (reify vr)
+  func-apps =
+  (forl (cons fterm val) <- (hash->list (muk-state-sub-funcs st))
+        `(,(reify fterm) == ,(reify val)))
+  constraints = (if (null? func-apps) '() `(: ,@func-apps))
+  (if (null? constraints) reified-var
+    `(,reified-var ,@constraints)))
 
 (define (muk-step-unification st e0 e1)
   (match (muk-unify-and-update st e0 e1)
@@ -435,7 +434,7 @@
 (module+ test
   (define (run comp) (muk-eval muk-state-empty comp))
   (define (reify-states name states)
-    (muk-reify muk-var->symbol (muk-var name) states))
+    (forl st <- states (muk-reify muk-var->symbol (muk-var name) st)))
   (check-equal?
     (muk-take-all (run (== '#(a b) '#(c))))
     '())
