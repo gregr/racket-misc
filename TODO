@@ -20,7 +20,6 @@ markout:
 
 sugar:
   support 'values' patterns in more positions for efficiency
-    forf accumulator
     letn
 
 kanren:

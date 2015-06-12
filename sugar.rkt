@@ -65,16 +65,26 @@
      (for_-cont cont (acc ...) (elem-seqs ... #:final expr) rest ...))
     ((_ cont (acc ...) elem-seqs body ...)
      (cont acc ... elem-seqs (lets body ...)))))
+(define-syntax for_-acc-cont
+  (syntax-rules (= <-)
+    ((_ cont (accs ...) acc = acc-init rest ...)
+     (for_-acc-cont cont (accs ... (acc acc-init)) rest ...))
+    ((_ cont accs elem <- seq rest ...)
+     (for_-cont cont (accs) () elem <- seq rest ...))
+    ((_ cont accs #:when rest ...)
+     (for_-cont cont (accs) () #:when rest ...))
+    ((_ cont accs #:unless rest ...)
+     (for_-cont cont (accs) () #:unless rest ...))
+    ((_ cont accs #:break rest ...)
+     (for_-cont cont (accs) () #:break rest ...))
+    ((_ cont accs #:final rest ...)
+     (for_-cont cont (accs) () #:final rest ...))
+    ))
 
 (define-syntax forf
-  (syntax-rules (=)
-    ((_ acc = acc-init rest ...)
-     (for_-cont for/fold/match (((acc acc-init))) () rest ...))))
-
+  (syntax-rules () ((_ body ...) (for_-acc-cont for/fold/match () body ...))))
 (define-syntax forf*
-  (syntax-rules (=)
-    ((_ acc = acc-init rest ...)
-     (for_-cont for*/fold/match (((acc acc-init))) () rest ...))))
+  (syntax-rules () ((_ body ...) (for_-acc-cont for*/fold/match () body ...))))
 
 (module+ test
   (check-equal?
@@ -93,6 +103,18 @@
       doubled = (* 2 elem)
       (cons doubled result))
     (list 6 2)
+    ))
+
+(module+ test
+  (check-equal?
+    (lets (values final result) =
+          (forf final = #f
+                result = '()
+                elem <- (list 1 2 3)
+            doubled = (* 2 elem)
+            (values elem (cons doubled result)))
+          (list final result))
+    (list 3 (list 6 4 2))
     ))
 
 (module+ test
