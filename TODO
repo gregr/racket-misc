@@ -35,7 +35,6 @@ kanren:
       depth (if sensible WRT eval-loop)
     reify
       also shape of the state
-  try take #f rather than take -1
   reification that does not depend on variables having names
   test efficiency of nameless variables
   constraints

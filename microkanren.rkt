@@ -24,7 +24,6 @@
   muk-sub-prefix
   muk-success
   muk-take
-  muk-take-all
   muk-term?
   muk-unification
   muk-unify-and-update
@@ -427,25 +426,24 @@
     ((_ g0 gs ...) (conj-seq g0 (conj* gs ...)))))
 
 (define (muk-take n ss)
-  (if (= 0 n) '()
+  (if (and n (zero? n)) '()
     (match (muk-force ss)
       ('() '())
-      ((cons st ss) (list* st (muk-take (- n 1) ss))))))
-(define (muk-take-all ss) (muk-take -1 ss))
+      ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
 
 (module+ test
   (define (run comp) (muk-eval muk-state-empty comp))
   (define (reify-states name states)
     (forl st <- states (muk-reify muk-var->symbol (muk-var name) st)))
   (check-equal?
-    (muk-take-all (run (== '#(a b) '#(c))))
+    (muk-take #f (run (== '#(a b) '#(c))))
     '())
   (define (one-and-two x) (conj* (== x 1) (== x 2)))
   (check-equal?
-    (muk-take-all (run (call/var one-and-two)))
+    (muk-take #f (run (call/var one-and-two)))
     '())
   (check-equal?
-    (reify-states 0 (muk-take-all (run (call/var (fn (x) (== x x))))))
+    (reify-states 0 (muk-take #f (run (call/var (fn (x) (== x x))))))
     '(_.0))
   (define (fives x) (disj+-Zzz (== x 5) (fives x)))
   (check-equal?

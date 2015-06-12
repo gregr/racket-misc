@@ -51,13 +51,13 @@
                                        (exist (qvar) gs ...) depth))
            (muk-reify muk-var->symbol (muk-var 0) st)))))
 (define-syntax run*-depth
-  (syntax-rules () ((_ body ...) (run-depth -1 body ...))))
+  (syntax-rules () ((_ body ...) (run-depth #f body ...))))
 (define-syntax run
   (syntax-rules ()
     ((_ n body ...)
      (run-depth n 1 body ...))))
 (define-syntax run*
-  (syntax-rules () ((_ body ...) (run -1 body ...))))
+  (syntax-rules () ((_ body ...) (run #f body ...))))
 
 (define-for-syntax (pattern->identifiers pat)
   (define (unquote-pats stx)
