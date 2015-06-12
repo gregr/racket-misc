@@ -160,10 +160,10 @@
       ((muk-pause paused) (list (list st paused)))
       (_ (muk-step-results muk-step next-depth (comp st))))))
 
-(def (muk-step st comp depth)
-  cost = (muk-computation-cost comp)
-  (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
-    (muk-step-depth st comp depth)))
+(define (muk-step st comp depth)
+  (let ((cost (muk-computation-cost comp)))
+    (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
+      (muk-step-depth st comp depth))))
 
 (def (muk-eval-loop pending depth)
   (list finished pending) =
