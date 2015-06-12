@@ -19,8 +19,8 @@ markout:
   http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
 sugar:
-  support 'values' patterns in more positions for efficiency
-    letn
+  remove letsn
+    first need to migrate dependants to letn
 
 kanren:
   run-with-config

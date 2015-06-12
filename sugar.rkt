@@ -275,12 +275,18 @@
     '(d c b a)
     ))
 
-(define-syntax letn
-  (syntax-rules (=)
-    ((_ name pattern = init-value body ...)
+(define-syntax letn-cont
+  (syntax-rules ()
+    ((_ name ((pattern init-value) ...) body ...)
      ((lambda ()
-        (def (name pattern) body ...)
-        (name init-value))))))
+        (def (name pattern ...) body ...)
+        (name init-value ...))))))
+(define-syntax letn
+  (syntax-rules (values =)
+    ((_ name (values pattern ...) = (values init-value ...) body ...)
+     (letn-cont name ((pattern init-value) ...) body ...))
+    ((_ name pattern = init-value body ...)
+     (letn-cont name ((pattern init-value)) body ...))))
 
 (module+ test
   (check-equal?
@@ -288,5 +294,14 @@
       (match xs
         ('() (cons x result))
         (_ (loop (list (cons x result) xs)))))
+    '(d c b a)
+    ))
+
+(module+ test
+  (check-equal?
+    (letn loop (values result (cons x xs)) = (values '() '(a b c d))
+      (match xs
+        ('() (cons x result))
+        (_ (loop (cons x result) xs))))
     '(d c b a)
     ))
