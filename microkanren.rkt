@@ -14,6 +14,7 @@
   interpret
   muk-conj-conc
   muk-conj-seq
+  muk-cost-goal
   muk-eval
   muk-func-app
   muk-mzero
@@ -102,6 +103,7 @@
   (muk-unification e0 e1)
   (muk-conj-conc cost c0 c1)
   (muk-conj-seq cost c0 c1)
+  (muk-cost-goal cost goal)
   (muk-pause paused)
   )
 
@@ -115,6 +117,7 @@
     ((muk-unification e0 e1) muk-cost-unification)
     ((muk-conj-conc cost c0 c1) cost)
     ((muk-conj-seq cost c0 c1) cost)
+    ((muk-cost-goal cost goal) cost)
     ((muk-pause _) muk-cost-unknown)
     (_ muk-cost-unknown)))
 (define (muk-comps->cost c0 c1)
@@ -144,6 +147,8 @@
     ((muk-conj-seq (? cost?) c0 c1)
      (muk-step-conj-seq muk-step-known cost-max st c0 c1))
     ((muk-unification e0 e1) (muk-step-unification st e0 e1))
+    ((muk-cost-goal (? cost?) goal)
+     (muk-step-results muk-step-known cost-max (goal st)))
     (_ (list (list st comp)))))
 
 (define (muk-step-depth st comp depth)
