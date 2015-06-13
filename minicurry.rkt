@@ -458,9 +458,6 @@
       (denote-eval `(== ,q (exist (f) (seq (== f (lam (x) x)) (f 11))))))
     '(11))
   (check-equal?
-    (run* (q r) (denote-eval `(== ,r (type ,q))))
-    '((() nil) ((_.3 . _.4) pair)))
-  (check-equal?
     (run* q
       (denote-eval `(== ,q ((lam (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
     '((8 . 9)))
@@ -475,10 +472,10 @@
                                      `(,d ,e 3)))))
     '((5 4 3)))
   (check-equal?
-    (run* q (denote-eval `(== ,q (match `(3 . a)
-                                     (`(,x . a) x)
-                                     (`(3 . ,y) y)))))
-    '(a 3))
+    (list->set (run* q (denote-eval `(== ,q (match `(3 . a)
+                                              (`(,x . a) x)
+                                              (`(3 . ,y) y))))))
+    (set 'a 3))
   (check-equal?
     (run* q (denote-eval `(== ,q (match* (17 `(3 . a))
                                      ((17 `(,x . a)) x)
@@ -561,8 +558,8 @@
       (check-equal?
         (run* q
           (denote-eval `(letr ,@shared
-                          ((== (rev '(1 2 3)) (reverse '(1 2 3)))))))
-        '(_.0))
+                          (== ,q (== (rev '(1 2 3)) (reverse '(1 2 3)))))))
+        (list (void)))
       (check-equal?
         (run* q (denote-eval
           `(== ,q (letr ,@shared

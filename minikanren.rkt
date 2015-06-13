@@ -40,16 +40,16 @@
   (syntax-rules ()
     ((_ () gs ...) (conj* gs ...))
     ((_ (x0 xs ...) gs ...)
-     (call/var (lambda (x0) (exist (xs ...) gs ...))))))
+     (call/var (lambda (x0) (exist (xs ...) gs ...)) 'x0))))
 
 (define-syntax run-depth
   (syntax-rules ()
     ((_ n depth (xs ...) gs ...)
      (run-depth n depth qvar (exist (xs ...) (== qvar (list xs ...)) gs ...)))
     ((_ n depth qvar gs ...)
-     (forl st <- (muk-take n (muk-eval muk-state-empty
-                                       (exist (qvar) gs ...) depth))
-           (muk-reify muk-var->symbol (muk-var 0) st)))))
+     (call/var (lambda (qvar)
+       (forl st <- (muk-take n (muk-eval muk-state-empty (conj* gs ...) depth))
+             (muk-reify muk-var->symbol qvar st))) 'qvar))))
 (define-syntax run*-depth
   (syntax-rules () ((_ body ...) (run-depth #f body ...))))
 (define-syntax run
@@ -90,7 +90,7 @@
           (list type components))))
 
 (define (interp-=/= . or-diseqs)
-  (def (muk-var< (muk-var n0) (muk-var n1)) (< n0 n1))
+  (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
   (def (total< e0 e1)
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (list< (list k0 v0) (list k1 v1)) (muk-var< k0 k1))
@@ -165,13 +165,11 @@
     (list (nat->bits 6) (nat->bits 7) (nat->bits 8) (nat->bits 9))
     '((2 2) (1 1 1) (2 1 1) (1 2 1))))
 
-(define ((nat-ino nats . lexprs) st)
-  (define (compressed-nats st)
-    (def (get-lvar st)
-         (list (list st lvar)) = ((call/var identity) st)
-         (list st lvar))
-    (let loop ((nats nats) (st st) (cur-result '()) (results '()))
-      (if (null? nats) (list st results)
+(define (nat-ino nats . lexprs)
+  (define (compressed-nats)
+    (define (get-lvar) (call/var identity))
+    (let loop ((nats nats) (cur-result '()) (results '()))
+      (if (null? nats) results
         (lets
           results = (if (member '() nats)
                       (list* (reverse cur-result) results)
@@ -181,27 +179,24 @@
           (zip-default '(() ()) (forl nat <- nats
                                       (list (first nat) (rest nat))))
           bits = (list->set firsts)
-          (list st next) =
-          (cond
-            ((= 2 (set-count bits)) (get-lvar st))
-            ((set-member? bits 1) (list st 1))
-            (else (list st 2)))
+          next = (cond ((= 2 (set-count bits)) (get-lvar))
+                       ((set-member? bits 1) 1)
+                       (else 2))
           cur-result = (list* next cur-result)
-          (loop nats st cur-result results)))))
-  (list
-    (forf (list st goal) = (list st (conj*))
-          lexpr <- lexprs
-          (list st domain) = (compressed-nats st)
-          (list st (conj goal (ino domain lexpr))))))
+          (loop nats cur-result results)))))
+  (forf goal = (conj*)
+        lexpr <- lexprs
+        domain = (compressed-nats)
+        (conj goal (ino domain lexpr))))
 
 (module+ test
-  (check-equal?
-    (run* q (nat-ino (list (nat->bits 6)
-                           (nat->bits 7)
-                           (nat->bits 8)
-                           (nat->bits 9))
-                     q))
-    '((_.1 _.2) (_.1 _.2 1))))
+  (check-true
+    (match (run* q (nat-ino (list (nat->bits 6)
+                                  (nat->bits 7)
+                                  (nat->bits 8)
+                                  (nat->bits 9)) q))
+      ((list (list v0 v1) (list v2 v3 1)) (and (eq? v0 v2) (eq? v1 v3)))
+      (_ #f))))
 
 (define (nat<o a b)
   (conde

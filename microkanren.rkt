@@ -59,10 +59,9 @@
 (records muk-term
   (muk-var name)
   (muk-func-app name args))
-(def (muk-var-next (muk-var idx)) (muk-var (+ 1 idx)))
-(record muk-state
-        bound-vars sub-vars sub-funcs func-deps func-interps next-var)
-(define muk-state-empty (muk-state '() (hasheq) (hash) (hash) (hash) (muk-var 0)))
+(define (muk-var-next (name '?)) (muk-var (gensym name)))
+(record muk-state bound-vars sub-vars sub-funcs func-deps func-interps)
+(define muk-state-empty (muk-state '() (hasheq) (hash) (hash) (hash)))
 (define (muk-sub-get-var st vr)
   (define sub (muk-state-sub-vars st))
   (let loop ((vr vr))
@@ -70,10 +69,10 @@
       (let ((result (hash-ref sub (muk-var-name vr) vr)))
         (if (eq? result vr) vr (loop result)))
       vr)))
-(def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis nv) vr val)
+(def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis) vr val)
   sub-vars = (hash-set sub-vars (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
-  (muk-state bound-vars sub-vars sfs fds fis nv))
+  (muk-state bound-vars sub-vars sfs fds fis))
 (define (muk-state-interpret st interpretations)
   (:~* st (fn (func-interps)
               (forf
@@ -81,8 +80,7 @@
                 (cons name op) <- (dict->list interpretations)
                 (hash-set interps name op)))
        'func-interps))
-(def (muk-sub-prefix (muk-state vars-old _ _ _ _ _)
-                     (muk-state vars-new _ _ _ _ _))
+(def (muk-sub-prefix (muk-state vars-old _ _ _ _) (muk-state vars-new _ _ _ _))
   (let loop ((current vars-new))
     (if (eq? current vars-old) '()
       (match current
@@ -211,7 +209,7 @@
 
 (module+ test
   (lets
-    vars = (map muk-var (range 3))
+    vars = (map muk-var '(a b c))
     (list v0 v1 v2) = vars
     f0 = (muk-func-app 'zero (list v0 v1))
     f1 = (muk-func-app 'one (list v2 f0))
@@ -232,21 +230,19 @@
       )))
 
 (def (muk-sub-get-term st term)
-  (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
+  (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
   (if (muk-func-app? term)
     (match (dict-get sub-funcs term)
       ((nothing)
        (lets
-         term-var = next-var
-         next-var = (muk-var-next next-var)
+         term-var = (muk-var-next)
          sub-funcs = (hash-set sub-funcs term term-var)
          func-deps = (forf
            func-deps = func-deps
            vr <- (muk-term->vars term)
            deps = (set-add (hash-ref func-deps vr (set)) term)
            (hash-set func-deps vr deps))
-         st = (muk-state
-                bvars sub-vars sub-funcs func-deps func-interps next-var)
+         st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
          (list st term-var)))
       ((just expected) (list st expected)))
     (list st term)))
@@ -260,7 +256,7 @@
           arg <- (reverse args)
           (list st narg) = (muk-normalize-get st arg)
           (list st (list* narg normalized))))
-  (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
+  (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
   (match term
     ((muk-var _) (list st (muk-sub-get-var st term)))
     ((muk-func-app name args)
@@ -277,13 +273,13 @@
 
 (module+ test
   (lets
-    st = (:=* muk-state-empty (muk-var 3) 'next-var)
+    st = muk-state-empty
     id-func-op = (fn (fname) (lambda xs (muk-func-app fname xs)))
     interps = (forl fname <- (list 'zero 'one 'two)
                     (cons fname (id-func-op fname)))
     st = (muk-state-interpret st interps)
     id-func = (fn (name args) (apply (id-func-op name) args))
-    vars = (map muk-var (range 5))
+    vars = (map muk-var '(a b c d e))
     (list v0 v1 v2 v3 v4) = vars
     f0 = (id-func 'zero (list v0 v1))
     f1 = (id-func 'one (list v2 f0))
@@ -293,8 +289,8 @@
     (list _ nf2) = (muk-normalize st f2)
     (begin
       (check-equal? (muk-term->vars nf0) (muk-term->vars f0))
-      (check-equal? (muk-term->vars nf1) (set v2 v3))
-      (check-equal? (muk-term->vars nf2) (set v4 v3 v1))
+      (check-true (set-member? (muk-term->vars nf1) v2))
+      (check-true (set-member? (muk-term->vars nf2) v1))
       )))
 
 (define (muk-normalize-term st term)
@@ -329,7 +325,7 @@
   (if (equal? term-old term-new) (just st)
     (lets
       (list st expected-old) = (muk-sub-get-term st term-old)
-      (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var) = st
+      (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
       func-deps =
       (forf func-deps = func-deps
             old-var <- (muk-term->vars term-old)
@@ -337,7 +333,7 @@
             (hash-update func-deps old-var
                          (fn (terms) (set-remove terms term-old))))
       sub-funcs = (hash-remove sub-funcs term-old)
-      st = (muk-state bvars sub-vars sub-funcs func-deps func-interps next-var)
+      st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
       (list st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
@@ -348,8 +344,7 @@
      (letn loop (values st-old st-new) = (values st st-new)
        (if (eq? st-old st-new) (just st-new)
          (lets
-           (muk-state
-             bvars sub-vars sub-funcs func-deps func-interps next-var) = st-new
+           (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st-new
            (if (hash-empty? func-deps) (just st-new)
              (lets
                new = (muk-sub-prefix st-old st-new)
@@ -362,7 +357,7 @@
 
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
-  (string->symbol (string-append "_." (number->string name))))
+  (string->symbol (string-append "_." (symbol->string name))))
 (def (muk-reify-term st term vtrans)
   term = (muk-sub-get-var st term)
   (match term
@@ -394,9 +389,7 @@
     ((just st) (muk-unit st))))
 (define == muk-unification)
 
-(def ((call/var f) (muk-state bvs svs sfs fds fis next-var))
-  (list (list (muk-state bvs svs sfs fds fis (muk-var-next next-var))
-              (f next-var))))
+(define (call/var f (name '?)) (f (muk-var-next name)))
 
 (define ((interpret interpretations) st)
   (muk-unit (muk-state-interpret st interpretations)))
@@ -433,8 +426,8 @@
 
 (module+ test
   (define (run comp) (muk-eval muk-state-empty comp))
-  (define (reify-states name states)
-    (forl st <- states (muk-reify muk-var->symbol (muk-var name) st)))
+  (define (reify-states vr states)
+    (forl st <- states (muk-reify muk-var->symbol vr st)))
   (check-equal?
     (muk-take #f (run (== '#(a b) '#(c))))
     '())
@@ -442,29 +435,31 @@
   (check-equal?
     (muk-take #f (run (call/var one-and-two)))
     '())
-  (check-equal?
-    (reify-states 0 (muk-take #f (run (call/var (fn (x) (== x x))))))
-    '(_.0))
+  (call/var (lambda (x)
+    (check-equal? (reify-states x (muk-take #f (run (== x x))))
+                  `(,(muk-var->symbol x)))))
   (define (fives x) (disj+-Zzz (== x 5) (fives x)))
-  (check-equal?
-    (reify-states 0 (muk-take 1 (run (call/var fives))))
-    '(5))
-  (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
-  (define fives-and-sixes
-    (call/var (lambda (x) (disj (fives x) (sixes x)))))
-  (lets
-    (list st0 st1) = (muk-take 2 (run fives-and-sixes))
+  (call/var (lambda (x)
     (check-equal?
-      (list->set (reify-states 0 (list st0 st1)))
-      (list->set '(5 6)))
-    )
+      (reify-states x (muk-take 1 (run (fives x))))
+      '(5))))
+  (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
+  (define (fives-and-sixes x) (disj (fives x) (sixes x)))
+  (call/var (fn (x)
+    (list st0 st1) = (muk-take 2 (run (fives-and-sixes x)))
+    (check-equal?
+      (list->set (reify-states x (list st0 st1)))
+      (list->set '(5 6)))))
+
   (record thing one two)
   (for_
     build <- (list cons vector thing)
     rel = (call/var
             (lambda (x) (call/var
                           (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
-    (check-equal?
-      (reify-states 0 (muk-take 1 (run rel)))
-      `(,(build 1 2))))
+    rel = (lambda (x y) (conj (== (build 1 y) x) (== y 2)))
+    (call/var (lambda (x) (call/var (lambda (y)
+      (check-equal?
+        (reify-states x (muk-take 1 (run (rel x y))))
+        `(,(build 1 2))))))))
   )
