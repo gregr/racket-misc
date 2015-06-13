@@ -3,6 +3,7 @@
 (provide
   ==
   call/var
+  let/vars
   conj
   conj-seq
   conj*
@@ -390,6 +391,12 @@
 (define == muk-unification)
 
 (define (call/var f (name '?)) (f (muk-var-next name)))
+(define-syntax let/vars
+  (syntax-rules ()
+    ((_ () body) body)
+    ((_ () body ...) (begin body ...))
+    ((_ (qvar qvars ...) body ...)
+     (call/var (lambda (qvar) (let/vars (qvars ...) body ...)) 'qvar))))
 
 (define ((interpret interpretations) st)
   (muk-unit (muk-state-interpret st interpretations)))
@@ -435,14 +442,14 @@
   (check-equal?
     (muk-take #f (run (call/var one-and-two)))
     '())
-  (call/var (lambda (x)
+  (let/vars (x)
     (check-equal? (reify-states x (muk-take #f (run (== x x))))
-                  `(,(muk-var->symbol x)))))
+                  `(,(muk-var->symbol x))))
   (define (fives x) (disj+-Zzz (== x 5) (fives x)))
-  (call/var (lambda (x)
+  (let/vars (x)
     (check-equal?
       (reify-states x (muk-take 1 (run (fives x))))
-      '(5))))
+      '(5)))
   (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
   (define (fives-and-sixes x) (disj (fives x) (sixes x)))
   (call/var (fn (x)
@@ -454,12 +461,8 @@
   (record thing one two)
   (for_
     build <- (list cons vector thing)
-    rel = (call/var
-            (lambda (x) (call/var
-                          (lambda (y) (conj (== (build 1 y) x) (== y 2))))))
-    rel = (lambda (x y) (conj (== (build 1 y) x) (== y 2)))
-    (call/var (lambda (x) (call/var (lambda (y)
+    (let/vars (x y)
       (check-equal?
-        (reify-states x (muk-take 1 (run (rel x y))))
-        `(,(build 1 2))))))))
+        (reify-states x (muk-take 1 (run (conj (== (build 1 y) x) (== y 2)))))
+        `(,(build 1 2)))))
   )
