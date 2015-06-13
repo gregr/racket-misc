@@ -33,7 +33,7 @@
   (ormap (lambda (p) (p x))
          (list muk-var? symbol? boolean? number? string? char?)))
 
-(define ((muk-value val) st) (muk-unit st val))
+(define muk-value muk-success)
 (define val-unit (void))
 (define val-nil '())
 (define val-cons cons)
@@ -72,7 +72,7 @@
         result = (muk-sub-get-var st value)
         (if (muk-var? result)
           (list (list st (muk-pause (loop result))))
-          ((muk-value result) st))))
+          (muk-unit st result))))
     (muk-value value)))
 (define (eval-application gproc gargs)
   (define (eval-app1 garg gproc)
