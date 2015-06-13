@@ -110,7 +110,7 @@
       (list e2 e1 e0))
     events = '(a b c)
     react = (gn yield (events)
-      (letsn loop ((cons enext erest) = events)
+      (letn loop (cons enext erest) = events
         command = (yield enext)
         (loop erest)))
     (check-equal?

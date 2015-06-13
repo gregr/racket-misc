@@ -183,7 +183,7 @@
        (if (> l0 l1) #t
          (if (< l0 l1) #f
            (head-pair-> (list #f t0) (list #f t1)))))))
-  (letsn loop (choices = '() scores = col-scores)
+  (letn loop (values choices scores) = (values '() col-scores)
     scores = (filter-not (compose1 empty? cadr) scores)
     scores = (sort scores head-pair->)
     (match scores
