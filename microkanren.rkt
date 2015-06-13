@@ -345,7 +345,7 @@
   (match (muk-unify st e0 e1)
     ((nothing) (nothing))
     ((just st-new)
-     (letn loop (list st-old st-new) = (list st st-new)
+     (letn loop (values st-old st-new) = (values st st-new)
        (if (eq? st-old st-new) (just st-new)
          (lets
            (muk-state
@@ -358,7 +358,7 @@
                (match (monad-foldl maybe-monad muk-func-app-update st-new
                                    (set->list fterms))
                  ((nothing) (nothing))
-                 ((just st-new-new) (loop (list st-new st-new-new))))))))))))
+                 ((just st-new-new) (loop st-new st-new-new)))))))))))
 
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
