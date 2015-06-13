@@ -11,7 +11,6 @@
   gn
   letn
   lets
-  letsn
   )
 
 (require
@@ -247,32 +246,6 @@
       (gen-result r) = (gen 2)
       (list v0 v1 r))
     (list 10 21 2)
-    ))
-
-(define-syntax letsn_-cont
-  (syntax-rules (=)
-    ((_ name (pattern ...) (init-value ...) () body ...)
-     ((lambda ()
-        (def (name pattern ...) body ...)
-        (name init-value ...))))
-    ((_ name (pattern ...) (init-value ...)
-        (next-pattern = next-value rest ...) body ...)
-     (letsn_-cont
-       name (pattern ... next-pattern) (init-value ... next-value) (rest ...)
-       body ...))))
-
-(define-syntax letsn
-  (syntax-rules ()
-    ((_ name (assignment ...) body ...)
-     (letsn_-cont name () () (assignment ...) body ...))))
-
-(module+ test
-  (check-equal?
-    (letsn loop (result = '() (cons x xs) = '(a b c d))
-      (match xs
-        ('() (cons x result))
-        (_ (loop (cons x result) xs))))
-    '(d c b a)
     ))
 
 (define-syntax letn-cont
