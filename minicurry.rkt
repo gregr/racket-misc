@@ -83,10 +83,9 @@
   (foldl eval-app1 gproc gargs))
 (define (possibly-strict strict? gbody)
   (if strict? gbody
-    (call/var
-      (lambda (r0)
-        (conj (apply-special-proc == (list (muk-value r0) gbody))
-              (muk-value r0))))))
+    (let/vars (r0)
+      (conj (apply-special-proc == (list (muk-value r0) gbody))
+            (muk-value r0)))))
 (def ((build-application strict? dproc dargs) env)
   gproc = (dproc env)
   gargs = (map (app1 env) dargs)
@@ -313,8 +312,8 @@
     (lambda (arg)
       (if (muk-var? arg)
         (disj (conj-seq (== '() arg) (muk-value 'nil))
-              (conj-seq (call/var (lambda (a0) (call/var (lambda (d0)
-                (== `(,a0 . ,d0) arg))))) (muk-value 'pair)))
+              (conj-seq (let/vars (a0 d0) (== `(,a0 . ,d0) arg))
+                        (muk-value 'pair)))
         (muk-value
           (cond ((null? arg) 'nil)
                 ((pair? arg) 'pair)
@@ -339,8 +338,8 @@
   (forf dbody = dbody
         param <- params
         (lambda (env)
-          (call/var (lambda (x0)
-                      (dbody (env-add env param (muk-value x0))))))))
+          (let/vars (x0)
+            (dbody (env-add env param (muk-value x0)))))))
 (define (denote-exist strict? senv tail)
   (match tail
     ((cons (? list? (? (fn (ps) (andmap symbol? ps)) params)) body)

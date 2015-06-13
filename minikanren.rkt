@@ -38,9 +38,7 @@
 
 (define-syntax exist
   (syntax-rules ()
-    ((_ () gs ...) (conj* gs ...))
-    ((_ (x0 xs ...) gs ...)
-     (call/var (lambda (x0) (exist (xs ...) gs ...)) 'x0))))
+    ((_ xs gs ...) (let/vars xs (conj* gs ...)))))
 
 (define-syntax run-depth
   (syntax-rules ()
