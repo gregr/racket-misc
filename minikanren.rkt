@@ -46,7 +46,7 @@
      (run-depth n depth qvar (exist (xs ...) (== qvar (list xs ...)) gs ...)))
     ((_ n depth qvar gs ...)
      (call/var (lambda (qvar)
-       (forl st <- (muk-take n (muk-eval muk-state-empty (conj* gs ...) depth))
+       (forl st <- (in-list (muk-take n (muk-eval muk-state-empty (conj* gs ...) depth)))
              (muk-reify muk-var->symbol qvar st))) 'qvar))))
 (define-syntax run*-depth
   (syntax-rules () ((_ body ...) (run-depth #f body ...))))

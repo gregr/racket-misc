@@ -124,19 +124,19 @@
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
 (define (muk-step-conj-conc cont arg st c0 c1)
-  (append* (forl (list st c0) <- (cont st c0 arg)
-                 (forl (list st c1) <- (cont st c1 arg)
+  (append* (forl (list st c0) <- (in-list (cont st c0 arg))
+                 (forl (list st c1) <- (in-list (cont st c1 arg))
                        (list st (match* (c0 c1)
                                   (((muk-success _) _) c1)
                                   ((_ (muk-success (? void?))) c0)
                                   ((_ _) (conj c0 c1))))))))
 (define (muk-step-conj-seq cont arg st c0 c1)
-  (append* (forl (list st c0) <- (cont st c0 arg)
+  (append* (forl (list st c0) <- (in-list (cont st c0 arg))
                  (match c0
                    ((muk-success _) (cont st c1 arg))
                    (_ (list (list st (conj-seq c0 c1))))))))
 (define (muk-step-results cont arg results)
-  (append* (forl (list st comp) <- results (cont st comp arg))))
+  (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
 
 (define (muk-step-known st comp cost-max)
   (define (cost? cost) (and cost (<= cost cost-max)))
@@ -170,7 +170,7 @@
 (def (muk-eval-loop pending depth)
   (values finished pending) =
   (forf finished = '() unfinished = '()
-    (list st comp) <- (muk-step-results muk-step depth pending)
+    (list st comp) <- (in-list (muk-step-results muk-step depth pending))
     (match comp
       ((muk-success _) (values (list* st finished) unfinished))
       (_ (values finished (list* (list st comp) unfinished)))))

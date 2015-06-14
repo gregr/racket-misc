@@ -53,7 +53,7 @@
 
 (define ((eval-goal-cont cont) value-goal)
   (define (absorb-results results)
-    (forl (list st comp) <- results
+    (forl (list st comp) <- (in-list results)
           (list st ((eval-goal-cont cont) comp))))
   (match value-goal
     ((muk-success value) (cont value))
