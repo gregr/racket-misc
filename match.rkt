@@ -22,7 +22,10 @@
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    racket/set
+    rackunit
+    ))
 
 (define-syntax match-let1+values
   (syntax-rules (values)
@@ -88,11 +91,20 @@
     (list 2 3 4 5)))
 
 (define-syntax (for_/fold/match/derived-cont stx)
-  (syntax-case stx ()
+  (syntax-case stx (values)
     ((_ cont original acc for-clauses ()
         (source ...) (pattern ...) body ...)
       #'(cont original acc for-clauses
           (match* (source ...) ((pattern ...) body ...))))
+    ((_ cont original acc (for-clause ...) (((values pats ...) seq) pat-for-clause ...)
+        (source ...) (pattern ...) body ...)
+     (with-syntax (((elems ...) (generate-temporaries #'(pats ...))))
+     #'(for_/fold/match/derived-cont
+         cont original acc
+         (for-clause ... ((elems ...) seq))
+         (pat-for-clause ...)
+         (source ... elems ...) (pattern ... pats ...)
+         body ...)))
     ((_ cont original acc (for-clause ...) ((pat seq) pat-for-clause ...)
         (source ...) (pattern ...) body ...)
      (with-syntax (((elem) (generate-temporaries #'(pat))))
@@ -161,6 +173,15 @@
          )
       (cons (+ a b c sum) 'something))
     (cons (* 2 (+ 1 2 7 4 10 20)) 'something)))
+
+(module+ test
+  (check-equal?
+    (for/fold/match
+        (((cons sum keys) (cons 0 (set))))
+        (((values key (list v0 v1))
+          (hash 'a (list 1 2) 'b (list 3 4) 'c (list 5 6))))
+      (cons (+ v0 v1 sum) (set-add keys key)))
+    (cons (+ 1 2 3 4 5 6) (set 'a 'b 'c))))
 
 (module+ test
   (check-equal?
