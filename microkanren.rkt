@@ -129,7 +129,6 @@
                        (list st (match* (c0 c1)
                                   (((muk-success _) _) c1)
                                   ((_ (muk-success (? void?))) c0)
-                                  ((_ (muk-success _)) (conj-seq c0 c1))
                                   ((_ _) (conj c0 c1))))))))
 (define (muk-step-conj-seq cont arg st c0 c1)
   (append* (forl (list st c0) <- (cont st c0 arg)
