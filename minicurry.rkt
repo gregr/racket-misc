@@ -476,10 +476,10 @@
                                               (`(3 . ,y) y))))))
     (set 'a 3))
   (check-equal?
-    (run* q (denote-eval `(== ,q (match* (17 `(3 . a))
-                                     ((17 `(,x . a)) x)
-                                     ((x `(3 . ,y)) `(,x . ,y))))))
-    '(3 (17 . a)))
+    (list->set (run* q (denote-eval `(== ,q (match* (17 `(3 . a))
+                                              ((17 `(,x . a)) x)
+                                              ((x `(3 . ,y)) `(,x . ,y)))))))
+    (set 3 '(17 . a)))
   (check-equal?
     (run* q
       (denote-eval
@@ -575,25 +575,26 @@
              (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
         '(3))
       (check-equal?
-        (run* q (denote-eval
-          `(letr ,@shared
-                 ((next-day day) (match day
-                                   ('mon 'tue)
-                                   ('tue 'wed)
-                                   ('wed 'thur)
-                                   ('thur 'fri)
-                                   ('fri 'sat)
-                                   ('sat 'sun)))
-                 ((weekday? day) (match day
-                                   ('mon #t)
-                                   ('tue #t)
-                                   ('wed #t)
-                                   ('thur #t)
-                                   ('fri #t)
-                                   ('sat #f)
-                                   ('sun #f)))
-            (== '() (filter (compose weekday? next-day) '(,q))))))
-        '(sat fri))
+        (list->set
+          (run* q (denote-eval
+            `(letr ,@shared
+                   ((next-day day) (match day
+                                     ('mon 'tue)
+                                     ('tue 'wed)
+                                     ('wed 'thur)
+                                     ('thur 'fri)
+                                     ('fri 'sat)
+                                     ('sat 'sun)))
+                   ((weekday? day) (match day
+                                     ('mon #t)
+                                     ('tue #t)
+                                     ('wed #t)
+                                     ('thur #t)
+                                     ('fri #t)
+                                     ('sat #f)
+                                     ('sun #f)))
+                   (== '() (filter (compose weekday? next-day) '(,q)))))))
+        (set 'sat 'fri))
       (check-equal?
         (run* q (denote-eval
           `(letr ,@shared
