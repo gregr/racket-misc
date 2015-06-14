@@ -6,6 +6,9 @@
   dict-get
   dict-subtract
   dict-subtract1
+  hash-add
+  hash-empty
+  hash-get
   )
 
 (require
@@ -17,7 +20,14 @@
 (module+ test
   (require rackunit))
 
-(define dict-empty (hash))
+(define hash-empty (hash))
+(define hash-add hash-set)
+(define (hash-get hsh key)
+  (define found? #t)
+  (let ((result (hash-ref hsh key (lambda () (set! found? #f)))))
+    (if found? (just result) (nothing))))
+
+(define dict-empty hash-empty)
 (define dict-add dict-set)
 (define (dict-get dct key)
   (define found? #t)
