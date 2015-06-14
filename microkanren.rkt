@@ -169,13 +169,12 @@
       (muk-step-depth st comp depth))))
 
 (def (muk-eval-loop pending depth)
-  (list finished pending) =
-  (forf
-    (list finished unfinished) = '(() ())
+  (values finished pending) =
+  (forf finished = '() unfinished = '()
     (list st comp) <- (muk-step-results muk-step depth pending)
     (match comp
-      ((muk-success _) (list (list* st finished) unfinished))
-      (_ (list finished (list* (list st comp) unfinished)))))
+      ((muk-success _) (values (list* st finished) unfinished))
+      (_ (values finished (list* (list st comp) unfinished)))))
   (append finished (if (null? pending)
                      '() (thunk (muk-eval-loop pending depth)))))
 
@@ -249,33 +248,34 @@
            deps = (set-add (hash-ref func-deps vr (set)) term)
            (hash-set func-deps vr deps))
          st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
-         (list st term-var)))
-      ((just expected) (list st expected)))
-    (list st term)))
+         (values st term-var)))
+      ((just expected) (values st expected)))
+    (values st term)))
 
-(define (muk-normalize-get st term)
-  (apply muk-sub-get-term (muk-normalize st term)))
+(def (muk-normalize-get st term)
+  (values st nterm) = (muk-normalize st term)
+  (muk-sub-get-term st nterm))
 
 (def (muk-normalize st term)
   normalize-get = (fn (st args)
-    (forf (list st normalized) = (list st '())
+    (forf st = st normalized = '()
           arg <- (reverse args)
-          (list st narg) = (muk-normalize-get st arg)
-          (list st (list* narg normalized))))
+          (values st narg) = (muk-normalize-get st arg)
+          (values st (list* narg normalized))))
   (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
   (match term
-    ((muk-var _) (list st (muk-sub-get-var st term)))
+    ((muk-var _) (values st (muk-sub-get-var st term)))
     ((muk-func-app name args)
-     (lets (list st normalized) = (normalize-get st args)
+     (lets (values st normalized) = (normalize-get st args)
            op = (hash-ref func-interps name)
            new-term = (apply op normalized)
-           (if (equal? new-term term) (list st new-term)
+           (if (equal? new-term term) (values st new-term)
              (muk-normalize st new-term))))
     (_ (match (muk-split (list term))
-         ((nothing) (list st term))
+         ((nothing) (values st term))
          ((just (list (repr type components)))
-          (lets (list st ncomps) = (normalize-get st components)
-                (list st (muk-rebuild (repr type ncomps)))))))))
+          (lets (values st ncomps) = (normalize-get st components)
+                (values st (muk-rebuild (repr type ncomps)))))))))
 
 (module+ test
   (lets
@@ -290,9 +290,9 @@
     f0 = (id-func 'zero (list v0 v1))
     f1 = (id-func 'one (list v2 f0))
     f2 = (id-func 'two (list f0 f1 f0 v1))
-    (list _ nf0) = (muk-normalize st f0)
-    (list _ nf1) = (muk-normalize st f1)
-    (list _ nf2) = (muk-normalize st f2)
+    (values _ nf0) = (muk-normalize st f0)
+    (values _ nf1) = (muk-normalize st f1)
+    (values _ nf2) = (muk-normalize st f2)
     (begin
       (check-equal? (muk-term->vars nf0) (muk-term->vars f0))
       (check-true (set-member? (muk-term->vars nf1) v2))
@@ -300,11 +300,11 @@
       )))
 
 (define (muk-normalize-term st term)
-  (if (muk-term? term) (muk-normalize-get st term) (list st term)))
+  (if (muk-term? term) (muk-normalize-get st term) (values st term)))
 
 (def (muk-unify st e0 e1)
-  (list st e0) = (muk-normalize-term st e0)
-  (list st e1) = (muk-normalize-term st e1)
+  (values st e0) = (muk-normalize-term st e0)
+  (values st e1) = (muk-normalize-term st e1)
   (cond
     ((eq? e0 e1) (just st))
     ((muk-var? e0) (just (muk-sub-add st e0 e1)))
@@ -327,10 +327,10 @@
                           (zip components)))))))))
 
 (def (muk-func-app-update st term-old)
-  (list st term-new) = (muk-normalize st term-old)
+  (values st term-new) = (muk-normalize st term-old)
   (if (equal? term-old term-new) (just st)
     (lets
-      (list st expected-old) = (muk-sub-get-term st term-old)
+      (values st expected-old) = (muk-sub-get-term st term-old)
       (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
       func-deps =
       (forf func-deps = func-deps
@@ -340,7 +340,7 @@
                          (fn (terms) (set-remove terms term-old))))
       sub-funcs = (hash-remove sub-funcs term-old)
       st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
-      (list st expected-new) = (muk-sub-get-term st term-new)
+      (values st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
 (define (muk-unify-and-update st e0 e1)
