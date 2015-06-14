@@ -12,7 +12,6 @@
   "maybe.rkt"
   "microkanren.rkt"
   "sugar.rkt"
-  racket/dict
   racket/function
   racket/list
   (except-in racket/match ==)
@@ -44,12 +43,13 @@
                             ('() val-nil)
                             ((cons fst snd) (build-cons fst snd))))
 
-(define (env-get env ident) (dict-get env ident))
-(define (env-add env ident val) (dict-set env ident val))
+(define (env-ref env ident) (hash-ref env ident))
+(define (env-get env ident) (hash-get env ident))
+(define (env-add env ident val) (hash-set env ident val))
 (define (env-extend env params) (forf env = env
                                       param <- params
                                       (env-add env param #f)))
-(define env-empty (hash))
+(define env-empty hash-empty)
 
 (define ((eval-goal-cont cont) value-goal)
   (define (absorb-results results)
@@ -403,7 +403,7 @@
     ((just special?)
      (if special?
        (error (format "invalid use of special identifier: ~a" ident))
-       (lambda (env) (match (just-x (env-get env ident))
+       (lambda (env) (match (env-ref env ident)
                        ((? box? val) (unbox val))
                        (val val)))))))
 (define (denote-atom atom) (const (muk-value atom)))
