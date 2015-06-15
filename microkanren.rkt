@@ -68,10 +68,9 @@
 (define (muk-sub-get-var st vr)
   (define sub (muk-state-sub-vars st))
   (let loop ((vr vr))
-    (if (muk-var? vr)
-      (let ((result (hash-ref sub (muk-var-name vr) vr)))
-        (if (eq? result vr) vr (loop result)))
-      vr)))
+    (let ((result (hash-ref sub (muk-var-name vr) vr)))
+      (if (eq? result vr) vr
+        (if (muk-var? result) (loop result) result)))))
 (def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis) vr val)
   sub-vars = (hash-set sub-vars (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
@@ -367,7 +366,7 @@
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
 (def (muk-reify-term st term vtrans)
-  term = (muk-sub-get-var st term)
+  term = (if (muk-var? term) (muk-sub-get-var st term) term)
   (match term
     ((muk-var _) (vtrans term))
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)
