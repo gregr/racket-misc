@@ -17,6 +17,7 @@
   muk-cost-goal
   muk-eval
   muk-func-app
+  muk-goal
   muk-mzero
   muk-pause
   muk-reify
@@ -136,7 +137,7 @@
   (append* (forl (list st c0) <- (in-list (cont st c0 arg))
                  (match c0
                    ((muk-success _) (cont st c1 arg))
-                   (_ (list (list st (conj-seq c0 c1))))))))
+                   (_ (muk-goal st (conj-seq c0 c1)))))))
 (define (muk-step-results cont arg results)
   (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
 
@@ -150,18 +151,18 @@
     ((muk-unification e0 e1) (muk-step-unification st e0 e1))
     ((muk-cost-goal (? cost?) goal)
      (muk-step-results muk-step-known cost-max (goal st)))
-    (_ (list (list st comp)))))
+    (_ (muk-goal st comp))))
 
 (define (muk-step-depth st comp depth)
   (define next-depth (- depth 1))
-  (if (= depth 0) (list (list st comp))
+  (if (= depth 0) (muk-goal st comp)
     (match comp
-      ((muk-success _) (list (list st comp)))
+      ((muk-success _) (muk-goal st comp))
       ((muk-conj-conc cost c0 c1)
        (muk-step-conj-conc muk-step depth st c0 c1))
       ((muk-conj-seq cost c0 c1)
        (muk-step-conj-seq muk-step depth st c0 c1))
-      ((muk-pause paused) (list (list st paused)))
+      ((muk-pause paused) (muk-goal st paused))
       (_ (muk-step-results muk-step next-depth (comp st))))))
 
 (define (muk-step st comp depth)
@@ -180,7 +181,7 @@
                      '() (thunk (muk-eval-loop pending depth)))))
 
 (define (muk-eval st comp (depth 1))
-  (muk-eval-loop (list (list st comp)) depth))
+  (muk-eval-loop (muk-goal st comp) depth))
 
 (define (conj c0 c1) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))
 (define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
@@ -188,9 +189,9 @@
 
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
 
+(define (muk-goal st comp) (list (list st comp)))
 (define muk-mzero '())
-(define (muk-unit st (result (void)))
-  (list* (list st (muk-success result)) muk-mzero))
+(define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
 
 (define split-entries
   (list repr-entry-pair repr-entry-vector repr-entry-struct repr-entry-hash))
@@ -408,7 +409,7 @@
   (muk-unit (muk-state-interpret st interpretations)))
 
 (define-syntax Zzz
-  (syntax-rules () ((_ goal) (lambda (st) (list (list st goal))))))
+  (syntax-rules () ((_ goal) (lambda (st) (muk-goal st goal)))))
 
 (define-syntax conj*
   (syntax-rules ()

@@ -74,7 +74,7 @@
         (fn (st)
             result = (muk-sub-get-var st value)
             (if (muk-var? result)
-              (list (list st (muk-pause (loop result))))
+              (muk-goal st (muk-pause (loop result)))
               (muk-unit st result)))))
     (muk-value value)))
 (define (eval-application gproc gargs)
