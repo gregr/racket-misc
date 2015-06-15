@@ -124,12 +124,14 @@
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
 (define (muk-step-conj-conc cont arg st c0 c1)
-  (append* (forl (list st c0) <- (in-list (cont st c0 arg))
-                 (forl (list st c1) <- (in-list (cont st c1 arg))
-                       (list st (match* (c0 c1)
-                                  (((muk-success _) _) c1)
-                                  ((_ (muk-success (? void?))) c0)
-                                  ((_ _) (conj c0 c1))))))))
+  (for*/list ((r0 (in-list (cont st c0 arg)))
+              (r1 (in-list (cont (first r0) c1 arg))))
+    (lets (list _ c0) = r0
+          (list st c1) = r1
+          (list st (match* (c0 c1)
+                     (((muk-success _) _) c1)
+                     ((_ (muk-success (? void?))) c0)
+                     ((_ _) (conj c0 c1)))))))
 (define (muk-step-conj-seq cont arg st c0 c1)
   (append* (forl (list st c0) <- (in-list (cont st c0 arg))
                  (match c0
