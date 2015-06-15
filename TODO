@@ -31,7 +31,6 @@ kanren:
     reify
       also shape of the state
   reification that does not depend on variables having names
-  test efficiency of nameless variables
   constraints
     CHR
       https://en.wikipedia.org/wiki/Constraint_Handling_Rules
@@ -56,10 +55,6 @@ kanren:
       experiment with separating syntactic analysis from evaluation
       experiment with small-step operational semantics
       quines?
-    benchmarks?
-      particularly related to substitution size once this is measurable
-    maybe try extending microkanren with by-need suspended computations, triggered by pause
-      appropriate suspension to be unfrozen is identified by a key provided by pause
     mode inference and optimization
       can functional-only evaluation be detected and improved?
       make use of cost annotations
@@ -85,11 +80,8 @@ kanren:
     compare efficiency of idempotent substitutions
     remove function terms and complex normalization during unification
     experiment with typed racket
-    explicit cost annotation for unknown goals (or to override known computational cost)
-      goals may override search strategy for their local computation tree
-        for instance, running themselves to completion if they know they terminate
-    support search priorities higher than unification?
-      probably better to just override cost of expensive unifications
+    goals may override search strategy for their local computation tree
+      for instance, running themselves to completion if they know they terminate
   specialized hash unification: keys always treated as fully ground
 
 ===============================================================================
