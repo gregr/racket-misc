@@ -72,7 +72,7 @@
     (let loop ((value value))
       (muk-cost-goal 0
         (fn (st)
-            result = (muk-sub-get-var st value)
+            (values st result) = (muk-sub-get-var st value)
             (if (muk-var? result)
               (muk-goal st (muk-pause (loop result)))
               (muk-unit st result)))))

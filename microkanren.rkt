@@ -65,8 +65,15 @@
 (define (muk-var-next (name '?)) (muk-var (gensym name)))
 (record muk-state bound-vars sub-vars sub-funcs func-deps func-interps)
 (define muk-state-empty (muk-state '() (hasheq) (hash) (hash) (hash)))
-(def (muk-sub-get-var (muk-state bound-vars sub sfs fds fis) vr)
-  compress = (lambda (path result) result)
+(def (muk-sub-get-var st vr)
+  (muk-state bound-vars sub sfs fds fis) = st
+  compress = (lambda (path result)
+    (if (null? path) (values st result)
+      (values (muk-state bound-vars
+                         (forf sub = sub
+                               (muk-var name) <- path
+                               (hash-set sub name result))
+                         sfs fds fis) result)))
   (let ((result (hash-ref sub (muk-var-name vr) vr)))
     (if (eq? result vr) (compress '() vr)
       (if (muk-var? result)
@@ -271,7 +278,7 @@
           (values st (list* narg normalized))))
   (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
   (match term
-    ((muk-var _) (values st (muk-sub-get-var st term)))
+    ((muk-var _) (muk-sub-get-var st term))
     ((muk-func-app name args)
      (lets (values st normalized) = (normalize-get st args)
            op = (hash-ref func-interps name)
@@ -372,7 +379,7 @@
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
 (def (muk-reify-term st term vtrans)
-  term = (if (muk-var? term) (muk-sub-get-var st term) term)
+  (values st term) = (if (muk-var? term) (muk-sub-get-var st term) (values st term))
   (match term
     ((muk-var _) (vtrans term))
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)
