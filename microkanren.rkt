@@ -24,7 +24,7 @@
   muk-take
   muk-term?
   muk-unification
-  muk-unify-and-update
+  muk-unify
   muk-unit
   muk-var
   muk-var?
@@ -92,21 +92,8 @@
                 (cons name op) <- (dict->list interpretations)
                 (hash-set interps name op)))
        'constraints 'func-interps))
-(def (muk-sub-prefix (muk-state vars-old _ _) (muk-state vars-new _ _))
-  (let loop ((current vars-new))
-    (if (eq? current vars-old) '()
-      (match current
-        ((cons vr more) (list* vr (loop more)))))))
-
-(module+ test
-  (lets
-    s0 = '(d c b a)
-    s1 = (list* 'g 'f 'e s0)
-    (check-equal?
-      (apply muk-sub-prefix
-             (map (fn (bvs) (:=* muk-state-empty bvs 'bound-vars))
-                  (list s0 s1)))
-      '(g f e))))
+(def (muk-sub-prefix (muk-state bound-vars sub cxs))
+  (values (muk-state '() sub cxs) bound-vars))
 
 (records muk-computation
   (muk-success result)
@@ -391,9 +378,9 @@
        (if (eq? st-old st-new) (just st-new)
          (lets
            (muk-state _ _ (muk-fof-constraints _ func-deps _)) = st-new
+           (values st-new new) = (muk-sub-prefix st-new)
            (if (hash-empty? func-deps) (just st-new)
              (lets
-               new = (muk-sub-prefix st-old st-new)
                fterms = (foldl set-union (set)
                                (forl vr <- new (hash-ref func-deps vr (set))))
                (match (monad-foldl maybe-monad muk-func-app-update st-new

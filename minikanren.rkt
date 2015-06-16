@@ -116,13 +116,14 @@
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (list< (list k0 v0) (list k1 v1)) (muk-var< k0 k1))
   (match (monad-foldl maybe-monad
-          (fn (st (list e0 e1)) (muk-unify-and-update st e0 e1))
+          (fn (st (list e0 e1)) (muk-unify st e0 e1))
           muk-state-empty or-diseqs)
     ((nothing) #t)
     ((just st-new)
      (lets
+       (values st-new vr-new) = (muk-sub-prefix st-new)
        or-diseqs = (forl
-                     vr <- (muk-sub-prefix muk-state-empty st-new)
+                     vr <- vr-new
                      (values _ val) = (muk-sub-get st-new vr)
                      (sort (list vr val) total<))
        or-diseqs = (sort or-diseqs list<)
