@@ -6,11 +6,7 @@
   let/vars
   conj
   conj-seq
-  conj*
-  conj-seq*
   disj
-  disj*
-  disj+-Zzz
   interpret
   muk-conj-conc
   muk-conj-seq
@@ -428,27 +424,6 @@
 (define-syntax Zzz
   (syntax-rules () ((_ goal) (lambda (st) (muk-goal st goal)))))
 
-(define-syntax conj*
-  (syntax-rules ()
-    ((_) muk-unit)
-    ((_ g0) g0)
-    ((_ g0 gs ...) (conj g0 (conj* gs ...)))))
-(define-syntax disj*
-  (syntax-rules ()
-    ((_) (const muk-mzero))
-    ((_ g0) g0)
-    ((_ g0 gs ...) (disj g0 (disj* gs ...)))))
-(define-syntax disj+-Zzz
-  (syntax-rules ()
-    ((_ g0) g0)
-    ((_ g0 gs ...) (Zzz (disj* g0 gs ...)))))
-
-(define-syntax conj-seq*
-  (syntax-rules ()
-    ((_) muk-unit)
-    ((_ g0) g0)
-    ((_ g0 gs ...) (conj-seq g0 (conj-seq* gs ...)))))
-
 (define (muk-take n ss)
   (if (and n (zero? n)) '()
     (match (muk-force ss)
@@ -462,19 +437,19 @@
   (check-equal?
     (muk-take #f (run (== '#(a b) '#(c))))
     '())
-  (define (one-and-two x) (conj* (== x 1) (== x 2)))
+  (define (one-and-two x) (conj (== x 1) (== x 2)))
   (check-equal?
     (muk-take #f (run (call/var one-and-two)))
     '())
   (let/vars (x)
     (check-equal? (reify-states x (muk-take #f (run (== x x))))
                   `(,(muk-var->symbol x))))
-  (define (fives x) (disj+-Zzz (== x 5) (fives x)))
+  (define (fives x) (disj (== x 5) (Zzz (fives x))))
   (let/vars (x)
     (check-equal?
       (reify-states x (muk-take 1 (run (fives x))))
       '(5)))
-  (define (sixes x) (disj+-Zzz (== x 6) (sixes x)))
+  (define (sixes x) (disj (== x 6) (Zzz (sixes x))))
   (define (fives-and-sixes x) (disj (fives x) (sixes x)))
   (call/var (fn (x)
     (list st0 st1) = (muk-take 2 (run (fives-and-sixes x)))
