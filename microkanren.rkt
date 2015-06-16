@@ -58,17 +58,19 @@
   (muk-var name)
   (muk-func-app name args))
 (define (muk-var-next (name '?)) (muk-var (gensym name)))
-(record muk-state bound-vars sub-vars sub-funcs func-deps func-interps)
-(define muk-state-empty (muk-state '() (hasheq) (hash) (hash) (hash)))
+(record muk-fof-constraints func-interps func-deps sub-funcs)
+(define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
+(record muk-state bound-vars sub-vars constraints)
+(define muk-state-empty (muk-state '() (hasheq) muk-fof-constraints-empty))
 (def (muk-sub-get-var st vr)
-  (muk-state bound-vars sub sfs fds fis) = st
+  (muk-state bound-vars sub constraints) = st
   compress = (lambda (path result)
     (if (null? path) (values st result)
       (values (muk-state bound-vars
                          (forf sub = sub
                                (muk-var name) <- path
                                (hash-set sub name result))
-                         sfs fds fis) result)))
+                         constraints) result)))
   (let ((result (hash-ref sub (muk-var-name vr) vr)))
     (if (eq? result vr) (compress '() vr)
       (if (muk-var? result)
@@ -79,18 +81,18 @@
                 (loop result (list* vr path))
                 (compress path result)))))
         (compress '() result)))))
-(def (muk-sub-add (muk-state bound-vars sub-vars sfs fds fis) vr val)
+(def (muk-sub-add (muk-state bound-vars sub-vars constraints) vr val)
   sub-vars = (hash-set sub-vars (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
-  (muk-state bound-vars sub-vars sfs fds fis))
+  (muk-state bound-vars sub-vars constraints))
 (define (muk-state-interpret st interpretations)
   (:~* st (fn (func-interps)
               (forf
                 interps = func-interps
                 (cons name op) <- (dict->list interpretations)
                 (hash-set interps name op)))
-       'func-interps))
-(def (muk-sub-prefix (muk-state vars-old _ _ _ _) (muk-state vars-new _ _ _ _))
+       'constraints 'func-interps))
+(def (muk-sub-prefix (muk-state vars-old _ _) (muk-state vars-new _ _))
   (let loop ((current vars-new))
     (if (eq? current vars-old) '()
       (match current
@@ -268,7 +270,8 @@
       )))
 
 (def (muk-sub-get-term st term)
-  (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
+  (muk-state bvars sub-vars constraints) = st
+  (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
   (if (muk-func-app? term)
     (match (dict-get sub-funcs term)
       ((nothing)
@@ -280,7 +283,8 @@
            vr <- (muk-term->vars term)
            deps = (set-add (hash-ref func-deps vr (set)) term)
            (hash-set func-deps vr deps))
-         st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
+         constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
+         st = (muk-state bvars sub-vars constraints)
          (values st term-var)))
       ((just expected) (values st expected)))
     (values st term)))
@@ -295,11 +299,12 @@
           arg <- (reverse args)
           (values st narg) = (muk-normalize-get st arg)
           (values st (list* narg normalized))))
-  (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
+  (muk-state _ _ constraints) = st
   (match term
     ((muk-var _) (muk-sub-get-var st term))
     ((muk-func-app name args)
      (lets (values st normalized) = (normalize-get st args)
+           (muk-fof-constraints func-interps _ _) = constraints
            op = (hash-ref func-interps name)
            new-term = (apply op normalized)
            (if (equal? new-term term) (values st new-term)
@@ -364,7 +369,8 @@
   (if (equal? term-old term-new) (just st)
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
-      (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st
+      (muk-state bvars sub-vars constraints) = st
+      (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
       func-deps =
       (forf func-deps = func-deps
             old-var <- (muk-term->vars term-old)
@@ -372,7 +378,8 @@
             (hash-update func-deps old-var
                          (fn (terms) (set-remove terms term-old))))
       sub-funcs = (hash-remove sub-funcs term-old)
-      st = (muk-state bvars sub-vars sub-funcs func-deps func-interps)
+      constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
+      st = (muk-state bvars sub-vars constraints)
       (values st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
@@ -383,7 +390,7 @@
      (letn loop (values st-old st-new) = (values st st-new)
        (if (eq? st-old st-new) (just st-new)
          (lets
-           (muk-state bvars sub-vars sub-funcs func-deps func-interps) = st-new
+           (muk-state _ _ (muk-fof-constraints _ func-deps _)) = st-new
            (if (hash-empty? func-deps) (just st-new)
              (lets
                new = (muk-sub-prefix st-old st-new)
@@ -415,8 +422,9 @@
 (def (muk-reify vtrans vr st)
   reify = (fn (term) (muk-reify-term st term vtrans))
   reified-var = (reify vr)
+  (muk-state _ _ (muk-fof-constraints _ _ sub-funcs)) = st
   func-apps =
-  (forl (cons fterm val) <- (hash->list (muk-state-sub-funcs st))
+  (forl (cons fterm val) <- (hash->list sub-funcs)
         `(,(reify fterm) == ,(reify val)))
   constraints = (if (null? func-apps) '() `(: ,@func-apps))
   (if (null? constraints) reified-var
