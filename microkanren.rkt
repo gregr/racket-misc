@@ -447,7 +447,7 @@
   (syntax-rules ()
     ((_) muk-unit)
     ((_ g0) g0)
-    ((_ g0 gs ...) (conj-seq g0 (conj* gs ...)))))
+    ((_ g0 gs ...) (conj-seq g0 (conj-seq* gs ...)))))
 
 (define (muk-take n ss)
   (if (and n (zero? n)) '()
