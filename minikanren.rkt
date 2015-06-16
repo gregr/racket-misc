@@ -386,20 +386,20 @@
           ((== a x) (== res out))
           ((=/= a x) (== `(,a . ,res) out)))))))
   (check-equal?
-    (run* q (conj*-seq with-constraints (rembero 'a '(a b a c) q)))
+    (run* q (conj-seq* with-constraints (rembero 'a '(a b a c) q)))
     '((b c)))
   (check-equal?
-    (run* q (conj*-seq with-constraints (rembero 'a '(a b c) '(a b c))))
+    (run* q (conj-seq* with-constraints (rembero 'a '(a b c) '(a b c))))
     '())
   (check-equal?
     (list->set
-      (run* (x y) (conj*-seq with-constraints (ino (range 3) x y) (all-diffo (list x y)))))
+      (run* (x y) (conj-seq* with-constraints (ino (range 3) x y) (all-diffo (list x y)))))
     (list->set '((0 1) (0 2) (1 0) (1 2) (2 0) (2 1))))
   (check-equal?
-    (run* (w x y z) (conj*-seq with-constraints (ino (range 3) w x y z) (all-diffo (list w x y z))))
+    (run* (w x y z) (conj-seq* with-constraints (ino (range 3) w x y z) (all-diffo (list w x y z))))
     '())
   (check-equal?
-    (run* (w x y z) (conj*-seq with-constraints (symbolo x) (symbolo z) (+o y y w) (ino (list 5 'five) x y z)))
+    (run* (w x y z) (conj-seq* with-constraints (symbolo x) (symbolo z) (+o y y w) (ino (list 5 'five) x y z)))
     '((10 five 5 five)))
 
   ; slow test (faster without compression)
@@ -434,7 +434,7 @@
         ;(nat-ino (nat-range 1 10) s m)
         ;(add-digitso s m carry2 m o)))
     ;(check-equal?
-      ;(run*-depth 1000 q (conj*-seq with-constraints (send-more-moneyo q)))
+      ;(run*-depth 1000 q (conj-seq* with-constraints (send-more-moneyo q)))
       ;(list (map nat->bits (list 9 5 6 7 1 0 8 2)))))
 
   ; slow test
@@ -467,11 +467,11 @@
         ;(ino (range 1 10) s m)
         ;(add-digitso s m carry2 m o)))
     ;(check-equal?
-      ;(run*-depth 1000 q (conj*-seq with-constraints (send-more-moneyo q)))
+      ;(run*-depth 1000 q (conj-seq* with-constraints (send-more-moneyo q)))
       ;'((9 5 6 7 1 0 8 2))))
 
   (check-match
-    (run* (p r) (conj*-seq with-constraints
+    (run* (p r) (conj-seq* with-constraints
       (=/= '(1 2) `(,p ,r))
       (== 1 p)
       (symbolo r)))

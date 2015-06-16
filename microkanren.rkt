@@ -7,7 +7,7 @@
   conj
   conj-seq
   conj*
-  conj*-seq
+  conj-seq*
   disj
   disj*
   disj+-Zzz
@@ -443,7 +443,7 @@
     ((_ g0) g0)
     ((_ g0 gs ...) (Zzz (disj* g0 gs ...)))))
 
-(define-syntax conj*-seq
+(define-syntax conj-seq*
   (syntax-rules ()
     ((_) muk-unit)
     ((_ g0) g0)
