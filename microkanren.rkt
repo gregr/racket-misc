@@ -335,14 +335,12 @@
       (check-true (set-member? (muk-term->vars nf2) v1))
       )))
 
-(define (muk-normalize-term st term)
-  (if (muk-func-app? term) (muk-normalize-get st term)
-    (if (muk-var? term) (muk-sub-get st term)
-      (values st term))))
+(define (muk-walk st term)
+  (if (muk-var? term) (muk-sub-get st term) (values st term)))
 
 (def (muk-unify st e0 e1)
-  (values st e0) = (muk-normalize-term st e0)
-  (values st e1) = (muk-normalize-term st e1)
+  (values st e0) = (muk-walk st e0)
+  (values st e1) = (muk-walk st e1)
   (cond
     ((eq? e0 e1) (just st))
     ((muk-var? e0) (just (muk-sub-add st e0 e1)))
@@ -399,7 +397,7 @@
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
 (def (muk-reify-term st term vtrans)
-  (values st term) = (if (muk-var? term) (muk-sub-get st term) (values st term))
+  (values st term) = (muk-walk st term)
   (match term
     ((muk-var _) (vtrans term))
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)
