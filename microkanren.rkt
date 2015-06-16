@@ -131,6 +131,37 @@
 (define (muk-comps->cost c0 c1)
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
+(define (muk-goal st comp) (list (list st comp)))
+(define muk-mzero '())
+(define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
+
+(define == muk-unification)
+(define (conj c0 c1) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))
+(define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
+(define ((disj g0 g1) st) (list (list st g0) (list st g1)))
+
+(define (call/var f (name '?)) (f (muk-var-next name)))
+(define-syntax let/vars
+  (syntax-rules ()
+    ((_ () body) body)
+    ((_ () body ...) (begin body ...))
+    ((_ (qvar qvars ...) body ...)
+     (call/var (lambda (qvar) (let/vars (qvars ...) body ...)) 'qvar))))
+
+(define-syntax Zzz
+  (syntax-rules () ((_ goal) (lambda (st) (muk-goal st goal)))))
+
+(define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
+
+(define (muk-take n ss)
+  (if (and n (zero? n)) '()
+    (match (muk-force ss)
+      ('() '())
+      ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
+
+(define ((interpret interpretations) st)
+  (muk-unit (muk-state-interpret st interpretations)))
+
 (define (muk-evaluator unify constrain)
   (define (muk-step-conj-conc cont arg st c0 c1)
     (for*/list ((r0 (in-list (cont st c0 arg)))
@@ -192,16 +223,6 @@
     (muk-eval-loop (muk-goal st comp) depth))
 
   muk-eval)
-
-(define (conj c0 c1) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))
-(define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
-(define ((disj g0 g1) st) (list (list st g0) (list st g1)))
-
-(define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
-
-(define (muk-goal st comp) (list (list st comp)))
-(define muk-mzero '())
-(define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
 
 (define split-entries
   (list repr-entry-pair repr-entry-vector repr-entry-struct repr-entry-hash))
@@ -405,30 +426,9 @@
   (match (muk-unify-and-update st e0 e1)
     ((nothing) muk-mzero)
     ((just st) (muk-unit st))))
-(define == muk-unification)
 
 (define muk-fof-eval (muk-evaluator muk-step-unification identity))
 (define muk-eval muk-fof-eval)
-
-(define (call/var f (name '?)) (f (muk-var-next name)))
-(define-syntax let/vars
-  (syntax-rules ()
-    ((_ () body) body)
-    ((_ () body ...) (begin body ...))
-    ((_ (qvar qvars ...) body ...)
-     (call/var (lambda (qvar) (let/vars (qvars ...) body ...)) 'qvar))))
-
-(define ((interpret interpretations) st)
-  (muk-unit (muk-state-interpret st interpretations)))
-
-(define-syntax Zzz
-  (syntax-rules () ((_ goal) (lambda (st) (muk-goal st goal)))))
-
-(define (muk-take n ss)
-  (if (and n (zero? n)) '()
-    (match (muk-force ss)
-      ('() '())
-      ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
 
 (module+ test
   (define (run comp) (muk-eval muk-state-empty comp))
