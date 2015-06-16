@@ -336,7 +336,9 @@
       )))
 
 (define (muk-normalize-term st term)
-  (if (muk-term? term) (muk-normalize-get st term) (values st term)))
+  (if (muk-func-app? term) (muk-normalize-get st term)
+    (if (muk-var? term) (muk-sub-get st term)
+      (values st term))))
 
 (def (muk-unify st e0 e1)
   (values st e0) = (muk-normalize-term st e0)

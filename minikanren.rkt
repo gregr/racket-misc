@@ -145,12 +145,10 @@
 
 (define with-constraints (interpret interpretations))
 
-(define (type val) (muk-func-app 'type (list val)))
-(define (typeo val ty) (== ty (type val)))
+(define (typeo val result) (muk-fof-apply 'type (list val) result))
 (define (symbolo val) (typeo val '(symbol ())))
 (define (numbero val)
   (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
-(define (full-repr val) (list (type val) val))
 (define (ino domain . xs)
   (forf goal = (conj*)
         x <- xs
@@ -159,7 +157,9 @@
                     el <- domain
                     (disj goal (== x el))))))
 (define (=/= e0 e1)
-  (== #t (muk-func-app '=/= (list (list (full-repr e0) (full-repr e1))))))
+  (let/vars (t0 t1)
+    (conj* (typeo e0 t0) (typeo e1 t1)
+           (muk-fof-apply '=/= (list (list (list t0 e0) (list t1 e1))) #t))))
 (define (all-diffo xs)
   (matche xs
     ('())
@@ -170,9 +170,10 @@
       (all-diffo `(,ad . ,dd)))))
 (define (+o a b a+b)
   (conj* (numbero a) (numbero b) (numbero a+b)
-         (== (muk-func-app '+ (list a b)) a+b)))
+         (muk-fof-apply '+ (list a b) a+b)))
 (define (<o a b)
-  (conj* (numbero a) (numbero b) (== (muk-func-app '< (list a b)) #t)))
+  (conj* (numbero a) (numbero b)
+         (muk-fof-apply '< (list a b) #t)))
 (define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
 
 (define (nat->bits nat)
