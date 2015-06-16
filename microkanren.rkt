@@ -370,21 +370,22 @@
       (values st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
+(def (muk-fof-constrain st)
+  (muk-state _ _ (muk-fof-constraints _ func-deps _)) = st
+  (values st new) = (muk-sub-prefix st)
+  (if (or (null? new) (hash-empty? func-deps)) (just st)
+    (lets
+      fterms = (foldl set-union (set)
+                      (forl vr <- new (hash-ref func-deps vr (set))))
+      (match (monad-foldl maybe-monad muk-func-app-update st
+                          (set->list fterms))
+        ((nothing) (nothing))
+        ((just st-new) (muk-fof-constrain st-new))))))
+
 (define (muk-unify-and-update st e0 e1)
   (match (muk-unify st e0 e1)
     ((nothing) (nothing))
-    ((just st-new)
-     (letn loop st-new = st-new
-       (muk-state _ _ (muk-fof-constraints _ func-deps _)) = st-new
-       (values st-new new) = (muk-sub-prefix st-new)
-       (if (or (null? new) (hash-empty? func-deps)) (just st-new)
-         (lets
-           fterms = (foldl set-union (set)
-                           (forl vr <- new (hash-ref func-deps vr (set))))
-           (match (monad-foldl maybe-monad muk-func-app-update st-new
-                               (set->list fterms))
-             ((nothing) (nothing))
-             ((just st-new-new) (loop st-new-new)))))))))
+    ((just st-new) (muk-fof-constrain st-new))))
 
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
