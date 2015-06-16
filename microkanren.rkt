@@ -22,7 +22,6 @@
   muk-pause
   muk-reify
   muk-state-empty
-  muk-step-unification
   muk-sub-get-var
   muk-sub-prefix
   muk-success
