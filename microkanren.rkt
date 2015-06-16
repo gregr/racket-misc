@@ -12,6 +12,7 @@
   muk-conj-seq
   muk-cost-goal
   muk-eval
+  muk-fof-apply
   muk-func-app
   muk-goal
   muk-mzero
@@ -258,29 +259,33 @@
         (set v0 v1 v2))
       )))
 
-(def (muk-sub-get-term st term)
+(def (muk-func-app-add st term)
   (muk-state bvars sub constraints) = st
   (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
-  (if (muk-func-app? term)
-    (match (dict-get sub-funcs term)
-      ((nothing)
-       (lets
-         term-var = (muk-var-next)
-         sub-funcs = (hash-set sub-funcs term term-var)
-         func-deps = (forf
-           func-deps = func-deps
-           vr <- (muk-term->vars term)
-           deps = (set-add (hash-ref func-deps vr (set)) term)
-           (hash-set func-deps vr deps))
-         constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
-         st = (muk-state bvars sub constraints)
-         (values st term-var)))
-      ((just expected) (values st expected)))
-    (values st term)))
+  (match (dict-get sub-funcs term)
+    ((nothing)
+     (lets term-var = (muk-var-next)
+           sub-funcs = (hash-set sub-funcs term term-var)
+           func-deps = (forf
+                         func-deps = func-deps
+                         vr <- (muk-term->vars term)
+                         deps = (set-add (hash-ref func-deps vr (set)) term)
+                         (hash-set func-deps vr deps))
+           constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
+           st = (muk-state bvars sub constraints)
+           (values st term-var)))
+    ((just expected) (values st expected))))
+
+(define (muk-sub-get-term st term)
+  (if (muk-func-app? term) (muk-func-app-add st term) (values st term)))
 
 (def (muk-normalize-get st term)
   (values st nterm) = (muk-normalize st term)
   (muk-sub-get-term st nterm))
+
+(def ((muk-fof-apply name args result) st)
+  (values st result-var) = (muk-normalize-get st (muk-func-app name args))
+  (muk-goal st (== result-var result)))
 
 (define (muk-normalize-get-args st args)
   (forf st = st normalized = '()
