@@ -60,7 +60,7 @@
 (define (muk-var-next (name '?)) (muk-var (gensym name)))
 (record muk-fof-constraints func-interps func-deps sub-funcs)
 (define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
-(record muk-state bound-vars sub-vars constraints)
+(record muk-state bound-vars substitution constraints)
 (define muk-state-empty (muk-state '() (hasheq) muk-fof-constraints-empty))
 (def (muk-sub-get st vr)
   (muk-state bound-vars sub constraints) = st
@@ -81,10 +81,10 @@
                 (loop result (list* vr path))
                 (compress path result)))))
         (compress '() result)))))
-(def (muk-sub-add (muk-state bound-vars sub-vars constraints) vr val)
-  sub-vars = (hash-set sub-vars (muk-var-name vr) val)
+(def (muk-sub-add (muk-state bound-vars sub constraints) vr val)
+  sub = (hash-set sub (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
-  (muk-state bound-vars sub-vars constraints))
+  (muk-state bound-vars sub constraints))
 (define (muk-state-interpret st interpretations)
   (:~* st (fn (func-interps)
               (forf
@@ -270,7 +270,7 @@
       )))
 
 (def (muk-sub-get-term st term)
-  (muk-state bvars sub-vars constraints) = st
+  (muk-state bvars sub constraints) = st
   (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
   (if (muk-func-app? term)
     (match (dict-get sub-funcs term)
@@ -284,7 +284,7 @@
            deps = (set-add (hash-ref func-deps vr (set)) term)
            (hash-set func-deps vr deps))
          constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
-         st = (muk-state bvars sub-vars constraints)
+         st = (muk-state bvars sub constraints)
          (values st term-var)))
       ((just expected) (values st expected)))
     (values st term)))
@@ -369,7 +369,7 @@
   (if (equal? term-old term-new) (just st)
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
-      (muk-state bvars sub-vars constraints) = st
+      (muk-state bvars sub constraints) = st
       (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
       func-deps =
       (forf func-deps = func-deps
@@ -379,7 +379,7 @@
                          (fn (terms) (set-remove terms term-old))))
       sub-funcs = (hash-remove sub-funcs term-old)
       constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
-      st = (muk-state bvars sub-vars constraints)
+      st = (muk-state bvars sub constraints)
       (values st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
