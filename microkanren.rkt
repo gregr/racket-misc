@@ -196,7 +196,9 @@
   (define (muk-step st comp depth)
     (let ((cost (muk-computation-cost comp)))
       (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
-        (muk-step-depth st comp depth))))
+        (match (constrain st)
+          ((nothing) muk-mzero)
+          ((just st) (muk-step-depth st comp depth))))))
 
   (def (muk-eval-loop pending depth)
        (values finished pending) =
@@ -382,11 +384,6 @@
         ((nothing) (nothing))
         ((just st-new) (muk-fof-constrain st-new))))))
 
-(define (muk-unify-and-update st e0 e1)
-  (match (muk-unify st e0 e1)
-    ((nothing) (nothing))
-    ((just st-new) (muk-fof-constrain st-new))))
-
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
@@ -417,11 +414,11 @@
     `(,reified-var ,@constraints)))
 
 (define (muk-step-unification st e0 e1)
-  (match (muk-unify-and-update st e0 e1)
+  (match (muk-unify st e0 e1)
     ((nothing) muk-mzero)
     ((just st) (muk-unit st))))
 
-(define muk-fof-eval (muk-evaluator muk-step-unification identity))
+(define muk-fof-eval (muk-evaluator muk-step-unification muk-fof-constrain))
 (define muk-eval muk-fof-eval)
 
 (module+ test
