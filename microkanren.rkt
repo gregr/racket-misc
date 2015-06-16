@@ -18,7 +18,7 @@
   muk-pause
   muk-reify
   muk-state-empty
-  muk-sub-get-var
+  muk-sub-get
   muk-sub-prefix
   muk-success
   muk-take
@@ -62,7 +62,7 @@
 (define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
 (record muk-state bound-vars sub-vars constraints)
 (define muk-state-empty (muk-state '() (hasheq) muk-fof-constraints-empty))
-(def (muk-sub-get-var st vr)
+(def (muk-sub-get st vr)
   (muk-state bound-vars sub constraints) = st
   compress = (lambda (path result)
     (if (null? path) (values st result)
@@ -301,7 +301,7 @@
           (values st (list* narg normalized))))
   (muk-state _ _ constraints) = st
   (match term
-    ((muk-var _) (muk-sub-get-var st term))
+    ((muk-var _) (muk-sub-get st term))
     ((muk-func-app name args)
      (lets (values st normalized) = (normalize-get st args)
            (muk-fof-constraints func-interps _ _) = constraints
@@ -405,7 +405,7 @@
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
 (def (muk-reify-term st term vtrans)
-  (values st term) = (if (muk-var? term) (muk-sub-get-var st term) (values st term))
+  (values st term) = (if (muk-var? term) (muk-sub-get st term) (values st term))
   (match term
     ((muk-var _) (vtrans term))
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)

@@ -123,7 +123,7 @@
      (lets
        or-diseqs = (forl
                      vr <- (muk-sub-prefix muk-state-empty st-new)
-                     (values _ val) = (muk-sub-get-var st-new vr)
+                     (values _ val) = (muk-sub-get st-new vr)
                      (sort (list vr val) total<))
        or-diseqs = (sort or-diseqs list<)
        (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
