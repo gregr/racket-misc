@@ -282,26 +282,30 @@
   (values st nterm) = (muk-normalize st term)
   (muk-sub-get-term st nterm))
 
-(def (muk-normalize st term)
-  normalize-get = (fn (st args)
-    (forf st = st normalized = '()
-          arg <- (reverse args)
-          (values st narg) = (muk-normalize-get st arg)
-          (values st (list* narg normalized))))
+(define (muk-normalize-get-args st args)
+  (forf st = st normalized = '()
+        arg <- (reverse args)
+        (values st narg) = (muk-normalize-get st arg)
+        (values st (list* narg normalized))))
+
+(def (muk-func-app-normalize st term)
+  (muk-func-app name args) = term
   (muk-state _ _ constraints) = st
+  (muk-fof-constraints func-interps _ _) = constraints
+  (values st normalized) = (muk-normalize-get-args st args)
+  op = (hash-ref func-interps name)
+  new-term = (apply op normalized)
+  (if (equal? new-term term) (values st new-term)
+    (muk-normalize st new-term)))
+
+(def (muk-normalize st term)
   (match term
     ((muk-var _) (muk-sub-get st term))
-    ((muk-func-app name args)
-     (lets (values st normalized) = (normalize-get st args)
-           (muk-fof-constraints func-interps _ _) = constraints
-           op = (hash-ref func-interps name)
-           new-term = (apply op normalized)
-           (if (equal? new-term term) (values st new-term)
-             (muk-normalize st new-term))))
+    ((muk-func-app _ _) (muk-func-app-normalize st term))
     (_ (match (muk-split (list term))
          ((nothing) (values st term))
          ((just (list (repr type components)))
-          (lets (values st ncomps) = (normalize-get st components)
+          (lets (values st ncomps) = (muk-normalize-get-args st components)
                 (values st (muk-rebuild (repr type ncomps)))))))))
 
 (module+ test
@@ -354,7 +358,7 @@
                           (zip components)))))))))
 
 (def (muk-func-app-update st term-old)
-  (values st term-new) = (muk-normalize st term-old)
+  (values st term-new) = (muk-func-app-normalize st term-old)
   (if (equal? term-old term-new) (just st)
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
