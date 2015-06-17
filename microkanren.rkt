@@ -154,6 +154,10 @@
       ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
 
 (define (muk-evaluator unify constrain)
+  (define (muk-step-unification st e0 e1)
+    (match (unify st e0 e1)
+      ((nothing) muk-mzero)
+      ((just st) (muk-unit st))))
   (define (muk-step-conj-conc cont arg st c0 c1)
     (for*/list ((r0 (in-list (cont st c0 arg)))
                 (r1 (in-list (cont (first r0) c1 arg))))
@@ -178,7 +182,7 @@
        (muk-step-conj-conc muk-step-known cost-max st c0 c1))
       ((muk-conj-seq (? cost?) c0 c1)
        (muk-step-conj-seq muk-step-known cost-max st c0 c1))
-      ((muk-unification e0 e1) (unify st e0 e1))
+      ((muk-unification e0 e1) (muk-step-unification st e0 e1))
       ((muk-cost-goal (? cost?) goal)
        (muk-step-results muk-step-known cost-max (goal st)))
       (_ (muk-goal st comp))))
@@ -424,16 +428,11 @@
 
 (define muk-reify muk-fof-reify)
 
-(define (muk-step-unification st e0 e1)
-  (match (muk-unify st e0 e1)
-    ((nothing) muk-mzero)
-    ((just st) (muk-unit st))))
-
-(define muk-fof-eval (muk-evaluator muk-step-unification muk-fof-constrain))
+(define muk-fof-eval (muk-evaluator muk-unify muk-fof-constrain))
 (define muk-eval muk-fof-eval)
 
 (module+ test
-  (define eval-simple (muk-evaluator muk-step-unification just))
+  (define eval-simple (muk-evaluator muk-unify just))
   (define (run comp) (eval-simple (muk-state-empty/constraints (void)) comp))
   (define (reify-states vr states)
     (forl st <- states (muk-reify-term st vr muk-var->symbol)))
