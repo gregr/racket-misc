@@ -17,7 +17,8 @@
   muk-rebuild
   muk-reify-term
   muk-split
-  (struct-out muk-state)  ; temporary
+  muk-state-constraints
+  muk-state-constraints-set
   muk-state-empty/constraints
   muk-sub-get
   muk-sub-prefix
@@ -53,6 +54,8 @@
 
 (record muk-var name)
 (record muk-state bound-vars substitution constraints)
+(def (muk-state-constraints-set (muk-state bvs sub _) cxs)
+  (muk-state bvs sub cxs))
 (define (muk-state-empty/constraints constraints)
   (muk-state '() (hasheq) constraints))
 (def (muk-sub-get st vr)

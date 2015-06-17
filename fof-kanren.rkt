@@ -79,7 +79,7 @@
       )))
 
 (def (fof-func-app-add st term)
-  (muk-state bvars sub constraints) = st
+  constraints = (muk-state-constraints st)
   (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
   (match (hash-get sub-funcs term)
     ((nothing)
@@ -91,7 +91,7 @@
                          deps = (set-add (hash-ref func-deps vr (set)) term)
                          (hash-set func-deps vr deps))
            constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
-           st = (muk-state bvars sub constraints)
+           st = (muk-state-constraints-set st constraints)
            (values st term-var)))
     ((just expected) (values st expected))))
 
@@ -114,8 +114,7 @@
 
 (def (fof-func-app-normalize st term)
   (fof-func-app name args) = term
-  (muk-state _ _ constraints) = st
-  (muk-fof-constraints func-interps _ _) = constraints
+  (muk-fof-constraints func-interps _ _) = (muk-state-constraints st)
   (values st normalized) = (muk-normalize-get-args st args)
   op = (hash-ref func-interps name)
   new-term = (apply op normalized)
@@ -162,7 +161,7 @@
   (if (equal? term-old term-new) (just st)
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
-      (muk-state bvars sub constraints) = st
+      constraints = (muk-state-constraints st)
       (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
       func-deps =
       (forf func-deps = func-deps
@@ -172,12 +171,12 @@
                          (fn (terms) (set-remove terms term-old))))
       sub-funcs = (hash-remove sub-funcs term-old)
       constraints = (muk-fof-constraints func-interps func-deps sub-funcs)
-      st = (muk-state bvars sub constraints)
+      st = (muk-state-constraints-set st constraints)
       (values st expected-new) = (muk-sub-get-term st term-new)
       (muk-unify st expected-old expected-new))))
 
 (def (muk-fof-constrain st)
-  (muk-state _ _ (muk-fof-constraints _ func-deps _)) = st
+  (muk-fof-constraints _ func-deps _) = (muk-state-constraints st)
   (values st new) = (muk-sub-prefix st)
   (if (or (null? new) (hash-empty? func-deps)) (just st)
     (lets
@@ -194,7 +193,7 @@
   `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
 (def (fof-reify vtrans vr st)
   reified-var = (muk-reify-term st vr vtrans)
-  (muk-state _ _ (muk-fof-constraints _ _ sub-funcs)) = st
+  (muk-fof-constraints _ _ sub-funcs) = (muk-state-constraints st)
   func-apps =
   (forl (cons ft val) <- (hash->list sub-funcs)
     `(,(muk-reify-func-app st ft vtrans) == ,(muk-reify-term st val vtrans)))
