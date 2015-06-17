@@ -21,7 +21,7 @@
   muk-state-constraints-set
   muk-state-empty/constraints
   muk-sub-get
-  muk-sub-prefix
+  muk-sub-new-bindings
   muk-success
   muk-take
   muk-unification
@@ -54,16 +54,16 @@
     ))
 
 (record muk-var name)
-(record muk-state bound-vars substitution constraints)
-(def (muk-state-constraints-set (muk-state bvs sub _) cxs)
-  (muk-state bvs sub cxs))
+(record muk-state new-bindings substitution constraints)
+(def (muk-state-constraints-set (muk-state nbs sub _) cxs)
+  (muk-state nbs sub cxs))
 (define (muk-state-empty/constraints constraints)
   (muk-state '() (hasheq) constraints))
 (def (muk-sub-get st vr)
-  (muk-state bound-vars sub constraints) = st
+  (muk-state new-bindings sub constraints) = st
   compress = (lambda (path result)
     (if (null? path) (values st result)
-      (values (muk-state bound-vars
+      (values (muk-state new-bindings
                          (forf sub = sub
                                (muk-var name) <- path
                                (hash-set sub name result))
@@ -78,12 +78,12 @@
                 (loop result (list* vr path))
                 (compress path result)))))
         (compress '() result)))))
-(def (muk-sub-add (muk-state bound-vars sub constraints) vr val)
+(def (muk-sub-add (muk-state new-bindings sub constraints) vr val)
   sub = (hash-set sub (muk-var-name vr) val)
-  bound-vars = (list* vr bound-vars)
-  (muk-state bound-vars sub constraints))
-(def (muk-sub-prefix (muk-state bound-vars sub cxs))
-  (values (muk-state '() sub cxs) bound-vars))
+  new-bindings = (list* vr new-bindings)
+  (muk-state new-bindings sub constraints))
+(def (muk-sub-new-bindings (muk-state new-bindings sub cxs))
+  (values (muk-state '() sub cxs) new-bindings))
 
 (records muk-computation
   (muk-success result)
@@ -246,7 +246,7 @@
                           (zip components)))))))))
 
 (def (muk-constrain-default st)
-  (values st _) = (muk-sub-prefix st)
+  (values st _) = (muk-sub-new-bindings st)
   (just st))
 
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))

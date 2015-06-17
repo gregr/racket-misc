@@ -177,7 +177,7 @@
 
 (def (muk-fof-constrain st)
   (muk-fof-constraints _ func-deps _) = (muk-state-constraints st)
-  (values st new) = (muk-sub-prefix st)
+  (values st new) = (muk-sub-new-bindings st)
   (if (or (null? new) (hash-empty? func-deps)) (just st)
     (lets
       fterms = (foldl set-union (set)
@@ -234,7 +234,7 @@
     ((nothing) #t)
     ((just st-new)
      (lets
-       (values st-new vr-new) = (muk-sub-prefix st-new)
+       (values st-new vr-new) = (muk-sub-new-bindings st-new)
        or-diseqs = (forl
                      vr <- vr-new
                      (values _ val) = (muk-sub-get st-new vr)
