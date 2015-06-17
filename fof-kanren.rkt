@@ -1,11 +1,13 @@
 #lang racket/base
 (provide
   interpret
-  muk-eval
   muk-fof-apply
   (struct-out muk-func-app)
-  muk-reify
-  muk-state-empty
+  run-config-fof
+  runfof
+  runfof*
+  runfof-depth
+  runfof*-depth
   )
 
 (require
@@ -13,11 +15,14 @@
   "dict.rkt"
   "maybe.rkt"
   "microkanren.rkt"
+  "minikanren.rkt"
   "monad.rkt"
   "record.rkt"
   "repr.rkt"
   "sugar.rkt"
   racket/dict
+  racket/function
+  racket/list
   (except-in racket/match ==)
   racket/set
   )
@@ -183,11 +188,11 @@
         ((nothing) (nothing))
         ((just st-new) (muk-fof-constrain st-new))))))
 
-(define muk-fof-eval (muk-evaluator muk-unify muk-fof-constrain))
+(define fof-eval (muk-evaluator muk-unify muk-fof-constrain))
 
 (def (muk-reify-func-app st (muk-func-app name args) vtrans)
   `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
-(def (muk-fof-reify vtrans vr st)
+(def (fof-reify vtrans vr st)
   reified-var = (muk-reify-term st vr vtrans)
   (muk-state _ _ (muk-fof-constraints _ _ sub-funcs)) = st
   func-apps =
@@ -197,7 +202,160 @@
   (if (null? constraints) reified-var
     `(,reified-var ,@constraints)))
 
-; temporary definitions
-(define muk-state-empty muk-fof-state-empty)
-(define muk-reify muk-fof-reify)
-(define muk-eval muk-fof-eval)
+(define run-config-fof
+  (run-config (curry fof-eval muk-fof-state-empty)
+              (curry fof-reify muk-var->symbol)))
+
+(define-syntax runfof-depth
+  (syntax-rules ()
+    ((_ n depth body ...) (run/config run-config-fof n depth body ...))))
+(define-syntax runfof*-depth
+  (syntax-rules () ((_ body ...) (runfof-depth #f body ...))))
+(define-syntax runfof
+  (syntax-rules () ((_ n body ...) (runfof-depth n 1 body ...))))
+(define-syntax runfof*
+  (syntax-rules () ((_ body ...) (runfof #f body ...))))
+
+(define (muk-term? val) (or (muk-var? val) (muk-func-app? val)))
+
+(define (interp-type val)
+  (if (muk-term? val) (muk-func-app 'type (list val))
+    (lets (repr type components) = (value->repr val)
+          components = (if (list? components) (map interp-type components) '())
+          (list type components))))
+
+(define (interp-=/= . or-diseqs)
+  (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
+  (def (total< e0 e1)
+    (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
+  (def (list< (list k0 v0) (list k1 v1)) (muk-var< k0 k1))
+  (match (monad-foldl maybe-monad
+          (fn (st (list e0 e1)) (muk-unify st e0 e1))
+          muk-fof-state-empty or-diseqs)
+    ((nothing) #t)
+    ((just st-new)
+     (lets
+       (values st-new vr-new) = (muk-sub-prefix st-new)
+       or-diseqs = (forl
+                     vr <- vr-new
+                     (values _ val) = (muk-sub-get st-new vr)
+                     (sort (list vr val) total<))
+       or-diseqs = (sort or-diseqs list<)
+       (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
+
+(define ((interp-numeric-op name op) a b)
+  (if (or (muk-term? a) (muk-term? b)) (muk-func-app name (list a b))
+    (if (and (number? a) (number? b)) (op a b) (void))))
+(define interp-+ (interp-numeric-op '+ +))
+(define interp-< (interp-numeric-op '< <))
+
+(define interpretations
+  (hash
+    'type interp-type
+    '=/= interp-=/=
+    '+ interp-+
+    '< interp-<
+    ))
+
+; TODO: this was a bad idea that's now easier to fix
+(define with-constraints (interpret interpretations))
+
+(define (typeo val result) (muk-fof-apply 'type (list val) result))
+(define (symbolo val) (typeo val '(symbol ())))
+(define (numbero val)
+  (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
+
+(define (=/= e0 e1)
+  (let/vars (t0 t1)
+    (conj* (typeo e0 t0) (typeo e1 t1)
+           (muk-fof-apply '=/= (list (list (list t0 e0) (list t1 e1))) #t))))
+(define (all-diffo xs)
+  (matche xs
+    ('())
+    (`(,_))
+    (`(,a ,ad . ,dd)
+      (=/= a ad)
+      (all-diffo `(,a . ,dd))
+      (all-diffo `(,ad . ,dd)))))
+(define (+o a b a+b)
+  (conj* (numbero a) (numbero b) (numbero a+b)
+         (muk-fof-apply '+ (list a b) a+b)))
+(define (<o a b)
+  (conj* (numbero a) (numbero b)
+         (muk-fof-apply '< (list a b) #t)))
+(define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
+
+(module+ test
+  ; TODO: re-enable with deterministic sub-func reification order
+  ;(check-match
+    ;(runfof 1 (q) with-constraints (all-diffo `(2 3 ,q)))
+    ;`((,q :
+          ;((type ,q) == ,r)
+          ;((=/= (,r ((number real exact integer natural) ())) (,q 3)) == #t)
+          ;((=/= (,r ((number real exact integer natural) ())) (,q 2)) == #t)
+          ;)))
+  (define (rembero x ls out)
+    (conde
+      ((== '() ls) (== '() out))
+      ((exist (a d res)
+        (== `(,a . ,d) ls)
+        (rembero x d res)
+        (conde
+          ((== a x) (== res out))
+          ((=/= a x) (== `(,a . ,res) out)))))))
+  (check-equal?
+    (runfof* q (conj-seq* with-constraints (rembero 'a '(a b a c) q)))
+    '((b c)))
+  (check-equal?
+    (runfof* q (conj-seq* with-constraints (rembero 'a '(a b c) '(a b c))))
+    '())
+  (check-equal?
+    (list->set
+      (runfof* (x y) (conj-seq* with-constraints (ino (range 3) x y) (all-diffo (list x y)))))
+    (list->set '((0 1) (0 2) (1 0) (1 2) (2 0) (2 1))))
+  (check-equal?
+    (runfof* (w x y z) (conj-seq* with-constraints (ino (range 3) w x y z) (all-diffo (list w x y z))))
+    '())
+  (check-equal?
+    (runfof* (w x y z) (conj-seq* with-constraints (symbolo x) (symbolo z) (+o y y w) (ino (list 5 'five) x y z)))
+    '((10 five 5 five)))
+  (check-match
+    (runfof* (p r) (conj-seq* with-constraints
+      (=/= '(1 2) `(,p ,r))
+      (== 1 p)
+      (symbolo r)))
+    `(((1 ,r) : ((type ,r) == (symbol ())))))
+
+  ; slow test
+  ;(lets
+    ;;   S E N D
+    ;; + M O R E
+    ;; ---------
+    ;; M O N E Y
+    ;add-digitso = (fn (augend addend carry-in carry-out digit)
+      ;(exist (partial-sum sum)
+        ;(+o augend addend partial-sum)
+        ;(+o partial-sum carry-in sum)
+        ;(conde
+          ;((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
+          ;((<=o sum 9) (== carry-out 0) (== digit sum)))
+        ;(ino (range 19) partial-sum)
+        ;(ino (range 20) sum)))
+    ;send-more-moneyo = (fn (letters)
+      ;(exist (s e n d m o r y carry0 carry1 carry2)
+        ;(== letters (list s e n d m o r y))
+        ;(all-diffo letters)
+        ;(ino (range 2) carry0)
+        ;(ino (range 10) e d y)
+        ;(add-digitso d e 0 carry0 y)
+        ;(ino (range 2) carry1 carry2)
+        ;(ino (range 10) n o)
+        ;(add-digitso e o carry1 carry2 n)
+        ;(ino (range 10) r)
+        ;(add-digitso n r carry0 carry1 e)
+        ;(ino (range 1 10) s m)
+        ;(add-digitso s m carry2 m o)))
+    ;(check-equal?
+      ;(runfof*-depth 1000 q (conj-seq* with-constraints (send-more-moneyo q)))
+      ;'((9 5 6 7 1 0 8 2))))
+  )

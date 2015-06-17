@@ -6,6 +6,7 @@
   conj-seq*
   disj*
   exist
+  ino
   matche
   (struct-out run-config)
   run-config-default
@@ -17,7 +18,6 @@
   )
 
 (require
-  "fof-kanren.rkt"
   "list.rkt"
   "maybe.rkt"
   "microkanren.rkt"
@@ -68,10 +68,11 @@
   (syntax-rules ()
     ((_ xs gs ...) (let/vars xs (conj* gs ...)))))
 
+(define state-empty (muk-state-empty/constraints (void)))
 (record run-config eval reify)
 (define run-config-default
-  (run-config (curry muk-eval muk-state-empty)
-              (curry muk-reify muk-var->symbol)))
+  (run-config (curry (muk-evaluator muk-unify just) state-empty)
+              (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
 
 (define-syntax run/config
   (syntax-rules ()
@@ -117,53 +118,6 @@
     ((_ arg (pattern gs ...) ...)
      (let ((param arg)) (disj+-Zzz (match1e param pattern gs ...) ...)))))
 
-(define (muk-term? val) (or (muk-var? val) (muk-func-app? val)))
-
-(define (interp-type val)
-  (if (muk-term? val) (muk-func-app 'type (list val))
-    (lets (repr type components) = (value->repr val)
-          components = (if (list? components) (map interp-type components) '())
-          (list type components))))
-
-(define (interp-=/= . or-diseqs)
-  (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
-  (def (total< e0 e1)
-    (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
-  (def (list< (list k0 v0) (list k1 v1)) (muk-var< k0 k1))
-  (match (monad-foldl maybe-monad
-          (fn (st (list e0 e1)) (muk-unify st e0 e1))
-          muk-state-empty or-diseqs)
-    ((nothing) #t)
-    ((just st-new)
-     (lets
-       (values st-new vr-new) = (muk-sub-prefix st-new)
-       or-diseqs = (forl
-                     vr <- vr-new
-                     (values _ val) = (muk-sub-get st-new vr)
-                     (sort (list vr val) total<))
-       or-diseqs = (sort or-diseqs list<)
-       (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
-
-(define ((interp-numeric-op name op) a b)
-  (if (or (muk-term? a) (muk-term? b)) (muk-func-app name (list a b))
-    (if (and (number? a) (number? b)) (op a b) (void))))
-(define interp-+ (interp-numeric-op '+ +))
-(define interp-< (interp-numeric-op '< <))
-
-(define interpretations
-  (hash
-    'type interp-type
-    '=/= interp-=/=
-    '+ interp-+
-    '< interp-<
-    ))
-
-(define with-constraints (interpret interpretations))
-
-(define (typeo val result) (muk-fof-apply 'type (list val) result))
-(define (symbolo val) (typeo val '(symbol ())))
-(define (numbero val)
-  (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
 (define (ino domain . xs)
   (forf goal = (conj*)
         x <- xs
@@ -171,25 +125,6 @@
               (forf goal = (disj*)
                     el <- domain
                     (disj goal (== x el))))))
-(define (=/= e0 e1)
-  (let/vars (t0 t1)
-    (conj* (typeo e0 t0) (typeo e1 t1)
-           (muk-fof-apply '=/= (list (list (list t0 e0) (list t1 e1))) #t))))
-(define (all-diffo xs)
-  (matche xs
-    ('())
-    (`(,_))
-    (`(,a ,ad . ,dd)
-      (=/= a ad)
-      (all-diffo `(,a . ,dd))
-      (all-diffo `(,ad . ,dd)))))
-(define (+o a b a+b)
-  (conj* (numbero a) (numbero b) (numbero a+b)
-         (muk-fof-apply '+ (list a b) a+b)))
-(define (<o a b)
-  (conj* (numbero a) (numbero b)
-         (muk-fof-apply '< (list a b) #t)))
-(define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
 
 (define (nat->bits nat)
   (if (zero? nat) '()
@@ -408,39 +343,6 @@
         ((1 2 3) (4 5))
         ((1 2 3 4) (5))
         ((1 2 3 4 5) ()))))
-  ; TODO: re-enable with deterministic sub-func reification order
-  ;(check-match
-    ;(run 1 (q) with-constraints (all-diffo `(2 3 ,q)))
-    ;`((,q :
-          ;((type ,q) == ,r)
-          ;((=/= (,r ((number real exact integer natural) ())) (,q 3)) == #t)
-          ;((=/= (,r ((number real exact integer natural) ())) (,q 2)) == #t)
-          ;)))
-  (define (rembero x ls out)
-    (conde
-      ((== '() ls) (== '() out))
-      ((exist (a d res)
-        (== `(,a . ,d) ls)
-        (rembero x d res)
-        (conde
-          ((== a x) (== res out))
-          ((=/= a x) (== `(,a . ,res) out)))))))
-  (check-equal?
-    (run* q (conj-seq* with-constraints (rembero 'a '(a b a c) q)))
-    '((b c)))
-  (check-equal?
-    (run* q (conj-seq* with-constraints (rembero 'a '(a b c) '(a b c))))
-    '())
-  (check-equal?
-    (list->set
-      (run* (x y) (conj-seq* with-constraints (ino (range 3) x y) (all-diffo (list x y)))))
-    (list->set '((0 1) (0 2) (1 0) (1 2) (2 0) (2 1))))
-  (check-equal?
-    (run* (w x y z) (conj-seq* with-constraints (ino (range 3) w x y z) (all-diffo (list w x y z))))
-    '())
-  (check-equal?
-    (run* (w x y z) (conj-seq* with-constraints (symbolo x) (symbolo z) (+o y y w) (ino (list 5 'five) x y z)))
-    '((10 five 5 five)))
 
   ; slow test (faster without compression)
   ;(lets
@@ -476,44 +378,4 @@
     ;(check-equal?
       ;(run*-depth 1000 q (conj-seq* with-constraints (send-more-moneyo q)))
       ;(list (map nat->bits (list 9 5 6 7 1 0 8 2)))))
-
-  ; slow test
-  ;(lets
-    ;;   S E N D
-    ;; + M O R E
-    ;; ---------
-    ;; M O N E Y
-    ;add-digitso = (fn (augend addend carry-in carry-out digit)
-      ;(exist (partial-sum sum)
-        ;(+o augend addend partial-sum)
-        ;(+o partial-sum carry-in sum)
-        ;(conde
-          ;((<o 9 sum) (== carry-out 1) (+o digit 10 sum))
-          ;((<=o sum 9) (== carry-out 0) (== digit sum)))
-        ;(ino (range 19) partial-sum)
-        ;(ino (range 20) sum)))
-    ;send-more-moneyo = (fn (letters)
-      ;(exist (s e n d m o r y carry0 carry1 carry2)
-        ;(== letters (list s e n d m o r y))
-        ;(all-diffo letters)
-        ;(ino (range 2) carry0)
-        ;(ino (range 10) e d y)
-        ;(add-digitso d e 0 carry0 y)
-        ;(ino (range 2) carry1 carry2)
-        ;(ino (range 10) n o)
-        ;(add-digitso e o carry1 carry2 n)
-        ;(ino (range 10) r)
-        ;(add-digitso n r carry0 carry1 e)
-        ;(ino (range 1 10) s m)
-        ;(add-digitso s m carry2 m o)))
-    ;(check-equal?
-      ;(run*-depth 1000 q (conj-seq* with-constraints (send-more-moneyo q)))
-      ;'((9 5 6 7 1 0 8 2))))
-
-  (check-match
-    (run* (p r) (conj-seq* with-constraints
-      (=/= '(1 2) `(,p ,r))
-      (== 1 p)
-      (symbolo r)))
-    `(((1 ,r) : ((type ,r) == (symbol ())))))
   )
