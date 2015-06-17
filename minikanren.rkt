@@ -14,6 +14,7 @@
   )
 
 (require
+  "fof-kanren.rkt"
   "list.rkt"
   "maybe.rkt"
   "microkanren.rkt"
