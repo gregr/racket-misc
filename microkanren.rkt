@@ -13,7 +13,7 @@
   muk-cost-goal
   muk-eval
   muk-fof-apply
-  muk-func-app
+  (struct-out muk-func-app)
   muk-goal
   muk-mzero
   muk-pause
@@ -23,12 +23,10 @@
   muk-sub-prefix
   muk-success
   muk-take
-  muk-term?
   muk-unification
   muk-unify
   muk-unit
-  muk-var
-  muk-var?
+  (struct-out muk-var)
   muk-var->symbol
   Zzz
   )
@@ -55,14 +53,11 @@
     rackunit
     ))
 
-(records muk-term
-  (muk-var name)
-  (muk-func-app name args))
+(record muk-var name)
 (define (muk-var-next (name '?)) (muk-var (gensym name)))
-(record muk-fof-constraints func-interps func-deps sub-funcs)
-(define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
 (record muk-state bound-vars substitution constraints)
-(define muk-state-empty (muk-state '() (hasheq) muk-fof-constraints-empty))
+(define (muk-state-empty/constraints constraints)
+  (muk-state '() (hasheq) constraints))
 (def (muk-sub-get st vr)
   (muk-state bound-vars sub constraints) = st
   compress = (lambda (path result)
@@ -86,6 +81,15 @@
   sub = (hash-set sub (muk-var-name vr) val)
   bound-vars = (list* vr bound-vars)
   (muk-state bound-vars sub constraints))
+(def (muk-sub-prefix (muk-state bound-vars sub cxs))
+  (values (muk-state '() sub cxs) bound-vars))
+
+(record muk-func-app name args)
+(record muk-fof-constraints func-interps func-deps sub-funcs)
+(define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
+(define muk-fof-state-empty
+  (muk-state-empty/constraints muk-fof-constraints-empty))
+(define muk-state-empty muk-fof-state-empty)
 (define (muk-state-interpret st interpretations)
   (:~* st (fn (func-interps)
               (forf
@@ -93,8 +97,8 @@
                 (cons name op) <- (dict->list interpretations)
                 (hash-set interps name op)))
        'constraints 'func-interps))
-(def (muk-sub-prefix (muk-state bound-vars sub cxs))
-  (values (muk-state '() sub cxs) bound-vars))
+(define ((interpret interpretations) st)
+  (muk-unit (muk-state-interpret st interpretations)))
 
 (records muk-computation
   (muk-success result)
@@ -148,9 +152,6 @@
     (match (muk-force ss)
       ('() '())
       ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
-
-(define ((interpret interpretations) st)
-  (muk-unit (muk-state-interpret st interpretations)))
 
 (define (muk-evaluator unify constrain)
   (define (muk-step-conj-conc cont arg st c0 c1)
@@ -315,7 +316,7 @@
 
 (module+ test
   (lets
-    st = muk-state-empty
+    st = muk-fof-state-empty
     id-func-op = (fn (fname) (lambda xs (muk-func-app fname xs)))
     interps = (forl fname <- (list 'zero 'one 'two)
                     (cons fname (id-func-op fname)))
@@ -432,9 +433,10 @@
 (define muk-eval muk-fof-eval)
 
 (module+ test
-  (define (run comp) (muk-eval muk-state-empty comp))
+  (define eval-simple (muk-evaluator muk-step-unification just))
+  (define (run comp) (eval-simple (muk-state-empty/constraints (void)) comp))
   (define (reify-states vr states)
-    (forl st <- states (muk-reify muk-var->symbol vr st)))
+    (forl st <- states (muk-reify-term st vr muk-var->symbol)))
   (check-equal?
     (muk-take #f (run (== '#(a b) '#(c))))
     '())

@@ -104,6 +104,8 @@
     ((_ arg (pattern gs ...) ...)
      (let ((param arg)) (disj+-Zzz (match1e param pattern gs ...) ...)))))
 
+(define (muk-term? val) (or (muk-var? val) (muk-func-app? val)))
+
 (define (interp-type val)
   (if (muk-term? val) (muk-func-app 'type (list val))
     (lets (repr type components) = (value->repr val)
