@@ -7,6 +7,9 @@
   disj*
   exist
   matche
+  (struct-out run-config)
+  run-config-default
+  run/config
   run
   run*
   run-depth
@@ -19,6 +22,7 @@
   "maybe.rkt"
   "microkanren.rkt"
   "monad.rkt"
+  "record.rkt"
   "repr.rkt"
   "sugar.rkt"
   racket/function
@@ -64,20 +68,28 @@
   (syntax-rules ()
     ((_ xs gs ...) (let/vars xs (conj* gs ...)))))
 
+(record run-config eval reify)
+(define run-config-default
+  (run-config (curry muk-eval muk-state-empty)
+              (curry muk-reify muk-var->symbol)))
+
+(define-syntax run/config
+  (syntax-rules ()
+    ((_ cfg n depth (xs ...) gs ...)
+     (run/config cfg n depth qvar
+                 (exist (xs ...) (== qvar (list xs ...)) gs ...)))
+    ((_ cfg n depth qvar gs ...)
+     (lets (run-config eval reify) = cfg
+           (let/vars (qvar)
+             (forl st <- (in-list (muk-take n (eval (conj* gs ...) depth)))
+                   (reify qvar st)))))))
 (define-syntax run-depth
   (syntax-rules ()
-    ((_ n depth (xs ...) gs ...)
-     (run-depth n depth qvar (exist (xs ...) (== qvar (list xs ...)) gs ...)))
-    ((_ n depth qvar gs ...)
-     (call/var (lambda (qvar)
-       (forl st <- (in-list (muk-take n (muk-eval muk-state-empty (conj* gs ...) depth)))
-             (muk-reify muk-var->symbol qvar st))) 'qvar))))
+    ((_ n depth body ...) (run/config run-config-default n depth body ...))))
 (define-syntax run*-depth
   (syntax-rules () ((_ body ...) (run-depth #f body ...))))
 (define-syntax run
-  (syntax-rules ()
-    ((_ n body ...)
-     (run-depth n 1 body ...))))
+  (syntax-rules () ((_ n body ...) (run-depth n 1 body ...))))
 (define-syntax run*
   (syntax-rules () ((_ body ...) (run #f body ...))))
 
