@@ -27,7 +27,6 @@
   muk-unify
   muk-unit
   (struct-out muk-var)
-  muk-var-next  ; temporary?
   muk-var->symbol
   Zzz
   )
@@ -53,7 +52,6 @@
     ))
 
 (record muk-var name)
-(define (muk-var-next (name '?)) (muk-var (gensym name)))
 (record muk-state bound-vars substitution constraints)
 (define (muk-state-empty/constraints constraints)
   (muk-state '() (hasheq) constraints))
@@ -117,7 +115,7 @@
 (define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
 (define ((disj g0 g1) st) (list (list st g0) (list st g1)))
 
-(define (call/var f (name '?)) (f (muk-var-next name)))
+(define (call/var f (name '?)) (f (muk-var (gensym name))))
 (define-syntax let/vars
   (syntax-rules ()
     ((_ () body) body)

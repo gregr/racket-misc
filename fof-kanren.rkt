@@ -83,7 +83,7 @@
   (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
   (match (hash-get sub-funcs term)
     ((nothing)
-     (lets term-var = (muk-var-next)
+     (lets term-var = (let/vars (app-result) app-result)
            sub-funcs = (hash-set sub-funcs term term-var)
            func-deps = (forf
                          func-deps = func-deps
