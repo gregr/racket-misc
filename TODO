@@ -19,18 +19,12 @@ markout:
   http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf
 
 kanren:
-  run-with-config
-    eval-loop
-      shape of the state
-        substitution, constraint store, etc.
-      unify
-        control over which structures are internally unified
-      constraints (optional)
-        including occurs-check
-      depth (if sensible WRT eval-loop)
-    reify
-      also shape of the state
+  flexible interface to data structure interrogation (ie. for unification)
   reification that does not depend on variables having names
+  support multiple eval iterations of a disj branch before moving onto next branch
+    allows single branch to separately control concurrency depth and total depth
+    example: depth=500 iterations=10 allows a branch to reach depth 5000 before trying the next
+  constraints with cost 0?
   constraints
     CHR
       https://en.wikipedia.org/wiki/Constraint_Handling_Rules
@@ -77,8 +71,6 @@ kanren:
     constraint-like reification
   improve performance
     measure substitution size growth
-    compare efficiency of idempotent substitutions
-    remove function terms and complex normalization during unification
     experiment with typed racket
     goals may override search strategy for their local computation tree
       for instance, running themselves to completion if they know they terminate
