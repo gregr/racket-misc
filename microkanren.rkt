@@ -403,24 +403,25 @@
     ((cons hd tl) (cons (muk-reify-term st hd vtrans)
                         (muk-reify-term st tl vtrans)))
     ((? no-split?) term)
-    ((muk-func-app name args)
-     `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
     (_ (match (muk-split (list term))
          ((nothing) term)
          ((just (list (repr type components)))
           (muk-rebuild
             (repr type (map (fn (el) (muk-reify-term st el vtrans))
                             components))))))))
-(def (muk-reify vtrans vr st)
-  reify = (fn (term) (muk-reify-term st term vtrans))
-  reified-var = (reify vr)
+(def (muk-reify-func-app st (muk-func-app name args) vtrans)
+  `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
+(def (muk-fof-reify vtrans vr st)
+  reified-var = (muk-reify-term st vr vtrans)
   (muk-state _ _ (muk-fof-constraints _ _ sub-funcs)) = st
   func-apps =
-  (forl (cons fterm val) <- (hash->list sub-funcs)
-        `(,(reify fterm) == ,(reify val)))
+  (forl (cons ft val) <- (hash->list sub-funcs)
+    `(,(muk-reify-func-app st ft vtrans) == ,(muk-reify-term st val vtrans)))
   constraints = (if (null? func-apps) '() `(: ,@func-apps))
   (if (null? constraints) reified-var
     `(,reified-var ,@constraints)))
+
+(define muk-reify muk-fof-reify)
 
 (define (muk-step-unification st e0 e1)
   (match (muk-unify st e0 e1)
