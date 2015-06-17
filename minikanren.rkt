@@ -71,8 +71,9 @@
 (define state-empty (muk-state-empty/constraints (void)))
 (record run-config eval reify)
 (define run-config-default
-  (run-config (curry (muk-evaluator muk-unify just) state-empty)
-              (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
+  (run-config
+    (curry (muk-evaluator muk-unify muk-constrain-default) state-empty)
+    (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
 
 (define-syntax run/config
   (syntax-rules ()

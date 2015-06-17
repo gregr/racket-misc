@@ -26,6 +26,7 @@
   muk-take
   muk-unification
   muk-unify
+  muk-constrain-default
   muk-unit
   (struct-out muk-var)
   muk-var->symbol
@@ -244,6 +245,10 @@
                           (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
                           (zip components)))))))))
 
+(def (muk-constrain-default st)
+  (values st _) = (muk-sub-prefix st)
+  (just st))
+
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
@@ -262,7 +267,7 @@
                             components))))))))
 
 (module+ test
-  (define eval-simple (muk-evaluator muk-unify just))
+  (define eval-simple (muk-evaluator muk-unify muk-constrain-default))
   (define (run comp) (eval-simple (muk-state-empty/constraints (void)) comp))
   (define (reify-states vr states)
     (forl st <- states (muk-reify-term st vr muk-var->symbol)))
