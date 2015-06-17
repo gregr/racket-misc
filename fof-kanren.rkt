@@ -1,8 +1,8 @@
 #lang racket/base
 (provide
   interpret
-  muk-fof-apply
-  (struct-out muk-func-app)
+  fof-apply
+  (struct-out fof-func-app)
   run-config-fof
   runfof
   runfof*
@@ -32,7 +32,7 @@
     rackunit
     ))
 
-(record muk-func-app name args)
+(record fof-func-app name args)
 (record muk-fof-constraints func-interps func-deps sub-funcs)
 (define muk-fof-constraints-empty (muk-fof-constraints (hash) (hash) (hash)))
 (define muk-fof-state-empty
@@ -51,7 +51,7 @@
   (define (recur xs) (foldl set-union (set) (map muk-term->vars xs)))
   (match term
     ((muk-var _) (set term))
-    ((muk-func-app _ args) (recur args))
+    ((fof-func-app _ args) (recur args))
     (_ (match (muk-split (list term))
          ((nothing) (set))
          ((just (list rpr)) (recur (repr-components rpr)))))))
@@ -60,9 +60,9 @@
   (lets
     vars = (map muk-var '(a b c))
     (list v0 v1 v2) = vars
-    f0 = (muk-func-app 'zero (list v0 v1))
-    f1 = (muk-func-app 'one (list v2 f0))
-    f2 = (muk-func-app 'two (list f0 f1 v1))
+    f0 = (fof-func-app 'zero (list v0 v1))
+    f1 = (fof-func-app 'one (list v2 f0))
+    f2 = (fof-func-app 'two (list f0 f1 v1))
     (begin
       (check-equal?
         (map muk-term->vars vars)
@@ -78,7 +78,7 @@
         (set v0 v1 v2))
       )))
 
-(def (muk-func-app-add st term)
+(def (fof-func-app-add st term)
   (muk-state bvars sub constraints) = st
   (muk-fof-constraints func-interps func-deps sub-funcs) = constraints
   (match (hash-get sub-funcs term)
@@ -96,14 +96,14 @@
     ((just expected) (values st expected))))
 
 (define (muk-sub-get-term st term)
-  (if (muk-func-app? term) (muk-func-app-add st term) (values st term)))
+  (if (fof-func-app? term) (fof-func-app-add st term) (values st term)))
 
 (def (muk-normalize-get st term)
   (values st nterm) = (muk-normalize st term)
   (muk-sub-get-term st nterm))
 
-(def ((muk-fof-apply name args result) st)
-  (values st result-var) = (muk-normalize-get st (muk-func-app name args))
+(def ((fof-apply name args result) st)
+  (values st result-var) = (muk-normalize-get st (fof-func-app name args))
   (muk-goal st (== result-var result)))
 
 (define (muk-normalize-get-args st args)
@@ -112,8 +112,8 @@
         (values st narg) = (muk-normalize-get st arg)
         (values st (list* narg normalized))))
 
-(def (muk-func-app-normalize st term)
-  (muk-func-app name args) = term
+(def (fof-func-app-normalize st term)
+  (fof-func-app name args) = term
   (muk-state _ _ constraints) = st
   (muk-fof-constraints func-interps _ _) = constraints
   (values st normalized) = (muk-normalize-get-args st args)
@@ -128,7 +128,7 @@
 (def (muk-normalize st term)
   (match term
     ((muk-var _) (muk-sub-get st term))
-    ((muk-func-app _ _) (muk-func-app-normalize st term))
+    ((fof-func-app _ _) (fof-func-app-normalize st term))
     (_ (match (muk-split (list term))
          ((nothing) (values st term))
          ((just (list (repr type components)))
@@ -138,7 +138,7 @@
 (module+ test
   (lets
     st = muk-fof-state-empty
-    id-func-op = (fn (fname) (lambda xs (muk-func-app fname xs)))
+    id-func-op = (fn (fname) (lambda xs (fof-func-app fname xs)))
     interps = (forl fname <- (list 'zero 'one 'two)
                     (cons fname (id-func-op fname)))
     st = (muk-state-interpret st interps)
@@ -157,8 +157,8 @@
       (check-true (set-member? (muk-term->vars nf2) v1))
       )))
 
-(def (muk-func-app-update st term-old)
-  (values st term-new) = (muk-func-app-normalize st term-old)
+(def (fof-func-app-update st term-old)
+  (values st term-new) = (fof-func-app-normalize st term-old)
   (if (equal? term-old term-new) (just st)
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
@@ -183,14 +183,14 @@
     (lets
       fterms = (foldl set-union (set)
                       (forl vr <- new (hash-ref func-deps vr (set))))
-      (match (monad-foldl maybe-monad muk-func-app-update st
+      (match (monad-foldl maybe-monad fof-func-app-update st
                           (set->list fterms))
         ((nothing) (nothing))
         ((just st-new) (muk-fof-constrain st-new))))))
 
 (define fof-eval (muk-evaluator muk-unify muk-fof-constrain))
 
-(def (muk-reify-func-app st (muk-func-app name args) vtrans)
+(def (muk-reify-func-app st (fof-func-app name args) vtrans)
   `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))
 (def (fof-reify vtrans vr st)
   reified-var = (muk-reify-term st vr vtrans)
@@ -216,10 +216,10 @@
 (define-syntax runfof*
   (syntax-rules () ((_ body ...) (runfof #f body ...))))
 
-(define (muk-term? val) (or (muk-var? val) (muk-func-app? val)))
+(define (muk-term? val) (or (muk-var? val) (fof-func-app? val)))
 
 (define (interp-type val)
-  (if (muk-term? val) (muk-func-app 'type (list val))
+  (if (muk-term? val) (fof-func-app 'type (list val))
     (lets (repr type components) = (value->repr val)
           components = (if (list? components) (map interp-type components) '())
           (list type components))))
@@ -241,10 +241,10 @@
                      (values _ val) = (muk-sub-get st-new vr)
                      (sort (list vr val) total<))
        or-diseqs = (sort or-diseqs list<)
-       (if (null? or-diseqs) #f (muk-func-app '=/= or-diseqs))))))
+       (if (null? or-diseqs) #f (fof-func-app '=/= or-diseqs))))))
 
 (define ((interp-numeric-op name op) a b)
-  (if (or (muk-term? a) (muk-term? b)) (muk-func-app name (list a b))
+  (if (or (muk-term? a) (muk-term? b)) (fof-func-app name (list a b))
     (if (and (number? a) (number? b)) (op a b) (void))))
 (define interp-+ (interp-numeric-op '+ +))
 (define interp-< (interp-numeric-op '< <))
@@ -260,7 +260,7 @@
 ; TODO: this was a bad idea that's now easier to fix
 (define with-constraints (interpret interpretations))
 
-(define (typeo val result) (muk-fof-apply 'type (list val) result))
+(define (typeo val result) (fof-apply 'type (list val) result))
 (define (symbolo val) (typeo val '(symbol ())))
 (define (numbero val)
   (exist (sub-type) (typeo val `((number . ,sub-type) ()))))
@@ -268,7 +268,7 @@
 (define (=/= e0 e1)
   (let/vars (t0 t1)
     (conj* (typeo e0 t0) (typeo e1 t1)
-           (muk-fof-apply '=/= (list (list (list t0 e0) (list t1 e1))) #t))))
+           (fof-apply '=/= (list (list (list t0 e0) (list t1 e1))) #t))))
 (define (all-diffo xs)
   (matche xs
     ('())
@@ -279,10 +279,10 @@
       (all-diffo `(,ad . ,dd)))))
 (define (+o a b a+b)
   (conj* (numbero a) (numbero b) (numbero a+b)
-         (muk-fof-apply '+ (list a b) a+b)))
+         (fof-apply '+ (list a b) a+b)))
 (define (<o a b)
   (conj* (numbero a) (numbero b)
-         (muk-fof-apply '< (list a b) #t)))
+         (fof-apply '< (list a b) #t)))
 (define (<=o a b) (conde ((numbero a) (numbero b) (== a b)) ((<o a b))))
 
 (module+ test
