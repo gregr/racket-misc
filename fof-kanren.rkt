@@ -187,7 +187,9 @@
         ((nothing) (nothing))
         ((just st-new) (muk-fof-constrain st-new))))))
 
-(define fof-eval (muk-evaluator muk-unify muk-fof-constrain))
+; TODO: use constraint-adding in fof-apply?
+(define fof-eval
+  (muk-evaluator muk-unify muk-add-constraint-default muk-fof-constrain))
 
 (def (muk-reify-func-app st (fof-func-app name args) vtrans)
   `(,name ,@(map (fn (el) (muk-reify-term st el vtrans)) args)))

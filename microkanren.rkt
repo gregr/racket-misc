@@ -26,6 +26,7 @@
   muk-take
   muk-unification
   muk-unify
+  muk-add-constraint-default
   muk-constrain-default
   muk-unit
   (struct-out muk-var)
@@ -88,6 +89,7 @@
 (records muk-computation
   (muk-success result)
   (muk-unification e0 e1)
+  (muk-constraint name args)
   (muk-conj-conc cost c0 c1)
   (muk-conj-seq cost c0 c1)
   (muk-cost-goal cost goal)
@@ -96,15 +98,17 @@
 
 (define muk-cost-unknown #f)
 (define muk-cost-unification 0)
+(define muk-cost-constraint 0)
 (define (muk-cost-min c0 c1)
   (if c0 (if c1 (min c0 c1) c0) c1))
 (define (muk-computation-cost comp)
   (match comp
     ((muk-success _) muk-cost-unknown)
-    ((muk-unification e0 e1) muk-cost-unification)
-    ((muk-conj-conc cost c0 c1) cost)
-    ((muk-conj-seq cost c0 c1) cost)
-    ((muk-cost-goal cost goal) cost)
+    ((muk-unification _ _) muk-cost-unification)
+    ((muk-constraint _ _) muk-cost-constraint)
+    ((muk-conj-conc cost _ _) cost)
+    ((muk-conj-seq cost _ _) cost)
+    ((muk-cost-goal cost _) cost)
     ((muk-pause _) muk-cost-unknown)
     (_ muk-cost-unknown)))
 (define (muk-comps->cost c0 c1)
@@ -138,7 +142,7 @@
       ('() '())
       ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
 
-(define (muk-evaluator unify constrain)
+(define (muk-evaluator unify add-constraint constrain)
   (define (muk-step-unification st e0 e1)
     (match (unify st e0 e1)
       ((nothing) muk-mzero)
@@ -168,6 +172,7 @@
       ((muk-conj-seq (? cost?) c0 c1)
        (muk-step-conj-seq muk-step-known cost-max st c0 c1))
       ((muk-unification e0 e1) (muk-step-unification st e0 e1))
+      ((muk-constraint name args) (add-constraint st name args))
       ((muk-cost-goal (? cost?) goal)
        (muk-step-results muk-step-known cost-max (goal st)))
       (_ (muk-goal st comp))))
@@ -245,6 +250,8 @@
                           (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
                           (zip components)))))))))
 
+(define (muk-add-constraint-default st name args)
+  (error (format "unsupported constraint: ~a ~a" name args)))
 (def (muk-constrain-default st)
   (values st _) = (muk-sub-new-bindings st)
   (just st))
@@ -267,7 +274,8 @@
                             components))))))))
 
 (module+ test
-  (define eval-simple (muk-evaluator muk-unify muk-constrain-default))
+  (define eval-simple
+    (muk-evaluator muk-unify muk-add-constraint-default muk-constrain-default))
   (define (run comp) (eval-simple (muk-state-empty/constraints (void)) comp))
   (define (reify-states vr states)
     (forl st <- states (muk-reify-term st vr muk-var->symbol)))

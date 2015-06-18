@@ -72,7 +72,8 @@
 (record run-config eval reify)
 (define run-config-default
   (run-config
-    (curry (muk-evaluator muk-unify muk-constrain-default) state-empty)
+    (curry (muk-evaluator muk-unify muk-add-constraint-default
+                          muk-constrain-default) state-empty)
     (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
 
 (define-syntax run/config
