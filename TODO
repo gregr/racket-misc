@@ -20,11 +20,9 @@ markout:
 
 kanren:
   flexible interface to data structure interrogation (ie. for unification)
-  reification that does not depend on variables having names
   support multiple eval iterations of a disj branch before moving onto next branch
     allows single branch to separately control concurrency depth and total depth
     example: depth=500 iterations=10 allows a branch to reach depth 5000 before trying the next
-  constraints with cost 0?
   constraints
     CHR
       https://en.wikipedia.org/wiki/Constraint_Handling_Rules
