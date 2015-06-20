@@ -9,6 +9,7 @@
   disj
   muk-conj-conc
   muk-conj-seq
+  muk-constraint
   muk-cost-goal
   muk-evaluator
   muk-goal
