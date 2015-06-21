@@ -1,5 +1,8 @@
 #lang racket
 (provide
+  integer-set-+
+  integer-set--
+  integer-set-*-imprecise
   integer-set-extrema
   integer-set-lb-subtract
   integer-set-ub-subtract
@@ -71,4 +74,64 @@
       (check-equal? (integer-set-ub-subtract 6 not-in) 6)
       (check-equal? (integer-set-ub-subtract -3 not-in) -4)
       (check-equal? (integer-set-ub-subtract -4 not-in) -4)
+      )))
+
+(define (integer-set-invert is)
+  (make-integer-set
+    (forf iwfs = '()
+          (cons lb ub) <- (integer-set-contents is)
+          (list* (cons (- ub) (- lb)) iwfs))))
+
+(module+ test
+  (check-equal?
+    (integer-set-invert (integer-set '((-3 . 5) (7 . 9))))
+    (integer-set '((-9 . -7) (-5 . 3)))
+    ))
+
+(define (integer-set-+ a b)
+  (forf result = (make-range)
+        (cons alb aub) <- (integer-set-contents a)
+        (union result
+               (forf result = (make-range)
+                     (cons blb bub) <- (integer-set-contents b)
+                     (union result (make-range (+ alb blb) (+ aub bub)))))))
+
+(define (integer-set-- a b) (integer-set-+ a (integer-set-invert b)))
+
+(define (cross-binop-range op l0 l1 r0 r1)
+  (make-range (min (op l0 r0) (op l0 r1) (op l1 r0) (op l1 r1))
+              (max (op l0 r0) (op l0 r1) (op l1 r0) (op l1 r1))))
+
+(define (integer-set-*-imprecise a b)
+  (forf result = (make-range)
+        (cons alb aub) <- (integer-set-contents a)
+        (union result
+               (forf result = (make-range)
+                     (cons blb bub) <- (integer-set-contents b)
+                     (union result (cross-binop-range * alb aub blb bub))))))
+
+(module+ test
+  (lets
+    lhs0 = (integer-set '((2 . 3)))
+    lhs = (integer-set '((2 . 3) (100 . 200)))
+    rhs = (integer-set '((-3 . 5) (7 . 9)))
+    (begin
+      (check-equal?
+        (integer-set-+ lhs0 rhs)
+        (make-range -1 12))
+      (check-equal?
+        (integer-set-+ lhs rhs)
+        (make-integer-set '((-1 . 12) (97 . 209))))
+      (check-equal?
+        (integer-set-- lhs0 rhs)
+        (make-range -7 6))
+      (check-equal?
+        (integer-set-- lhs rhs)
+        (make-integer-set '((-7 . 6) (91 . 203))))
+      (check-equal?
+        (integer-set-*-imprecise lhs0 rhs)
+        (make-range -9 27))
+      (check-equal?
+        (integer-set-*-imprecise lhs rhs)
+        (make-integer-set '((-600 . 1800))))
       )))
