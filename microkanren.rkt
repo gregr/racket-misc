@@ -27,6 +27,7 @@
   muk-take
   muk-unification
   muk-unify
+  muk-walk
   muk-add-constraint-default
   muk-constrain-default
   muk-unit
