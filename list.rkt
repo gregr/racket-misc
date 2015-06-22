@@ -72,11 +72,15 @@
   (error (format "list-ref-key: no value found for key\n  key: ~v" key)))
 (define (list-ref-key xs key (failure-result list-ref-key-failure-result))
   (match key
+    ('head (car xs))
+    ('tail (cdr xs))
     ('first (first xs))
     ('rest (rest xs))
     (_ (if (procedure? failure-result) (failure-result key) failure-result))))
 (define/destruct (list-set-key (cons x xs) key val)
   (match key
+    ('head (cons val xs))
+    ('tail (cons x val))
     ('first (cons val xs))
     ('rest (cons x val))))
 

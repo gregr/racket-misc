@@ -6,7 +6,6 @@ cursors:
     more concise and more efficient
   default void constructor for :=% and friends
     won't be able to support varargs versions, but this is fine
-  support non-list pairs
 
 consolidate ui.rkt
   a lot of this is unnecessary
