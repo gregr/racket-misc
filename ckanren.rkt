@@ -455,4 +455,16 @@
   (check-equal?
     (runc 1 q (not-betweenfd q '((-4 . 9))) (betweenfd q -3 10))
     '((10)))
+  (check-equal?
+    (runc 1 q (betweenfd q -3 10) (<=fd q -4))
+    '())
+  (check-equal?
+    (runc 1 q (betweenfd q -3 10) (<=fd q -3))
+    '((-3)))
+  (check-equal?
+    (runc 1 q (betweenfd q -3 10) (<=fd 10 q))
+    '((10)))
+  (check-equal?
+    (runc 1 q (!=fd 10 q) (betweenfd q -3 10) (<=fd 8 q) (!=fd q 9))
+    '((8)))
   )
