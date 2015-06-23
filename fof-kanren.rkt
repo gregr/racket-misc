@@ -178,13 +178,13 @@
 (def (muk-fof-constrain st)
   (muk-fof-constraints _ func-deps _) = (muk-state-constraints st)
   (values st new) = (muk-sub-new-bindings st)
-  (if (or (null? new) (hash-empty? func-deps)) (just st)
+  (if (or (null? new) (hash-empty? func-deps)) (list st)
     (lets
       fterms = (foldl set-union (set)
                       (forl vr <- new (hash-ref func-deps vr (set))))
       (match (monad-foldl maybe-monad fof-func-app-update st
                           (set->list fterms))
-        ((nothing) (nothing))
+        ((nothing) '())
         ((just st-new) (muk-fof-constrain st-new))))))
 
 ; TODO: use constraint-adding in fof-apply?

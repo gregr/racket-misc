@@ -198,9 +198,8 @@
   (define (muk-step st comp depth)
     (let ((cost (muk-computation-cost comp)))
       (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
-        (match (constrain st)
-          ((nothing) muk-mzero)
-          ((just st) (muk-step-depth st comp depth))))))
+        (append* (forl st <- (constrain st)
+                       (muk-step-depth st comp depth))))))
 
   (def (muk-eval-loop pending depth)
        (values finished pending) =
@@ -260,7 +259,7 @@
   (error (format "unsupported constraint: ~a ~a" name args)))
 (def (muk-constrain-default st)
   (values st _) = (muk-sub-new-bindings st)
-  (just st))
+  (list st))
 
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
