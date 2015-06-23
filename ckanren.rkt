@@ -290,6 +290,8 @@
   st = (and v=>d (state-constraints-var=>desc-set st v=>d))
   (values st fdd))
 
+(define (walk st val) (if st (muk-walk st val) (values #f val)))
+
 (def (constrain-eval-binop solve st name args)
   (list lhs rhs) = args
   (values st lfdd) = (lookup-integer st lhs)
@@ -301,7 +303,9 @@
          (values lfd rfd) = (solve lfd rfd)
          st = (fd-domain-update st lhs lfd)
          st = (fd-domain-update st rhs rfd)
-         (if (= 2 (length (filter muk-var? args)))
+         (values st lhs) = (walk st lhs)
+         (values st rhs) = (walk st rhs)
+         (if (= 2 (length (filter muk-var? (list lhs rhs))))
            (suspend-constraint st name args)
            st))))
 
