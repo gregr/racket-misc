@@ -353,8 +353,8 @@
                      lub = (min lub rub)
                      rlb = (max llb rlb)
                      (values
-                       (fd-int-interval-unbounded llb lub)
-                       (fd-int-interval-unbounded rlb rub)))
+                       (fd-int-interval-unbounded llb lub integer-set-empty)
+                       (fd-int-interval-unbounded rlb rub integer-set-empty)))
                    st '<= args))
             ('!= (constrain-!= st args))
             ;('+ (constrain-eval-arithop ))
