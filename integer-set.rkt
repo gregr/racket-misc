@@ -3,6 +3,7 @@
   integer-set-+
   integer-set--
   integer-set-*-imprecise
+  integer-set-empty
   integer-set-extrema
   integer-set-lb-subtract
   integer-set-ub-subtract
@@ -18,6 +19,8 @@
   (require
     rackunit
     ))
+
+(define integer-set-empty (make-range))
 
 (def (list->integer-set xs)
   (values wfs lb ub) =
@@ -89,10 +92,10 @@
     ))
 
 (define (integer-set-+ a b)
-  (forf result = (make-range)
+  (forf result = integer-set-empty
         (cons alb aub) <- (integer-set-contents a)
         (union result
-               (forf result = (make-range)
+               (forf result = integer-set-empty
                      (cons blb bub) <- (integer-set-contents b)
                      (union result (make-range (+ alb blb) (+ aub bub)))))))
 
@@ -103,10 +106,10 @@
               (max (op l0 r0) (op l0 r1) (op l1 r0) (op l1 r1))))
 
 (define (integer-set-*-imprecise a b)
-  (forf result = (make-range)
+  (forf result = integer-set-empty
         (cons alb aub) <- (integer-set-contents a)
         (union result
-               (forf result = (make-range)
+               (forf result = integer-set-empty
                      (cons blb bub) <- (integer-set-contents b)
                      (union result (cross-binop-range * alb aub blb bub))))))
 
