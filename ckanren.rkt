@@ -337,7 +337,7 @@
   (if (set-empty? pending) st
     (lets fst = (set-first pending)
           pending = (set-remove pending fst)
-          pending = (state-constraints-pending-set st pending)
+          st = (state-constraints-pending-set st pending)
           (cons name args) = fst
           (values st rargs) =
           (forf st = st wargs = '()
