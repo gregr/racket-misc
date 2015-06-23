@@ -155,7 +155,7 @@
              (intersect (make-range (or lb mn) (or ub mx))
                         (subtract int-set not-b)))))
     (((int-interval int-set) (enumeration domain))
-     (fd-int-interval (intersect (set->integer-set #f #f domain))))
+     (fd-int-interval (intersect int-set (set->integer-set #f #f domain))))
     (((int-interval int-set) (typed name type? not-in)) #f)
     (((int-interval int-set) (unknown-fd not-in))
      (fd-int-interval (subtract int-set (set->integer-set #f #f not-in))))
