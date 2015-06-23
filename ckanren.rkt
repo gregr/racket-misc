@@ -271,7 +271,7 @@
 
 (define (scalar->ii scalar) (int-interval (make-range scalar)))
 
-(define fd-invalid (fd-desc #f set-empty))
+(define fdd-invalid (fd-desc #f set-empty))
 
 (def (lookup-integer st key)
   v=>d = (state-constraints-var=>desc st)
@@ -281,8 +281,8 @@
           v=>d = (hash-set v=>d key fdd)
           (values v=>d fdd))
     (if (exact-integer? key)
-      (values v=>d (scalar->ii key))
-      (values #f fd-invalid)))
+      (values v=>d (fd-desc (scalar->ii key) set-empty))
+      (values #f fdd-invalid)))
   st = (and v=>d (state-constraints-var=>desc-set st v=>d))
   (values st fdd))
 
