@@ -309,21 +309,27 @@
            (suspend-constraint st name args)
            st))))
 
-; TODO: fix this
-;(def (constrain-eval-arithop solve st args)
-  ;(list lrand rrand result) = args
-  ;(values st (fd-desc lfd lcxs)) = (lookup-integer st lrand)
-  ;(values st (fd-desc rfd rcxs)) = (lookup-integer st rrand)
-  ;(values st (fd-desc resfd rescxs)) = (lookup-integer st result)
-  ;(and st
-       ;(lets
-         ;(values lfd rfd resfd) = (solve lfd rfd resfd)
-         ;st = (fd-domain-update st lrand lfd)
-         ;st = (fd-domain-update st rrand rfd)
-         ;st = (fd-domain-update st result resfd)
-         ;(if (>= 2 (length (filter muk-var? args)))
-           ;(suspend-constraint st name args)
-           ;st))))
+; TODO: generalize this and the binop case
+(def (constrain-eval-arithop solve st name args)
+  (list lrand rrand result) = args
+  (values st lfdd) = (lookup-integer st lrand)
+  (values st rfdd) = (lookup-integer st rrand)
+  (values st resfdd) = (lookup-integer st result)
+  (fd-desc lfd lcxs) = lfdd
+  (fd-desc rfd rcxs) = rfdd
+  (fd-desc resfd rescxs) = resfdd
+  (and st
+       (lets
+         (values lfd rfd resfd) = (solve lfd rfd resfd)
+         st = (fd-domain-update st lrand lfd)
+         st = (fd-domain-update st rrand rfd)
+         st = (fd-domain-update st result resfd)
+         (values st lrand) = (walk st lrand)
+         (values st rrand) = (walk st rrand)
+         (values st result) = (walk st result)
+         (if (>= 2 (length (filter muk-var? (list lrand rrand result))))
+           (suspend-constraint st name args)
+           st))))
 
 (define (int-interval-extrema ii)
   (match ii
