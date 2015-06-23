@@ -95,7 +95,8 @@
         (else (enumeration domain))))
 
 (define (fd-int-interval-unbounded lb ub not-in)
-  (if (and lb ub) (fd-int-interval (subtract (make-range lb ub) not-in))
+  (if (and lb ub)
+    (and (<= lb ub) (fd-int-interval (subtract (make-range lb ub) not-in)))
     (int-interval-unbounded
       (integer-set-lb-subtract lb not-in)
       (integer-set-ub-subtract ub not-in)
@@ -121,6 +122,7 @@
 
 (define (fd-domain-meet lhs rhs)
   (match* (lhs rhs)
+    ((#f _) #f)
     ((#t _) rhs)
     (((unknown-fd not-in-lhs) (unknown-fd not-in-rhs))
      (unknown-fd (set-union not-in-lhs not-in-rhs)))
@@ -248,15 +250,17 @@
   (if (or (not st-new) (eq? st st-new)) st-new
     (constrain-new-bindings st-new)))
 
-(def (suspend-constraint st name args)
-  vars = (filter muk-var? args)
-  (state-constraints-var=>desc-set
-    st (forf var=>desc = (state-constraints-var=>desc st)
-             vr <- vars
-             (hash-update var=>desc vr
-               (fn ((fd-desc dom cxs))
-                   (fd-desc dom (set-add (cons name args) cxs)))
-               fd-desc-empty))))
+(define (suspend-constraint st name args)
+  (and st
+       (lets
+         vars = (filter muk-var? args)
+         (state-constraints-var=>desc-set
+           st (forf var=>desc = (state-constraints-var=>desc st)
+                    vr <- vars
+                    (hash-update var=>desc vr
+                      (fn ((fd-desc dom cxs))
+                          (fd-desc dom (set-add (cons name args) cxs)))
+                      fd-desc-empty))))))
 
 (define ii-empty (int-interval-unbounded #f #f set-empty))
 
