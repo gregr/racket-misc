@@ -330,7 +330,7 @@
       (fd-domain-update st lhs (unknown-fd (set rhs))))
     (if (muk-var? rhs)
       (fd-domain-update st rhs (unknown-fd (set lhs)))
-      (and (equal? lhs rhs) st))))
+      (and (not (equal? lhs rhs)) st))))
 
 (def (constrain-eval st)
   pending = (state-constraints-pending st)
@@ -417,9 +417,15 @@
   (check-equal?
     (runc 1 q (domainfd q '(3)))
     '((3)))
-  ;(check-equal?
-    ;(runc 1 q (domainfd q '(4 a)) (!=fd q a))
-    ;'((4)))
+  (check-equal?
+    (runc 1 q (domainfd q '(4 a)) (!=fd q 'a))
+    '((4)))
+  (check-equal?
+    (runc 1 (q r) (domainfd q '(4 b)) (== r 'b) (!=fd q r))
+    '(((4 b))))
+  (check-equal?
+    (runc 1 (q r) (!=fd q r) (domainfd q '(4 b)) (== r 'b))
+    '(((4 b))))
   (check-equal?
     (runc 1 q (betweenfd q -3 10) (== q -4))
     '())
