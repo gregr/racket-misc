@@ -80,8 +80,8 @@
 (def-cx not-betweenfd not-between val wfs)
 (def-cx !=fd != lhs rhs)
 (def-cx <=fd <= lhs rhs)
-(def-cx +fd + lhs rhs)
-(def-cx *fd * lhs rhs)
+(def-cx +fd + lhs rhs result)
+(def-cx *fd * lhs rhs result)
 
 (define types (make-immutable-hash
                 `((symbol . ,symbol?)
