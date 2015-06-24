@@ -336,7 +336,9 @@
 (define (int-interval-extrema ii)
   (match ii
     ((int-interval-unbounded lb ub _) (values lb ub))
-    ((int-interval iset) (integer-set-extrema iset))))
+    ((int-interval iset) (integer-set-extrema iset))
+    ((enumeration (? (compose1 (curry = 1) set-count) dom))
+     (values (set-first dom) (set-first dom)))))
 
 (def (constrain-!= st args)
   (list lhs rhs) = args
