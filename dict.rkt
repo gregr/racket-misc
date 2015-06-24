@@ -6,9 +6,11 @@
   dict-get
   dict-subtract
   dict-subtract1
+  dict-update-if-has
   hash-add
   hash-empty
   hash-get
+  hash-update-if-has
   )
 
 (require
@@ -26,6 +28,8 @@
   (define found? #t)
   (let ((result (hash-ref hsh key (lambda () (set! found? #f)))))
     (if found? (just result) (nothing))))
+(define (hash-update-if-has hsh key update)
+  (if (hash-has-key? hsh key) (hash-update hsh key update) hsh))
 
 (define dict-empty hash-empty)
 (define dict-add dict-set)
@@ -33,6 +37,8 @@
   (define found? #t)
   (let ((result (dict-ref dct key (lambda () (set! found? #f)))))
     (if found? (just result) (nothing))))
+(define (dict-update-if-has dct key update)
+  (if (dict-has-key? dct key) (dict-update dct key update) dct))
 
 (define (dict-subtract1 d0 d1)
   (for/fold ((d0 d0))
