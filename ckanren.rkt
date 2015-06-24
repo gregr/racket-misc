@@ -8,6 +8,7 @@
   )
 
 (require
+  "dict.rkt"
   "integer-set.rkt"
   "maybe.rkt"
   "microkanren.rkt"
@@ -194,14 +195,14 @@
 (def (reschedule-constraints st cxs vr-source)
   peers = (forf peers = set-empty
                 (cons _ args) <- cxs
-                (set-union peers (filter muk-var? args)))
+                (set-union peers (list->set (filter muk-var? args))))
   peers = (set-remove peers vr-source)
   st = (state-constraints-var=>desc-set st
          (forf var=>desc = (state-constraints-var=>desc st)
                peer <- peers
-               (hash-update var=>desc peer
-                 (fn (fd-desc dom peer-cxs)
-                     (fd-desc dom (set-subtract peer-cxs cxs))))))
+               (hash-update-if-has var=>desc peer
+                 (fn ((fd-desc dom peer-cxs))
+                   (fd-desc dom (set-subtract peer-cxs cxs))))))
   pending = (set-union cxs (state-constraints-pending st))
   (state-constraints-pending-set st pending))
 
