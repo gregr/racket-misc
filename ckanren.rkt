@@ -13,6 +13,7 @@
   "maybe.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
+  "num.rkt"
   "record.rkt"
   "set.rkt"
   "sugar.rkt"
@@ -365,8 +366,8 @@
                    (fn (lfd rfd)
                      (values llb lub) = (int-interval-extrema lfd)
                      (values rlb rub) = (int-interval-extrema rfd)
-                     lub = (min lub rub)
-                     rlb = (max llb rlb)
+                     lub = (minb lub rub)
+                     rlb = (maxb llb rlb)
                      (values
                        (fd-int-interval-unbounded llb lub integer-set-empty)
                        (fd-int-interval-unbounded rlb rub integer-set-empty)))
