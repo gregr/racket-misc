@@ -262,7 +262,8 @@
                       (fn ((fd-desc dom cxs))
                           (fd-desc dom (set-add cxs (cons name args))))))))))
 
-(define ii-empty (int-interval-unbounded #f #f set-empty))
+(define ii-empty (int-interval-unbounded #f #f integer-set-empty))
+(define fdd-ii-empty (fd-desc ii-empty set-empty))
 
 (define (fdd->ii fdd)
   (match fdd
@@ -281,7 +282,7 @@
   v=>d = (state-constraints-var=>desc st)
   (values v=>d fdd) =
   (if (muk-var? key)
-    (lets fdd = (fdd->ii (hash-ref v=>d key ii-empty))
+    (lets fdd = (fdd->ii (hash-ref v=>d key fdd-ii-empty))
           v=>d = (hash-set v=>d key fdd)
           (values v=>d fdd))
     (if (exact-integer? key)
