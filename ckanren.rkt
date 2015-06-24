@@ -340,6 +340,12 @@
     ((enumeration (? (compose1 (curry = 1) set-count) dom))
      (values (set-first dom) (set-first dom)))))
 
+(def (int-interval-invert ii)
+  (values lb ub) = (int-interval-extrema ii)
+  ub-new = (and lb (- lb))
+  lb-new = (and ub (- ub))
+  (fd-int-interval-unbounded lb-new ub-new integer-set-empty))
+
 (def (constrain-!= st args)
   (list lhs rhs) = args
   (if (muk-var? lhs)
@@ -349,6 +355,21 @@
     (if (muk-var? rhs)
       (fd-domain-update st rhs (unknown-fd (set lhs)))
       (and (not (equal? lhs rhs)) st))))
+
+(define (solve-+ ld rd ad)
+  (define (solve ld rd ad)
+    (and ld rd ad
+         (lets (values llb lub) = (int-interval-extrema ld)
+               (values rlb rub) = (int-interval-extrema rd)
+               (values alb aub) = (int-interval-extrema ad)
+               ub = (minb (and lub rub (+ lub rub)) aub)
+               lb = (maxb (and llb rlb (+ llb rlb)) alb)
+               (fd-int-interval-unbounded lb ub integer-set-empty))))
+  (lets
+    ad = (fd-domain-meet ad (solve ld rd ad))
+    ld = (fd-domain-meet ld (solve ad (int-interval-invert rd) ld))
+    rd = (fd-domain-meet rd (solve ad (int-interval-invert ld) rd))
+    (values ld rd ad)))
 
 (def (constrain-eval st)
   pending = (state-constraints-pending st)
@@ -375,7 +396,7 @@
                        (fd-int-interval-unbounded rlb rub integer-set-empty)))
                    st '<= args))
             ('!= (constrain-!= st args))
-            ;('+ (constrain-eval-arithop ))
+            ('+ (constrain-eval-arithop solve-+ st '+ args))
             ;('* (constrain-eval-arithop ))
             ))))
 
@@ -477,4 +498,8 @@
   (check-equal?
     (runc 1 q (!=fd 10 q) (betweenfd q -3 10) (<=fd 8 q) (!=fd q 9))
     '((8)))
+  (check-equal?
+    (runc 1 (q r s) (betweenfd q -3 5) (betweenfd r 0 1)
+          (+fd q r s) (<=fd 6 s) (!=fd s 7))
+    '(((5 1 6))))
   )
