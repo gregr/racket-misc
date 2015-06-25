@@ -77,6 +77,7 @@
 (def-cx typeo type val ty)
 (def-cx domainfd domain val domain)
 (def-cx betweenfd between val lb ub)
+(def-cx not-infd not-in val domain)
 (def-cx not-betweenfd not-between val wfs)
 (def-cx !=fd != lhs rhs)
 (def-cx <=fd <= lhs rhs)
@@ -215,6 +216,7 @@
     (fd-int-interval (list->integer-set domain))
     (fd-enum (list->set domain))))
 (define (between->fd-domain lb ub) (fd-int-interval (make-range lb ub)))
+(define (not-in->fd-domain domain) (unknown-fd (list->set domain)))
 (define (not-between->fd-domain wfs)
   (fd-int-interval-unbounded #f #f (make-integer-set wfs)))
 
@@ -227,6 +229,8 @@
                               (not-between->fd-domain wfs)))
           ('domain (lets (list domain) = rargs
                          (domain->fd-domain domain)))
+          ('not-in (lets (list domain) = rargs
+                         (not-in->fd-domain domain)))
           ('type (lets (list type-name) = rargs
                        (type->fd-domain type-name)))
           (_ #f))
