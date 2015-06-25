@@ -439,12 +439,11 @@
             ('* (constrain-eval-arithop solve-* st '* args))
             ))))
 
-(define (constrain st)
-  (letn loop st = st
-    st = (constrain-new-bindings st)
-    st-new = (and st (constrain-eval st))
-    (if (not st-new) '()
-      (if (eq? st st-new) (list st-new) (loop st-new)))))
+(def (constrain st)
+  st = (constrain-new-bindings st)
+  st-new = (and st (constrain-eval st))
+  (if (not st-new) '()
+    (if (eq? st st-new) (list st-new) (constrain st-new))))
 
 (define c-eval (muk-evaluator muk-unify add-constraint constrain))
 ; TODO: improve constraint visualization
