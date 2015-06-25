@@ -62,7 +62,8 @@
   (typed name type? not-in)
   (enumeration domain)
   (int-interval-unbounded lb ub not-in)
-  (int-interval int-set))
+  (int-interval int-set)
+  (singleton value))
 (record fd-desc dom cxs)
 (define fd-desc-empty (fd-desc #t set-empty))
 (define fd-invalid (fd-desc #f set-empty))
@@ -112,6 +113,7 @@
 
 (define (fd-enum domain)
   (cond ((set-empty? domain) #f)
+        ((= 1 (set-count domain)) (singleton (set-first domain)))
         ((andmap exact-integer? (set->list domain))
          (fd-int-interval (set->integer-set #f #f domain)))
         (else (enumeration domain))))
@@ -127,7 +129,7 @@
 (define (fd-int-interval int-set)
   (and (get-integer int-set)
        (match (integer-set-contents int-set)
-         ((list (cons lb ub)) (if (= lb ub) (enumeration (set lb))
+         ((list (cons lb ub)) (if (= lb ub) (singleton lb)
                                 (int-interval int-set)))
          (_ (int-interval int-set)))))
 
@@ -141,6 +143,7 @@
           (or (not lb) (<= lb val)) (or (not ub) (<= val ub))
           (not (member? val not-in))))
     ((int-interval int-set) (and (exact-integer? val) (member? val int-set)))
+    ((singleton single) (equal? single val))
     (#f #f)))
 
 (define (fd-domain-meet lhs rhs)
@@ -185,6 +188,7 @@
     (((int-interval int-set) (typed _ _ _)) (fd-domain-meet lhs (fdd->ii rhs)))
     (((int-interval int-set) (unknown-fd not-in))
      (fd-int-interval (subtract int-set (set->integer-set #f #f not-in))))
+    (((singleton single) dom) (and (fd-domain-satisfy dom single) lhs))
     ((_ _) (fd-domain-meet rhs lhs))))
 
 (define (unify st e0 e1) (match (muk-unify st e0 e1)
@@ -201,12 +205,11 @@
         result = (fd-domain-meet dom-lhs dom-rhs)
         (match result
           (#f #f)
-          ((enumeration (? (compose1 (curry = 1) set-count) sset))
+          ((singleton single)
            (lets st = (state-constraints-var=>desc-set
                         st (hash-remove var=>desc vr))
                  st = (reschedule-constraints st cxs vr)
-                 (list singleton) = (set->list sset)
-                 (unify st vr singleton)))
+                 (unify st vr single)))
           (_ (lets (values update-cxs keep-cxs) =
                    (if (not (equal? dom-lhs result))
                      (values cxs set-empty) (values set-empty cxs))
@@ -294,6 +297,7 @@
 
 (define (fdd->ii fdd)
   (match fdd
+    ((singleton single) (and (exact-integer? single) fdd))
     ((enumeration domain) (fd-int-interval (set->integer-set #f #f domain)))
     ((typed name _ not-in)
      (and (equal? name 'number) (fdd->ii (unknown-fd not-in))))
@@ -363,8 +367,7 @@
   (match ii
     ((int-interval-unbounded lb ub _) (values lb ub))
     ((int-interval iset) (integer-set-extrema iset))
-    ((enumeration (? (compose1 (curry = 1) set-count) dom))
-     (values (set-first dom) (set-first dom)))))
+    ((singleton single) (values single single))))
 
 (def (int-interval-invert ii)
   (values lb ub) = (int-interval-extrema ii)
