@@ -552,4 +552,95 @@
     (caar (runc 1 s (exist (q r) (betweenfd q -1 2) (betweenfd r 2 3)
                            (*fd q r s) (<=fd s -3))))
     '-3)
+  (check-equal?
+    (runc 1 (a b c d) (all-difffd a b c d) (== a c))
+    '())
+  (check-equal?
+    (runc 1 (a b c d) (all-difffd a b c d)
+          (infd a b c d '(a b 1 2)) (<=fd 1 b) (== a 1) (== c 'a))
+    '(((1 2 a b))))
+  (check-equal?
+    (runc 1 (a0 a1 b0 b1
+             a2 a3 b2 b3
+             c0 c1 d0 d1
+             c2 c3 d2 d3)
+          (infd a0 a1 b0 b1
+                a2 a3 b2 b3
+                c0 c1 d0 d1
+                c2 c3 d2 d3
+                '(h i j k))
+          (all-difffd a0 a1 b0 b1)
+          (all-difffd a2 a3 b2 b3)
+          (all-difffd c0 c1 d0 d1)
+          (all-difffd c2 c3 d2 d3)
+          (all-difffd a0 a2 c0 c2)
+          (all-difffd a1 a3 c1 c3)
+          (all-difffd b0 b2 d0 d2)
+          (all-difffd b1 b3 d1 d3)
+          (== (list
+                a0 a1 b0 b1
+                a2 a3 b2 b3
+                c0 c1 d0 d1
+                c2 c3 d2 d3)
+              '(h i j k
+                j k h i
+                k j i h
+                i h k j)))
+    '(((h i j k j k h i k j i h i h k j))))
+  (check-equal?
+    (runc* (a0 a1 b0 b1
+            a2 a3 b2 b3
+            c0 c1 d0 d1
+            c2 c3 d2 d3)
+           (infd a0 a1 b0 b1
+                 a2 a3 b2 b3
+                 c0 c1 d0 d1
+                 c2 c3 d2 d3
+                 '(h i j k))
+           (all-difffd a0 a1 b0 b1)
+           (all-difffd a2 a3 b2 b3)
+           (all-difffd c0 c1 d0 d1)
+           (all-difffd c2 c3 d2 d3)
+           (all-difffd a0 a2 c0 c2)
+           (all-difffd a1 a3 c1 c3)
+           (all-difffd b0 b2 d0 d2)
+           (all-difffd b1 b3 d1 d3)
+           (== (list
+                       b0
+                 a2 a3
+                          d1
+                 c2         )
+               '(    j
+                 j k
+                       h
+                 i      )))
+    '(((h i j k j k h i k j i h i h k j))))
+  (check-equal?
+    (runc* (a0 a1 b0 b1
+            a2 a3 b2 b3
+            c0 c1 d0 d1
+            c2 c3 d2 d3)
+           (infd a0 a1 b0 b1
+                 a2 a3 b2 b3
+                 c0 c1 d0 d1
+                 c2 c3 d2 d3
+                 '(1 2 3 4))
+           (all-difffd a0 a1 b0 b1)
+           (all-difffd a2 a3 b2 b3)
+           (all-difffd c0 c1 d0 d1)
+           (all-difffd c2 c3 d2 d3)
+           (all-difffd a0 a2 c0 c2)
+           (all-difffd a1 a3 c1 c3)
+           (all-difffd b0 b2 d0 d2)
+           (all-difffd b1 b3 d1 d3)
+           (== (list
+                       b0
+                 a2 a3
+                          d1
+                 c2         )
+               '(    3
+                 3 4
+                       1
+                 2      )))
+    '(((1 2 3 4 3 4 1 2 4 3 2 1 2 1 4 3))))
   )
