@@ -27,6 +27,7 @@
 (module+ test
   (require
     rackunit
+    racket/list
     ))
 
 (define (set->integer-set lb ub xs)
@@ -657,4 +658,35 @@
                        1
                  2      )))
     '(((1 2 3 4 3 4 1 2 4 3 2 1 2 1 4 3))))
+
+  ; slow test
+  (lets
+    ;   S E N D
+    ; + M O R E
+    ; ---------
+    ; M O N E Y
+    add-digitso = (fn (augend addend carry-in carry-out digit)
+      (exist (partial-sum sum)
+        (infd partial-sum (range 19))
+        (infd sum (range 20))
+        (+fd augend addend partial-sum)
+        (+fd partial-sum carry-in sum)
+        (conde
+          ((<fd 9 sum) (== carry-out 1) (+fd digit 10 sum))
+          ((<=fd sum 9) (== carry-out 0) (== digit sum)))))
+    send-more-moneyo = (fn (letters)
+      (exist (s e n d m o r y carry0 carry1 carry2)
+        (== letters (list s e n d m o r y))
+        (all-difffd s e n d m o r y)
+        (infd carry0 carry1 carry2 (range 2))
+        (infd s m (range 1 10))
+        (infd e n d o r y (range 10))
+        (add-digitso s m carry2 m o)
+        (add-digitso e o carry1 carry2 n)
+        (add-digitso d e 0 carry0 y)
+        (add-digitso n r carry0 carry1 e)
+        ))
+    (check-equal?
+      (runc 1 q (conj-seq (send-more-moneyo q) domain->disjfd))
+      '(((9 5 6 7 1 0 8 2)))))
   )
