@@ -5,6 +5,7 @@
   integer-set-*-imprecise
   integer-set-empty
   integer-set-extrema
+  integer-set-map
   integer-set-lb-subtract
   integer-set-ub-subtract
   list->integer-set
@@ -48,6 +49,14 @@
       (values mn mx) = (integer-set-extrema (integer-set '((-4 . -2) (5 . 8))))
       (list mn mx))
     (list -4 8)))
+
+(define (integer-set-map f int-set)
+  (foldr (lambda (n sts) (list* (f n) sts)) '() int-set))
+
+(module+ test
+  (check-equal?
+    (integer-set-map (curry * 2) (make-range 2 4))
+    (map (curry * 2) (range 2 5))))
 
 (define (integer-set-lb-subtract lb not-in)
   (forf lb = lb
