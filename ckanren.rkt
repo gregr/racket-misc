@@ -150,7 +150,8 @@
        (union not-in-lhs not-in-rhs)))
     (((int-interval-unbounded lb ub not-in) (enumeration domain))
      (fd-int-interval (subtract (set->integer-set lb ub domain) not-in)))
-    (((int-interval-unbounded lb ub not-b) (typed name type? not-in)) #f)
+    (((int-interval-unbounded lb ub not-b) (typed _ _ _))
+     (fd-domain-meet lhs (fdd->ii rhs)))
     (((int-interval-unbounded lb ub not-b) (unknown-fd not-in))
      (fd-int-interval-unbounded
        lb ub (union not-b (set->integer-set lb ub not-in))))
@@ -163,7 +164,7 @@
                         (subtract int-set not-b)))))
     (((int-interval int-set) (enumeration domain))
      (fd-int-interval (intersect int-set (set->integer-set #f #f domain))))
-    (((int-interval int-set) (typed name type? not-in)) #f)
+    (((int-interval int-set) (typed _ _ _)) (fd-domain-meet lhs (fdd->ii rhs)))
     (((int-interval int-set) (unknown-fd not-in))
      (fd-int-interval (subtract int-set (set->integer-set #f #f not-in))))
     ((_ _) (fd-domain-meet rhs lhs))))
@@ -276,7 +277,8 @@
 (define (fdd->ii fdd)
   (match fdd
     ((enumeration domain) (fd-int-interval (set->integer-set #f #f domain)))
-    ((typed name _ _) #f)
+    ((typed name _ not-in)
+     (and (equal? name 'number) (fdd->ii (unknown-fd not-in))))
     ((unknown-fd not-in)
      (int-interval-unbounded #f #f (set->integer-set #f #f not-in)))
     (#t ii-empty)
