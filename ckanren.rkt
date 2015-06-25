@@ -56,9 +56,6 @@
   (muk-state-constraints-set
     st (constraints-pending-set (muk-state-constraints st) pending)))
 
-; TODO: enums and intervals: infd, not-infd, all-difffd
-; TODO: integer intervals: <fd, -fd
-
 ; ideally this would support aggregate values and be expressed as a lattice...
 (records fd-domain
   (unknown-fd not-in)
@@ -84,6 +81,27 @@
 (def-cx <=fd <= lhs rhs)
 (def-cx +fd + lhs rhs result)
 (def-cx *fd * lhs rhs result)
+
+(define (-fd lhs rhs result) (+fd rhs result lhs))
+(define (<fd lhs rhs) (conj (<=fd lhs rhs) (!=fd lhs rhs)))
+
+(define-syntax infd
+  (syntax-rules ()
+    ((_ val domain) (domainfd val domain))
+    ((_ val vals ... domain)
+     (conj (domainfd val domain) (infd vals ... domain)))))
+
+(define-syntax all-difffd
+  (syntax-rules ()
+    ((_ va vb) (!=fd va vb))
+    ((_ va vb vs ...)
+     (conj* (!=fd va vb) (all-difffd va vs ...) (all-difffd vb vs ...)))))
+
+(define (booleano val) (domainfd val '(#t #f)))
+(define (symbolo val) (typeo val 'symbol))
+(define (numbero val) (typeo val 'numbero))
+(define (charo val) (typeo val 'char))
+(define (stringo val) (typeo val 'string))
 
 (define types (make-immutable-hash
                 `((symbol . ,symbol?)
