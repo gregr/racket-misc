@@ -68,6 +68,7 @@
   (int-interval int-set))
 (record fd-desc dom cxs)
 (define fd-desc-empty (fd-desc #t set-empty))
+(define fd-invalid (fd-desc #f set-empty))
 
 (define-syntax def-cx
   (syntax-rules ()
@@ -268,7 +269,7 @@
                           (fd-desc dom (set-add cxs (cons name args))))))))))
 
 (define ii-empty (int-interval-unbounded #f #f integer-set-empty))
-(define fdd-ii-empty (fd-desc ii-empty set-empty))
+(define fd-ii-empty (fd-desc ii-empty set-empty))
 
 (define (fdd->ii fdd)
   (match fdd
@@ -281,20 +282,19 @@
 
 (define (scalar->ii scalar) (int-interval (make-range scalar)))
 
-(define fdd-invalid (fd-desc #f set-empty))
-
 (def (lookup-integer st key)
   v=>d = (state-constraints-var=>desc st)
-  (values v=>d fdd) =
+  (values v=>d fd) =
   (if (muk-var? key)
-    (lets fdd = (fdd->ii (hash-ref v=>d key fdd-ii-empty))
-          v=>d = (hash-set v=>d key fdd)
-          (values v=>d fdd))
+    (lets (fd-desc fdd cxs) = (hash-ref v=>d key fd-ii-empty)
+          fd = (fd-desc (fdd->ii fdd) cxs)
+          v=>d = (hash-set v=>d key fd)
+          (values v=>d fd))
     (if (exact-integer? key)
       (values v=>d (fd-desc (scalar->ii key) set-empty))
-      (values #f fdd-invalid)))
+      (values #f fd-invalid)))
   st = (and v=>d (state-constraints-var=>desc-set st v=>d))
-  (values st fdd))
+  (values st fd))
 
 (define (walk st val) (if st (muk-walk st val) (values #f val)))
 
