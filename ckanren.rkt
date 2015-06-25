@@ -122,7 +122,8 @@
      (and (exact-integer? val)
           (or (not lb) (<= lb val)) (or (not ub) (<= val ub))
           (not (member? val not-in))))
-    ((int-interval int-set) (and (exact-integer? val) (member? val int-set)))))
+    ((int-interval int-set) (and (exact-integer? val) (member? val int-set)))
+    (#f #f)))
 
 (define (fd-domain-meet lhs rhs)
   (match* (lhs rhs)
