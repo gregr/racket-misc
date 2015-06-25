@@ -378,8 +378,8 @@
                (fd-int-interval-unbounded lb ub integer-set-empty))))
   (lets
     ad = (fd-domain-meet ad (solve ld rd ad))
-    ld = (fd-domain-meet ld (solve ad (int-interval-invert rd) ld))
-    rd = (fd-domain-meet rd (solve ad (int-interval-invert ld) rd))
+    ld = (fd-domain-meet ld (solve ad (and rd (int-interval-invert rd)) ld))
+    rd = (fd-domain-meet rd (solve ad (and ld (int-interval-invert ld)) rd))
     (values ld rd ad)))
 
 (def (constrain-eval st)
