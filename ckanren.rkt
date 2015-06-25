@@ -265,9 +265,10 @@
          (state-constraints-var=>desc-set
            st (forf var=>desc = (state-constraints-var=>desc st)
                     vr <- vars
-                    (hash-update-if-has var=>desc vr
+                    (hash-update var=>desc vr
                       (fn ((fd-desc dom cxs))
-                          (fd-desc dom (set-add cxs (cons name args))))))))))
+                          (fd-desc dom (set-add cxs (cons name args))))
+                      fd-desc-empty))))))
 
 (define ii-empty (int-interval-unbounded #f #f integer-set-empty))
 (define fd-ii-empty (fd-desc ii-empty set-empty))
