@@ -385,6 +385,20 @@
     rd = (fd-domain-meet rd (solve ad (and ld (int-interval-invert ld)) rd))
     (values ld rd ad)))
 
+; TODO: also improve precision of ld and rd
+(def (solve-* ld rd ad)
+  part = (lambda (a b) (and a b (* a b)))
+  (values llb lub) = (int-interval-extrema ld)
+  (values rlb rub) = (int-interval-extrema rd)
+  (values alb aub) = (int-interval-extrema ad)
+  parts = (filter identity
+            (list (part llb rlb) (part llb rub) (part lub rlb) (part lub rub)))
+  ub = (minb (foldl maxb #f parts) aub)
+  lb = (maxb (foldl minb #f parts) alb)
+  dom-result = (fd-int-interval-unbounded lb ub integer-set-empty)
+  ad = (fd-domain-meet ad dom-result)
+  (values ld rd ad))
+
 (def (constrain-eval st)
   pending = (state-constraints-pending st)
   (if (set-empty? pending) st
@@ -411,7 +425,7 @@
                    st '<= args))
             ('!= (constrain-!= st args))
             ('+ (constrain-eval-arithop solve-+ st '+ args))
-            ;('* (constrain-eval-arithop ))
+            ('* (constrain-eval-arithop solve-* st '* args))
             ))))
 
 (define (constrain st)
@@ -516,4 +530,8 @@
     (runc 1 (q r s) (betweenfd q -3 5) (betweenfd r 0 1)
           (+fd q r s) (<=fd 6 s) (!=fd s 7))
     '(((5 1 6))))
+  (check-equal?
+    (caar (runc 1 s (exist (q r) (betweenfd q -1 2) (betweenfd r 2 3)
+                           (*fd q r s) (<=fd s -3))))
+    '-3)
   )
