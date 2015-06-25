@@ -169,13 +169,7 @@
        (or (and lb-lhs lb-rhs (max lb-lhs lb-rhs)) lb-lhs lb-rhs)
        (or (and ub-lhs ub-rhs (min ub-lhs ub-rhs)) ub-lhs ub-rhs)
        (union not-in-lhs not-in-rhs)))
-    (((int-interval-unbounded lb ub not-in) (enumeration domain))
-     (fd-int-interval (subtract (set->integer-set lb ub domain) not-in)))
-    (((int-interval-unbounded lb ub not-b) (typed _ _ _))
-     (fd-domain-meet lhs (fdd->ii rhs)))
-    (((int-interval-unbounded lb ub not-b) (unknown-fd not-in))
-     (fd-int-interval-unbounded
-       lb ub (union not-b (set->integer-set lb ub not-in))))
+    (((int-interval-unbounded _ _ _) rhs) (fd-domain-meet (fdd->ii rhs) lhs))
     (((int-interval int-set-lhs) (int-interval int-set-rhs))
      (fd-int-interval (intersect int-set-lhs int-set-rhs)))
     (((int-interval int-set) (int-interval-unbounded lb ub not-b))
@@ -183,11 +177,7 @@
            (fd-int-interval
              (intersect (make-range (or lb mn) (or ub mx))
                         (subtract int-set not-b)))))
-    (((int-interval int-set) (enumeration domain))
-     (fd-int-interval (intersect int-set (set->integer-set #f #f domain))))
-    (((int-interval int-set) (typed _ _ _)) (fd-domain-meet lhs (fdd->ii rhs)))
-    (((int-interval int-set) (unknown-fd not-in))
-     (fd-int-interval (subtract int-set (set->integer-set #f #f not-in))))
+    (((int-interval _) rhs) (fd-domain-meet (fdd->ii rhs) lhs))
     (((singleton single) dom) (and (fd-domain-satisfy dom single) lhs))
     ((_ _) (fd-domain-meet rhs lhs))))
 
