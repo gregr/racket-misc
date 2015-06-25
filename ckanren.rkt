@@ -312,6 +312,7 @@
          st = (fd-domain-update st rhs rfd)
          (values st lhs) = (walk st lhs)
          (values st rhs) = (walk st rhs)
+         args = (list lhs rhs)
          (if (= 2 (length (filter muk-var? (list lhs rhs))))
            (suspend-constraint st name args)
            st))))
@@ -334,9 +335,8 @@
          (values st lrand) = (walk st lrand)
          (values st rrand) = (walk st rrand)
          (values st result) = (walk st result)
-         (if (>= 2 (length (filter muk-var? (list lrand rrand result))))
-           (suspend-constraint st name args)
-           st))))
+         args = (list lrand rrand result)
+         (suspend-constraint st name args))))
 
 (define (int-interval-extrema ii)
   (match ii
