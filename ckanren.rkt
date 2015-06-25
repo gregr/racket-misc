@@ -19,6 +19,7 @@
   "sugar.rkt"
   data/integer-set
   racket/function
+  (only-in racket/list append*)
   (except-in racket/match ==)
   (except-in racket/set subset?)
   )
@@ -438,6 +439,27 @@
             ('+ (constrain-eval-arithop solve-+ st '+ args))
             ('* (constrain-eval-arithop solve-* st '* args))
             ))))
+
+(define (constrain-domain->disj st)
+  (append*
+    (forl st <- (constrain st)
+          v=>d = (state-constraints-var=>desc st)
+          vr = (forf next = #f
+                     (values key val) <- v=>d
+                     #:break next
+                     (fd-desc dom _) = val
+                     (and (or (enumeration? dom) (int-interval? dom)) key))
+          (if vr
+            (append* (map constrain-domain->disj (filter identity
+              (match (fd-desc-dom (hash-ref v=>d vr))
+                ((enumeration domain) (map (curry unify st vr) domain))
+                ((int-interval int-set)
+                 (integer-set-map (curry unify st vr) int-set))))))
+            (list st)))))
+
+(define (domain->disjfd st)
+  (forl st <- (constrain-domain->disj st)
+        (list st (muk-success (void)))))
 
 (def (constrain st)
   st = (constrain-new-bindings st)
