@@ -32,9 +32,6 @@ kanren:
     optional occurs-check?
       https://dtai.cs.kuleuven.be/projects/ALP/newsletter/archive_93_96/net/impl/occur.html
         interesting sub-thread between torkel and pereira
-    finite domains
-      enumerations
-      intervals
   minicurry
     match scheme syntax more closely to simplify porting
       some form of macros
