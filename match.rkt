@@ -27,13 +27,6 @@
     rackunit
     ))
 
-(define-syntax match-let1+values
-  (syntax-rules (values)
-    ((_ (values vals ...) val-expr body ...)
-     (let-values (((vals ...) val-expr)) body ...))
-    ((_ pattern val-expr body ...)
-     (match-let ((pattern val-expr)) body ...))))
-
 (define-syntax (lambda/destruct stx)
   (syntax-case stx ()
     ((_ (pattern ...) body ...)
@@ -42,6 +35,13 @@
       #`(lambda (argname ...)
           (match* (argname ...)
             ((pattern ...) body ...)))))))
+
+(define-syntax match-let1+values
+  (syntax-rules (values)
+    ((_ (values vals ...) val-expr body ...)
+     (call-with-values (thunk val-expr) (lambda/destruct (vals ...) body ...)))
+    ((_ pattern val-expr body ...)
+     (match-let ((pattern val-expr)) body ...))))
 
 (define-syntax define/destruct
   (syntax-rules ()

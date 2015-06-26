@@ -45,10 +45,10 @@
   (check-equal?
     (lets
       a = 1
-      (values b c) = (values 2 3)
-      d = 4
-      (list a b c d))
-    '(1 2 3 4)))
+      (values b (list c d)) = (values 2 (list 3 4))
+      e = 5
+      (list a b c d e))
+    '(1 2 3 4 5)))
 
 (define-syntax for_-cont
   (syntax-rules (<-)
