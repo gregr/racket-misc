@@ -318,10 +318,8 @@
 
 (def (constrain-eval-binop solve st name args)
   (list lhs rhs) = args
-  (values st lfdd) = (lookup-integer st lhs)
-  (values st rfdd) = (lookup-integer st rhs)
-  (fd-desc lfd lcxs) = lfdd
-  (fd-desc rfd rcxs) = rfdd
+  (values st (fd-desc lfd lcxs)) = (lookup-integer st lhs)
+  (values st (fd-desc rfd rcxs)) = (lookup-integer st rhs)
   (and st
        (lets
          (values lfd rfd) = (solve lfd rfd)
@@ -337,12 +335,9 @@
 ; TODO: generalize this and the binop case
 (def (constrain-eval-arithop solve st name args)
   (list lrand rrand result) = args
-  (values st lfdd) = (lookup-integer st lrand)
-  (values st rfdd) = (lookup-integer st rrand)
-  (values st resfdd) = (lookup-integer st result)
-  (fd-desc lfd lcxs) = lfdd
-  (fd-desc rfd rcxs) = rfdd
-  (fd-desc resfd rescxs) = resfdd
+  (values st (fd-desc lfd lcxs)) = (lookup-integer st lrand)
+  (values st (fd-desc rfd rcxs)) = (lookup-integer st rrand)
+  (values st (fd-desc resfd rescxs)) = (lookup-integer st result)
   (and st
        (lets
          (values lfd rfd resfd) = (solve lfd rfd resfd)
@@ -446,9 +441,8 @@
     (forl st <- (constrain st)
           v=>d = (state-constraints-var=>desc st)
           vr = (forf next = #f
-                     (values key val) <- v=>d
+                     (values key (fd-desc dom _)) <- v=>d
                      #:break next
-                     (fd-desc dom _) = val
                      (and (or (enumeration? dom) (int-interval? dom)) key))
           (if vr
             (append* (map constrain-domain->disj (filter identity
