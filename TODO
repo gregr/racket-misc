@@ -48,21 +48,6 @@ kanren:
       make use of cost annotations
         complexity indicators to guide evaluation/search; dynamic? static only?
         static/dynamic termination checking?
-  encodings (such as full-repr) instead of additional constraint system layers
-    example: unification of type-encoded values eliminates the need for type constraints
-      (symbolo x) ===> (exist (val) (== x (('symbol ()) val)))
-      or
-      (naturalo x) ===> (exist (val) (== x (('(number real exact integer natural) ()) val)))
-      where x is a val that has been lifted by full-repr
-    not even 1st class =/= is necessary with the right encoding
-      but =/= being 1st class may be much more efficient for many structures
-    alternative to functions: implicit encodings that take effect on all unified values
-      reification can then perform decoding
-  implicit views
-    view, unview
-    tagging
-    =/=
-    constraint-like reification
   improve performance
     measure substitution size growth
     experiment with typed racket
@@ -73,7 +58,4 @@ kanren:
 ===============================================================================
 = future
 ===============================================================================
-logic/relational programming
-  oleg's lambda term generation: http://okmij.org/ftp/Haskell/AlgorithmsH1.html#random-term
-
 simple proof checker
