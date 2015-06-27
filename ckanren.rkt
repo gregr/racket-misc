@@ -488,91 +488,91 @@
 ; TODO: runc*
 (module+ test
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (== q 'a))
+    (runc* q (typeo q 'symbol) (== q 'a))
     '((a)))
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (== q 3))
+    (runc* q (typeo q 'symbol) (== q 3))
     '())
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 'a))
+    (runc* q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 'a))
     '((a)))
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 'b))
+    (runc* q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 'b))
     '())
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (domainfd q '(3 #t)))
+    (runc* q (typeo q 'symbol) (domainfd q '(3 #t)))
     '())
   (check-equal?
-    (runc 1 q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 3))
+    (runc* q (typeo q 'symbol) (domainfd q '(3 a #t)) (== q 3))
     '())
   (check-equal?
-    (runc 1 q (domainfd q '(c)))
+    (runc* q (domainfd q '(c)))
     '((c)))
   (check-equal?
-    (runc 1 q (domainfd q '(3)))
+    (runc* q (domainfd q '(3)))
     '((3)))
   (check-equal?
-    (runc 1 q (domainfd q '(4 a)) (!=fd q 'a))
+    (runc* q (domainfd q '(4 a)) (!=fd q 'a))
     '((4)))
   (check-equal?
-    (runc 1 (q r) (domainfd q '(4 b)) (== r 'b) (!=fd q r))
+    (runc* (q r) (domainfd q '(4 b)) (== r 'b) (!=fd q r))
     '(((4 b))))
   (check-equal?
-    (runc 1 (q r) (!=fd q r) (domainfd q '(4 b)) (== r 'b))
+    (runc* (q r) (!=fd q r) (domainfd q '(4 b)) (== r 'b))
     '(((4 b))))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (== q -4))
+    (runc* q (betweenfd q -3 10) (== q -4))
     '())
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (== q -3))
+    (runc* q (betweenfd q -3 10) (== q -3))
     '((-3)))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (== q 5))
+    (runc* q (betweenfd q -3 10) (== q 5))
     '((5)))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (== q 10))
+    (runc* q (betweenfd q -3 10) (== q 10))
     '((10)))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (== q 11))
+    (runc* q (betweenfd q -3 10) (== q 11))
     '())
   (check-equal?
-    (runc 1 q (not-betweenfd q '((-3 . 10))) (betweenfd q -3 10))
+    (runc* q (not-betweenfd q '((-3 . 10))) (betweenfd q -3 10))
     '())
   (check-equal?
-    (runc 1 q (not-betweenfd q '((-4 . 9))) (betweenfd q -3 10))
+    (runc* q (not-betweenfd q '((-4 . 9))) (betweenfd q -3 10))
     '((10)))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (<=fd q -4))
+    (runc* q (betweenfd q -3 10) (<=fd q -4))
     '())
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (<=fd q -3))
+    (runc* q (betweenfd q -3 10) (<=fd q -3))
     '((-3)))
   (check-equal?
-    (runc 1 q (betweenfd q -3 10) (<=fd 10 q))
+    (runc* q (betweenfd q -3 10) (<=fd 10 q))
     '((10)))
   (check-equal?
-    (runc 1 q (!=fd 10 q) (betweenfd q -3 10) (<=fd 8 q) (!=fd q 9))
+    (runc* q (!=fd 10 q) (betweenfd q -3 10) (<=fd 8 q) (!=fd q 9))
     '((8)))
   (check-equal?
-    (runc 1 (q r s) (betweenfd q -3 5) (betweenfd r 0 1)
+    (runc* (q r s) (betweenfd q -3 5) (betweenfd r 0 1)
           (+fd q r s) (<=fd 6 s) (!=fd s 7))
     '(((5 1 6))))
   (check-equal?
-    (caar (runc 1 s (exist (q r) (betweenfd q -1 2) (betweenfd r 2 3)
+    (caar (runc* s (exist (q r) (betweenfd q -1 2) (betweenfd r 2 3)
                            (*fd q r s) (<=fd s -3))))
     '-3)
   (check-equal?
-    (runc 1 (a b c d) (all-difffd a b c d) (== a c))
+    (runc* (a b c d) (all-difffd a b c d) (== a c))
     '())
   (check-equal?
-    (runc 1 (a b c d) (all-difffd a b c d)
+    (runc* (a b c d) (all-difffd a b c d)
           (infd a b c d '(a b 1 2)) (<=fd 1 b) (== a 1) (== c 'a))
     '(((1 2 a b))))
   (check-equal?
-    (runc 1 (a0 a1 b0 b1
-             a2 a3 b2 b3
-             c0 c1 d0 d1
-             c2 c3 d2 d3)
+    (runc* (a0 a1 b0 b1
+            a2 a3 b2 b3
+            c0 c1 d0 d1
+            c2 c3 d2 d3)
           (infd a0 a1 b0 b1
                 a2 a3 b2 b3
                 c0 c1 d0 d1
@@ -681,6 +681,6 @@
         (add-digitso n r carry0 carry1 e)
         ))
     (check-equal?
-      (runc 1 q (conj-seq (send-more-moneyo q) domain->disjfd))
+      (runc* q (conj-seq (send-more-moneyo q) domain->disjfd))
       '(((9 5 6 7 1 0 8 2)))))
   )
