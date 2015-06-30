@@ -172,6 +172,12 @@
               (build-seq #t dcond dbody)))))
   (list params senv build-match))
 
+(def (denote-conditioned-body senv conds*body)
+  (list conditions body) = (list-init+last conds*body)
+  dbody = (denote-with senv body #t)
+  (if (null? conditions) dbody
+    (build-seq #t (denote-conj #t senv conditions) dbody)))
+
 (define (build-lam senv params dbody)
   (foldr (lambda (param body)
            (lambda (env)
@@ -233,9 +239,9 @@
     (err)))
 (define (denote-let* strict? senv tail)
   (define (err) (error (format "invalid let*: ~a" `(let* . ,tail))))
-  (if (and (not (null? tail)) (list? tail))
+  (if (and (list? tail) (<= 2 (length tail)))
     (lets
-      (list assignments body) = (list-init+last tail)
+      (cons assignments conds*body) = tail
       (list senv rdassignments) =
       (forf (list senv rdassignments) = (list senv '())
             assignment <- assignments
@@ -247,7 +253,7 @@
                                           build-match)
                      (list senv (list* rdassignment rdassignments))))
               (_ (err))))
-      (forf dbody = (denote-with senv body #t)
+      (forf dbody = (denote-conditioned-body senv conds*body)
             (list param darg build-match) <- rdassignments
             dbody = (build-match '() dbody)
             (build-application
@@ -446,7 +452,13 @@
     (run* q (denote-eval `(== ,q (let ((rec '()) (val 6)) (== 3 3) `(,val . ,rec)))))
     '((6)))
   (check-equal?
-    (run* q (denote-eval `(== ,q (let* (val 7) (pr `(,val)) pr))))
+    (run* q (denote-eval `(== ,q (let* ((val 7) (pr `(,val))) pr))))
+    '((7)))
+  (check-equal?
+    (run* q (denote-eval `(== ,q (let* ((val 7) (pr `(,val))) (== 2 3) pr))))
+    '())
+  (check-equal?
+    (run* q (denote-eval `(== ,q (let* ((val 7) (pr `(,val))) (== 3 3) pr))))
     '((7)))
   (check-equal?
     (run* (q c) (denote-eval `(== ,q (if ,c `(,(if #t 3 4) . ,(if #f 3 4))
@@ -472,8 +484,8 @@
                                      `(,a . ,c)))))
     '((8 . 7)))
   (check-equal?
-    (run* q (denote-eval `(== ,q (let* (`(,a b ,c) `(4 b 5))
-                                         (`(,d . ,e) `(,c . ,a))
+    (run* q (denote-eval `(== ,q (let* ((`(,a b ,c) `(4 b 5))
+                                        (`(,d . ,e) `(,c . ,a)))
                                      `(,d ,e 3)))))
     '((5 4 3)))
   (check-equal?
