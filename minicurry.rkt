@@ -386,7 +386,7 @@
 (define senv-new (hash
                    'quote denote-quote
                    'quasiquote denote-quasiquote
-                   'lam denote-lam
+                   'lambda denote-lam
                    'letr denote-letr
                    'let denote-let
                    'let* denote-let*
@@ -433,14 +433,14 @@
     (run* q (denote-eval `(== ,q (quote (a b)))))
     '((a b)))
   (check-equal?
-    (run* q (denote-eval `(== ,q ((lam (x y) x) 5 (quote (a b c))))))
+    (run* q (denote-eval `(== ,q ((lambda (x y) x) 5 (quote (a b c))))))
     '(5))
   (check-equal?
     (run* (q r)
-      (denote-eval `(== ,q ((lam (x y) (seq (== ,r y) x)) 5 (quote (a b c))))))
+      (denote-eval `(== ,q ((lambda (x y) (seq (== ,r y) x)) 5 (quote (a b c))))))
     '((5 (a b c))))
   (check-equal?
-    (run* q (denote-eval `(== ,q ((lam (rec val) `(,val . ,rec)) '() 6))))
+    (run* q (denote-eval `(== ,q ((lambda (rec val) `(,val . ,rec)) '() 6))))
     '((6)))
   (check-equal?
     (run* q (denote-eval `(== ,q (let ((rec '()) (val 6)) `(,val . ,rec)))))
@@ -473,11 +473,11 @@
     '((1 2)))
   (check-equal?
     (run* q
-      (denote-eval `(== ,q (exist (f) (seq (== f (lam (x) x)) (f 11))))))
+      (denote-eval `(== ,q (exist (f) (seq (== f (lambda (x) x)) (f 11))))))
     '(11))
   (check-equal?
     (run* q
-      (denote-eval `(== ,q ((lam (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
+      (denote-eval `(== ,q ((lambda (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
     '((8 . 9)))
   (check-equal?
     (run* q (denote-eval `(== ,q (let ((4 4) (`(,a b ,c) '(8 b 7)))
@@ -527,7 +527,7 @@
                            (`(,y . ,ys) (f y (foldr f acc ys)))))
 
       ((map f xs) (foldr (compose cons f) '() xs))
-      ((filter p? xs) (foldr (lam (y ys) (if (p? y) (cons y ys) ys)) '() xs))
+      ((filter p? xs) (foldr (lambda (y ys) (if (p? y) (cons y ys) ys)) '() xs))
 
       ((append xs ys) (foldr cons ys xs))
       ((rev xs) (foldl cons '() xs))  ; not well-behaved when run backwards
