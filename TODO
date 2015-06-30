@@ -35,9 +35,8 @@ kanren:
   minicurry
     match scheme syntax more closely to simplify porting
       some form of macros
-      let[*]: wrap args, allow body to be conjunction, optional let-naming for looping
-      letr: wrap args, allow body to be conjunction
-        *maybe* generalize to take arbitrary arg values, not just lambdas
+      let[*]: optional let-naming for looping
+      letr: *maybe* generalize to take arbitrary arg values, not just lambdas
     metacircular interpreter
       may need to wait for additional constraints
       experiment with separating syntactic analysis from evaluation
