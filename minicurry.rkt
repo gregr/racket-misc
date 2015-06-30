@@ -172,11 +172,11 @@
               (build-seq #t dcond dbody)))))
   (list params senv build-match))
 
-(def (denote-conditioned-body senv conds*body)
+(def (denote-conditioned-body strict? senv conds*body)
   (list conditions body) = (list-init+last conds*body)
-  dbody = (denote-with senv body #t)
+  dbody = (denote-with senv body (or strict? (not (null? conditions))))
   (if (null? conditions) dbody
-    (build-seq #t (denote-conj #t senv conditions) dbody)))
+    (build-seq strict? (denote-conj #t senv conditions) dbody)))
 
 (define (build-lam senv params dbody)
   (foldr (lambda (param body)
@@ -199,9 +199,9 @@
    strict? senv tail))
 (define (denote-letr strict? senv tail)
   (define (err) (error (format "invalid letr: ~a" `(letr . ,tail))))
-  (if (and (not (null? tail)) (list? tail))
+  (if (and (list? tail) (<= 2 (length tail)))
     (lets
-      (list procs body) = (list-init+last tail)
+      (cons procs conds*body) = tail
       (list pnames ptails) =
       (zip-default '(() ())
                    (forl proc <- procs
@@ -211,7 +211,7 @@
                            (_ (err)))))
       senv = (env-extend senv pnames)
       dprocs = (map (curry denote-lam #t senv) ptails)
-      dbody = (denote-with senv body strict?)
+      dbody = (denote-conditioned-body strict? senv conds*body)
       (fn (env)
         boxes = (forl _ <- pnames (box (void)))
         env = (forf env = env
@@ -253,7 +253,7 @@
                                           build-match)
                      (list senv (list* rdassignment rdassignments))))
               (_ (err))))
-      (forf dbody = (denote-conditioned-body senv conds*body)
+      (forf dbody = (denote-conditioned-body #t senv conds*body)
             (list param darg build-match) <- rdassignments
             dbody = (build-match '() dbody)
             (build-application
@@ -502,7 +502,7 @@
     (run* q
       (denote-eval
         `(== ,q
-           (letr ((test x y) x)
+           (letr (((test x y) x))
                  (test 3 4)))))
     '(3))
 
@@ -541,18 +541,18 @@
         (run* q
           (denote-eval
             `(== ,q
-                 (letr ,@shared
+                 (letr ,shared
                    `((is-even ,(even? '(a b c)))
                      (is-odd ,(odd? '(a b c))))))))
         '(((is-even #f) (is-odd #t))))
       (check-equal?
         (run* q
-          (denote-eval `(== ,q (letr ,@shared
+          (denote-eval `(== ,q (letr ,shared
                                  (append '(a b c) '(d e f))))))
         '((a b c d e f)))
       (check-equal?
         (run* (r s)
-          (denote-eval `(letr ,@shared
+          (denote-eval `(letr ,shared
                           (== (append ,r ,s) '(1 2 3)))))
         '((() (1 2 3))
           ((1) (2 3))
@@ -560,62 +560,72 @@
           ((1 2 3) ())))
       (check-equal?
         (run* q
-          (denote-eval `(letr ,@shared
+          (denote-eval `(letr ,shared
                           ((== ,q (last '(1 2 3)))))))
         '(3))
       (check-equal?
         (run 1 q (denote-eval
-                     `(letr ,@shared (== '(1 2 3) (rev ,q)))))
+                     `(letr ,shared (== '(1 2 3) (rev ,q)))))
         '((3 2 1)))
       (check-equal?
         (run* q
-          (denote-eval `(letr ,@shared
+          (denote-eval `(letr ,shared
                           ((== ,q (reverse '(1 2 3)))))))
         '((3 2 1)))
       (check-equal?
         (run* q
-          (denote-eval `(letr ,@shared
+          (denote-eval `(letr ,shared
                           (== ,q (== (rev '(1 2 3)) (reverse '(1 2 3)))))))
         (list (void)))
       (check-equal?
         (run* q (denote-eval
-          `(== ,q (letr ,@shared
+          `(== ,q (letr ,shared
                     (map reverse '((a b c) (1 2 3)))))))
         '(((c b a) (3 2 1))))
       (check-equal?
         (run* q (denote-eval
-          `(letr ,@shared
+          `(letr ,shared
              (== '((c b a) (3 2 1)) (map reverse '((a b c) ,q))))))
         '((1 2 3)))
       (check-equal?
         (run* q (denote-eval
-          `(letr ,@shared
+          `(letr ,shared
              (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
+        '(3))
+      (check-equal?
+        (run* q (denote-eval
+          `(letr ,shared
+             (== 4 5) (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
+        '())
+      (check-equal?
+        (run* q (denote-eval
+          `(letr ,shared
+             (== 5 5) (== '((c b 3) (3 2 1)) (map reverse '((,q b c) (1 2 ,q)))))))
         '(3))
       (check-equal?
         (list->set
           (run* q (denote-eval
-            `(letr ,@shared
-                   ((next-day day) (match day
-                                     ('mon 'tue)
-                                     ('tue 'wed)
-                                     ('wed 'thur)
-                                     ('thur 'fri)
-                                     ('fri 'sat)
-                                     ('sat 'sun)))
-                   ((weekday? day) (match day
-                                     ('mon #t)
-                                     ('tue #t)
-                                     ('wed #t)
-                                     ('thur #t)
-                                     ('fri #t)
-                                     ('sat #f)
-                                     ('sun #f)))
+            `(letr (,@shared
+                     ((next-day day) (match day
+                                       ('mon 'tue)
+                                       ('tue 'wed)
+                                       ('wed 'thur)
+                                       ('thur 'fri)
+                                       ('fri 'sat)
+                                       ('sat 'sun)))
+                     ((weekday? day) (match day
+                                       ('mon #t)
+                                       ('tue #t)
+                                       ('wed #t)
+                                       ('thur #t)
+                                       ('fri #t)
+                                       ('sat #f)
+                                       ('sun #f))))
                    (== '() (filter (compose weekday? next-day) '(,q)))))))
         (set 'sat 'fri))
       (check-equal?
         (run* q (denote-eval
-          `(letr ,@shared
+          `(letr ,shared
              (conj (member ,q '(1 2 3))
                    (member ,q '(2 3 4))))))
         '(2 3))
