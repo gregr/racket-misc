@@ -220,15 +220,15 @@
     (err)))
 (define (denote-let strict? senv tail)
   (define (err) (error (format "invalid let: ~a" `(let . ,tail))))
-  (if (and (not (null? tail)) (list? tail))
+  (if (and (list? tail) (<= 2 (length tail)))
     (lets
-      (list assignments body) = (list-init+last tail)
+      (cons assignments body) = tail
       (list patterns args) =
       (zip-default '(() ()) (forl assignment <- assignments
                                   (match assignment
                                     ((list _ _) assignment)
                                     (_ (err)))))
-      (build-application strict? (denote-lam strict? senv `(,patterns ,body))
+      (build-application strict? (denote-lam strict? senv `(,patterns ,@body))
                          (map (denote-with-strictness #f senv) args)))
     (err)))
 (define (denote-let* strict? senv tail)
@@ -437,7 +437,13 @@
     (run* q (denote-eval `(== ,q ((lam (rec val) `(,val . ,rec)) '() 6))))
     '((6)))
   (check-equal?
-    (run* q (denote-eval `(== ,q (let (rec '()) (val 6) `(,val . ,rec)))))
+    (run* q (denote-eval `(== ,q (let ((rec '()) (val 6)) `(,val . ,rec)))))
+    '((6)))
+  (check-equal?
+    (run* q (denote-eval `(== ,q (let ((rec '()) (val 6)) (== 2 3) `(,val . ,rec)))))
+    '())
+  (check-equal?
+    (run* q (denote-eval `(== ,q (let ((rec '()) (val 6)) (== 3 3) `(,val . ,rec)))))
     '((6)))
   (check-equal?
     (run* q (denote-eval `(== ,q (let* (val 7) (pr `(,val)) pr))))
@@ -462,8 +468,7 @@
       (denote-eval `(== ,q ((lam (4 `(,a b ,c)) `(,a . ,c)) 4 '(8 b 9)))))
     '((8 . 9)))
   (check-equal?
-    (run* q (denote-eval `(== ,q (let (4 4)
-                                        (`(,a b ,c) '(8 b 7))
+    (run* q (denote-eval `(== ,q (let ((4 4) (`(,a b ,c) '(8 b 7)))
                                      `(,a . ,c)))))
     '((8 . 7)))
   (check-equal?
