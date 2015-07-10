@@ -31,6 +31,8 @@
   ::%=*
   ::%~*
 
+  ::** ; efficiently perform a sequence of cursor transformations
+
   ;; lens operators
   :o  ; merge a list of paths into one path
   :.  ; follow all paths given as arguments and get the target value
@@ -58,6 +60,7 @@
   "sugar.rkt"
   racket/dict
   racket/function
+  racket/list
   racket/match
   )
 
@@ -190,3 +193,73 @@
     (hash 'a 1 'b (hash 'c 3 'd (hash 'default 0 'e 5)))
     )
   )
+
+(define (paths->deltas current paths)
+  (define (compare cur path)
+    (match* (cur path)
+      (('() path) (list 0 path))
+      ((cur '()) (list (length cur) '()))
+      (((cons c0 cs) (cons p0 ps))
+       (if (equal? c0 p0) (compare cs ps) (list (length cur) path)))))
+  (match paths
+    ('() '())
+    ((cons path paths)
+     (list* (compare current path) (paths->deltas path paths)))))
+
+(module+ test
+  (check-equal?
+    (paths->deltas '() '((a b c d e f)
+                              (a b c d e f)
+                              (a b c d e f g h)
+                              (a b d e f)
+                              (a b d 1 2)
+                              (a b c 1 2)
+                              (z y x w v)
+                              (z y x 5)
+                              (z y x 5)))
+    '((0 (a b c d e f))
+      (0 ())
+      (0 (g h))
+      (6 (d e f))
+      (2 (1 2))
+      (3 (c 1 2))
+      (5 (z y x w v))
+      (2 (5))
+      (0 ()))
+    ))
+
+(define (paths->transitions initial-path paths)
+  (forl (list up down) <- (paths->deltas initial-path paths)
+        up-trans = (if (= 0 up) identity
+                     (lambda (cur) (last (iterate ::^ cur up))))
+        down-trans = (if (null? down) identity
+                       (lambda (cur) (::@ cur down)))
+        (match up
+          (0 down-trans)
+          (_ (match down
+               ('() up-trans)
+               (_ (compose1 down-trans up-trans)))))))
+
+(define (::**-process cursor initial-path ops paths)
+  (forf cursor = cursor
+        op <- ops
+        transition <- (paths->transitions initial-path paths)
+        (op (transition cursor))))
+
+(define (::** cursor initial-path op&path-list)
+  (apply ::**-process cursor initial-path (zip-default '(() ()) op&path-list)))
+
+(module+ test
+  (check-equal?
+    (::** (::0 '(a (b c) d (e f g) h)) '()
+      `((,(lambda (cur) (::=* cur 3)) (rest rest rest first rest rest first))
+        (,(lambda (cur) (::=* cur 4)) (rest rest rest first rest first))
+        (,(lambda (cur) (::=* cur 5)) (rest first rest first))
+        (,identity ())
+        (,identity (rest rest first))))
+    (lets datum = '(a (b c) d (e f g) h)
+          datum = (:= datum 3 '(rest rest rest first rest rest first))
+          datum = (:= datum 4 '(rest rest rest first rest first))
+          datum = (:= datum 5 '(rest first rest first))
+          (::@ (::0 datum) '(rest rest first)))
+    ))
