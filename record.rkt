@@ -26,8 +26,12 @@
        (define (dict-set rec key val)
          (match rec
            ((name field ...)
-            (let ((temp (hash-set (record-hash field ...) key val)))
-              (name (hash-ref temp 'field) ...)))))
+            (let ((temp (record-hash field ...)))
+              (if (not (hash-has-key? temp key))
+                (error (format "cannot set undefined '~a' field in '~a' record"
+                               key 'name))
+                (let ((temp (hash-set temp key val)))
+                  (name (hash-ref temp 'field) ...)))))))
        (define (dict-iterate-first rec)
          (if (empty? '(field ...)) #f 0))
        (define (dict-iterate-next rec pos)
