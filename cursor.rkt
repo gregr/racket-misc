@@ -50,6 +50,8 @@
   :%.*
   :%=*
   :%~*
+
+  :** ; efficiently perform a sequence of lens transformations and queries
   )
 
 (require
@@ -262,4 +264,47 @@
           datum = (:= datum 4 '(rest rest rest first rest first))
           datum = (:= datum 5 '(rest first rest first))
           (::@ (::0 datum) '(rest rest first)))
+    ))
+
+(define-syntax :**-cont
+  (syntax-rules (:. := :~ =)
+    ((_ initial-path (ops ...) (paths ...) cursor (:= value path body ...))
+     (:**-cont initial-path
+       (ops ... (lambda (cur) (::=* cur value))) (paths ... path)
+       cursor (body ...)))
+    ((_ initial-path (ops ...) (paths ...) cursor (:~ update path body ...))
+     (:**-cont initial-path
+       (ops ... (lambda (cur) (::~* cur update))) (paths ... path)
+       cursor (body ...)))
+    ((_ initial-path (ops ...) (paths ...) cursor (:. name path body ...))
+     (:**-cont initial-path (ops ... identity) (paths ... path) cursor
+               (name = (::.* cursor) body ...)))
+    ((_ initial-path () () cursor (lhs = rhs body ...))
+     (lets lhs = rhs (:**-cont initial-path () () cursor (body ...))))
+    ((_ initial-path () () cursor (body)) (values (::^*. cursor) body))
+    ((_ initial-path () () cursor ()) (::^*. cursor))
+    ((_ initial-path (ops ...) (paths ... final-path) cursor body)
+     (let ((cursor (::**-process cursor initial-path
+                                 (list ops ...) (list paths ... final-path))))
+       (:**-cont final-path () () cursor body)))))
+
+(define-syntax :**
+  (syntax-rules ()
+    ((_ datum body ...) (let ((cursor (::0 datum)))
+                          (:**-cont '() () () cursor (body ...))))))
+
+(module+ test
+  (check-equal?
+    (lets (values datum result) =
+      (:** '(a (b c) d (e f g) h)
+        := 3                           '(rest rest rest first rest rest first)
+        :~ (lambda (val) (list val 4)) '(rest rest rest first rest first)
+        := 5                           '(rest first rest first)
+        :. one                         '(rest rest rest first rest first first)
+        two = (list one one)
+        := two                         '(rest rest rest first rest first first)
+        :. result                      '(rest rest first)
+        result)
+      (list datum result))
+    '((a (b 5) d (e ((f f) 4) 3) h) d)
     ))
