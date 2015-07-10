@@ -1,5 +1,8 @@
 #lang racket/base
 (provide
+  default-hash
+  default-hash-ref
+  default-hash-set
   dict-add
   dict-diff
   dict-empty
@@ -17,10 +20,14 @@
   "match.rkt"
   "maybe.rkt"
   racket/dict
+  racket/match
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    rackunit
+    racket/function
+    ))
 
 (define hash-empty (hash))
 (define hash-add hash-set)
@@ -64,3 +71,36 @@
       (dict-diff (hash 'b 5 'c 3 'a 1 'e 11 'f 12)
                  (hash 'a 1 'b 2 'c 3 'd 4)))
     (hash 'b 5 'e 11 'f 12)))
+
+(struct default-hash (new hsh) #:transparent
+  #:methods gen:dict
+  ((define (dict-ref . args) (apply default-hash-ref args))
+   (define (dict-set . args) (apply default-hash-set args))
+   (define (dict-iterate-first dhsh)
+     (hash-iterate-first (default-hash-hsh dhsh)))
+   (define (dict-iterate-next dhsh pos)
+     (hash-iterate-next (default-hash-hsh dhsh) pos))
+   (define (dict-iterate-key dhsh pos)
+     (hash-iterate-key (default-hash-hsh dhsh) pos))
+   (define (dict-iterate-value dhsh pos)
+     (hash-iterate-value (default-hash-hsh dhsh) pos))
+   (define (dict-count dhsh) (hash-count (default-hash-hsh dhsh)))))
+
+(define (default-hash-ref dhsh key . args)
+  (match-let (((default-hash new hsh) dhsh))
+    (hash-ref hsh key (match args
+                        ('() (lambda () (new key)))
+                        ((list default) default)))))
+
+(define (default-hash-set dhsh key val)
+  (match-let (((default-hash new hsh) dhsh))
+    (default-hash new (hash-set hsh key val))))
+
+(module+ test
+  (check-equal? (dict? (default-hash (const 3) (hash))) #t)
+  (check-equal?
+    (default-hash-hsh
+      (dict-set (default-hash (const '(a b c)) (hash)) 5
+                (dict-ref (default-hash (const '(a b c)) (hash)) 5)))
+    (hash 5 '(a b c)))
+  )
