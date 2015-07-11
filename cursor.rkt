@@ -53,8 +53,8 @@
 
 (define (ref+set datum)
   (cond
-    ((pair? datum) (list list-ref-key list-set-key))
-    ((dict? datum) (list dict-ref dict-set))))
+    ((pair? datum) (values list-ref-key list-set-key))
+    ((dict? datum) (values dict-ref dict-set))))
 (define (datum-has-key? datum key)
   ((cond
      ((pair? datum) list-has-key?)
@@ -67,8 +67,8 @@
 (define (cursor-ascend cur)
   (match cur
     ((cursor focus (cons key keys) (cons parent ancestors))
-     (match-let* ((`(,_ ,p-set) (ref+set parent))
-                  (new-focus (p-set parent key focus)))
+     (let*-values (((_ p-set) (ref+set parent))
+                   ((new-focus) (p-set parent key focus)))
        (cursor new-focus keys ancestors)))))
 (define (cursor-ascend-to cur-src cur-tgt)
   (for/fold ((cur cur-src))
@@ -79,8 +79,8 @@
 (define (cursor-descend cur key)
   (match cur
     ((cursor focus keys ancestors)
-     (match-let* ((`(,p-ref ,_) (ref+set focus))
-                  (new-focus (p-ref focus key)))
+     (let*-values (((p-ref _) (ref+set focus))
+                   ((new-focus) (p-ref focus key)))
        (cursor new-focus (cons key keys) (cons focus ancestors))))))
 (define (cursor-descend* cur keys)
   (foldl (flip cursor-descend) cur keys))
