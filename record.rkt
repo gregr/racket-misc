@@ -36,14 +36,14 @@
          (if (empty? '(field ...)) #f 0))
        (define (dict-iterate-next rec pos)
          (let ((next (+ pos 1)))
-           (if (< next (length '(field ...))) next #f)))
+           (if (< next (vector-length '#(field ...))) next #f)))
        (define (dict-iterate-key rec pos)
-         (list-ref '(field ...) pos))
+         (vector-ref '#(field ...) pos))
        (define (dict-iterate-value rec pos)
          (match rec
-           ((name field ...) (list-ref (list field ...) pos))))
+           ((name field ...) (vector-ref (vector field ...) pos))))
        (define (dict-count rec)
-         (length '(field ...))))
+         (vector-length '#(field ...))))
       struct-rest ...))))
 
 (define-syntax record
