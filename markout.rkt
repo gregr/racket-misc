@@ -98,7 +98,7 @@
 (define (separated separator style items)
   (if (empty? items) '()
     (lets
-      (list init-items last-item) = (list-init+last items)
+      (values init-items last-item) = (list-init+last items)
       init-items = (forl
                      item <- init-items
                      (tight-pair style item separator))
@@ -539,7 +539,7 @@
   next-state =
   (fn (prefix header avail-width item)
     blocks = (doc->blocks context (size avail-width 0) item)
-    (list blocks first-block) = (list-init+last blocks)
+    (values blocks first-block) = (list-init+last blocks)
     (size align-width _) = (styled-block-size prefix)
     alignment = (space-block style (size align-width 1))
     prefix = (block-append-horiz style prefix first-block)

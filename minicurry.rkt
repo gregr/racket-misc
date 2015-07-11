@@ -173,7 +173,7 @@
   (list params senv build-match))
 
 (def (denote-conditioned-body strict? senv conds*body)
-  (list conditions body) = (list-init+last conds*body)
+  (values conditions body) = (list-init+last conds*body)
   dbody = (denote-with senv body (or strict? (not (null? conditions))))
   (if (null? conditions) dbody
     (build-seq strict? (denote-conj #t senv conditions) dbody)))
@@ -188,7 +188,7 @@
   (match tail
     ((cons (? list? (? (compose1 (curry < 0) length) patterns))
            (? list? (? (compose1 (curry < 0) length) tail)))
-     (lets (list conditions body) = (list-init+last tail)
+     (lets (values conditions body) = (list-init+last tail)
            (list params senv build-match) = (pattern-matcher senv patterns)
            dbody = (build-match conditions (denote-with senv body #t))
            (build-lam senv params dbody)))
@@ -334,7 +334,7 @@
 (define (denote-conj+seq strict? senv tail)
   (match tail
     ((? list? (? (compose1 (curry < 0) length)))
-     (lets (list conditions body) = (list-init+last tail)
+     (lets (values conditions body) = (list-init+last tail)
            dbody = (denote-with senv body #t)
            (if (null? conditions) dbody
              (build-seq strict? (denote-conj #t senv conditions) dbody))))
@@ -358,7 +358,7 @@
 (define (denote-conj strict? senv tail)
   (match tail
     ((? list? (? (compose1 (curry < 0) length)))
-     (lets (list prefixes body) = (list-init+last tail)
+     (lets (values prefixes body) = (list-init+last tail)
            dprefixes = (map (lambda (arg) (denote-with senv arg #t)) prefixes)
            dbody = (denote-with senv body strict?)
            (foldr (curry build-conj #t) dbody dprefixes)))
@@ -372,7 +372,7 @@
            (build-seq strict? dc0 dtail)))
     (_ (error (format "invalid sequential conjunction: ~a" `(seq . ,tail))))))
 (def (build-disj strict? dalternatives)
-  (list dinitial dfinal) = (list-init+last dalternatives)
+  (values dinitial dfinal) = (list-init+last dalternatives)
   (possibly-strict
     strict? (foldr (lambda (dhead dtail)
                      (lambda (env) (disj (dhead env) (dtail env))))

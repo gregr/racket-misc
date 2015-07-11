@@ -86,8 +86,8 @@
 
 (define (list-init+last lst)
   (let ((rlist (reverse lst)))
-    (list (reverse (cdr rlist)) (car rlist))))
-(define (list-init lst) (car (list-init+last lst)))
+    (values (reverse (cdr rlist)) (car rlist))))
+(define (list-init lst) (let-values (((init _) (list-init+last lst))) init))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
 
 (define (list-path index . path) (append (make-list index 'rest) path))
