@@ -1,12 +1,6 @@
 ===============================================================================
 = current
 ===============================================================================
-cursors:
-  additional operator for multiple transformations in sequence
-    more concise and more efficient
-  default void constructor for :=% and friends
-    won't be able to support varargs versions, but this is fine
-
 consolidate ui.rkt
   a lot of this is unnecessary
 
