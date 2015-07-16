@@ -7,6 +7,7 @@
   dict-diff
   dict-empty
   dict-get
+  dict-join
   dict-subtract
   dict-subtract1
   dict-update-if-has
@@ -46,6 +47,17 @@
     (if found? (just result) (nothing))))
 (define (dict-update-if-has dct key update)
   (if (dict-has-key? dct key) (dict-update dct key update) dct))
+
+(define (dict-join d0 d1)
+  (for/fold ((d0 d0))
+            (((key val) (in-dict d1)))
+            (dict-set d0 key val)))
+
+(module+ test
+  (check-equal?
+    (dict-join (default-hash identity (hash 'a 1 'b 2 'd 4))
+               (hash 'c 3 'b 5))
+    (default-hash identity (hash 'a 1 'b 5 'c 3 'd 4))))
 
 (define (dict-subtract1 d0 d1)
   (for/fold ((d0 d0))
