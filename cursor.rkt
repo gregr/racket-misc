@@ -227,7 +227,7 @@
     ))
 
 (define-syntax :**-cont
-  (syntax-rules (:. := :~ =)
+  (syntax-rules (:. := :~ :~+ =)
     ((_ initial-path (ops ...) (paths ...) cursor (:= value path body ...))
      (:**-cont initial-path
        (ops ... (lambda (cur) (::=* cur value))) (paths ... path)
@@ -235,6 +235,10 @@
     ((_ initial-path (ops ...) (paths ...) cursor (:~ update path body ...))
      (:**-cont initial-path
        (ops ... (lambda (cur) (::~* cur update))) (paths ... path)
+       cursor (body ...)))
+    ((_ initial-path (ops ...) (paths ...) cursor (:~+ new path body ...))
+     (:**-cont initial-path
+       (ops ... (lambda (cur) (::~+* cur new))) (paths ... path)
        cursor (body ...)))
     ((_ initial-path (ops ...) (paths ...) cursor (:. name path body ...))
      (:**-cont initial-path (ops ... identity) (paths ... path) cursor
@@ -256,9 +260,10 @@
 (module+ test
   (check-equal?
     (lets (values datum result) =
-      (:** '(a (b c) d (e f g) h)
+      (:** `(a (b c) d (e f g) ,(hash 'one 1 'two 2) h)
         := 3                           '(rest rest rest first rest rest first)
         :~ (lambda (val) (list val 4)) '(rest rest rest first rest first)
+        :~+ (hash 'three 3 'two 5)     '(rest rest rest rest first)
         := 5                           '(rest first rest first)
         :. one                         '(rest rest rest first rest first first)
         two = (list one one)
@@ -266,5 +271,5 @@
         :. result                      '(rest rest first)
         result)
       (list datum result))
-    '((a (b 5) d (e ((f f) 4) 3) h) d)
+    `((a (b 5) d (e ((f f) 4) 3) ,(hash 'one 1 'two 5 'three 3) h) d)
     ))
