@@ -20,6 +20,7 @@
   list-range
   list-range-transform
   list-range-remove
+  list-range-replace
   list-range-reverse
   list-remove
   list-set
@@ -237,7 +238,9 @@
     '(a f e d c b))
   )
 
-(define list-range-remove (list-range-transform (lambda (_) '())))
+(define (list-range-replace new) (list-range-transform (lambda (_) new)))
+
+(define list-range-remove (list-range-replace '()))
 
 (module+ test
   (check-equal?
