@@ -15,11 +15,13 @@
         ; original position
   ::~   ; like ::= but refocus by applying a transformation to the target
         ; focus
+  ::~+  ; merge new children into the current path
   ::@*  ; like ::@ but take each path component as an additional argument
   ::@?* ; like ::@* but return left (unmatchable path) or right (cursor)
   ::.*  ; like ::. but take each path component as an additional argument
   ::=*  ; like ::= but take each path component as an additional argument
   ::~*  ; like ::~ but take each path component as an additional argument
+  ::~+* ; like ::~+ but take each path component as an additional argument
 
   ::** ; efficiently perform a sequence of cursor transformations
 
@@ -33,10 +35,14 @@
   :=* ; like := but the arguments taken are segments of a single path
   :~* ; like :~ but the arguments taken are segments of a single path
 
+  :~+  ; merge new children into the current path
+  :~+* ; like :~+ but the arguments taken are segments of a single path
+
   :** ; efficiently perform a sequence of lens transformations and queries
   )
 
 (require
+  "dict.rkt"
   "either.rkt"
   "function.rkt"
   "list.rkt"
@@ -115,19 +121,23 @@
     (cursor-ascend-to
       (cursor-refocus cur-next (trans (cursor-focus cur-next)))
       cur)))
+(define (::~+ cur new path) (::~ cur (lambda (sub) (dict-join sub new)) path))
 
 (define (::@* cur . path)       (::@ cur path))
 (define (::@?* cur . path)      (::@? cur path))
 (define (::.* cur . path)       (::. cur path))
 (define (::=* cur val . path)   (::= cur val path))
 (define (::~* cur trans . path) (::~ cur trans path))
+(define (::~+* cur trans . path) (::~+ cur trans path))
 
 (define (:. src path)          (::. (::0 src) path))
 (define (:= src val path)      (::.* (::= (::0 src) val path)))
 (define (:~ src trans path)    (::.* (::~ (::0 src) trans path)))
+(define (:~+ src new path)     (::.* (::~+ (::0 src) new path)))
 (define (:.* src . path)       (:. src path))
 (define (:=* src val . path)   (:= src val path))
 (define (:~* src trans . path) (:~ src trans path))
+(define (:~+* src new . path)  (:~+ src new path))
 
 (module+ test
   (record foo x y)
@@ -140,6 +150,10 @@
   (check-equal? (:.* (:~* foobar (curry + 3) 'x 'a) 'x 'a)
                 8)
   (check-equal? (:=* 'src 'tgt) 'tgt)
+  (check-equal?  (:~+* (list 1 2 (hash 'a 1 'b 2 'd 4))
+                       (hash 'c 3 'b 5)
+                       'rest 'rest 'first)
+                 (list 1 2 (hash 'a 1 'b 5 'c 3 'd 4)))
   )
 
 (define (paths->deltas current paths)
