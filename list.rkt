@@ -17,6 +17,7 @@
   list-index-equal
   list->index-dict
   list->index-list
+  list-insert
   list-range
   list-range-transform
   list-range-remove
@@ -239,6 +240,20 @@
   )
 
 (define (list-range-replace new) (list-range-transform (lambda (_) new)))
+
+(define (list-insert xs idx ys) ((list-range-replace ys) xs idx idx))
+
+(module+ test
+  (check-equal?
+    (list-insert '(a b c d e) 0 '(f g h))
+    '(f g h a b c d e))
+  (check-equal?
+    (list-insert '(a b c d e) 2 '(f g h))
+    '(a b f g h c d e))
+  (check-equal?
+    (list-insert '(a b c d e) 5 '(f g h))
+    '(a b c d e f g h))
+  )
 
 (define list-range-remove (list-range-replace '()))
 
