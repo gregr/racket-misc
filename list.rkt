@@ -270,7 +270,7 @@
   )
 
 (define (list-remove xs idx)
-  (if (< idx (length xs))
+  (if (and (<= 0 idx) (< idx (length xs)))
     (list-range-remove xs idx (+ idx 1))
     xs))
 
