@@ -8,6 +8,8 @@
   navigator-ascend
   navigator-descend
   navigator-shift
+  navigator-preorder-next
+  navigator-preorder-prev
   )
 
 (require
@@ -87,6 +89,29 @@
        index = (+ index offset)
        (just nav) = (navigator-previous nav)
        (navigator-descend nav index)))))
+
+(define (navigator-preorder-next-jump nav)
+  (match (navigator-shift nav 1)
+    ((nothing)
+     (match (navigator-ascend nav)
+       ((nothing) (nothing))
+       ((just nav) (navigator-preorder-next-jump nav))))
+    (jn jn)))
+(define (navigator-preorder-prev-jump nav)
+  (match (navigator-shift nav -1)
+    ((nothing)
+     (match (navigator-ascend nav)
+       ((nothing) (nothing))
+       ((just nav) (navigator-preorder-prev-jump nav))))
+    (jn jn)))
+(define (navigator-preorder-next nav)
+  (match (navigator-descend nav)
+    ((nothing) (navigator-preorder-next-jump nav))
+    (jn jn)))
+(define (navigator-preorder-prev nav)
+  (match (navigator-descend nav (- (length (navigator-keys nav)) 1))
+    ((nothing) (navigator-preorder-prev-jump nav))
+    (jn jn)))
 
 (def (navigator-path nav)
   (navigator _ _ _ trail) = nav
