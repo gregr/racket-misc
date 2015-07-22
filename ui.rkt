@@ -3,23 +3,15 @@
   decorate-controller
   dispatch-events
   dispatch-notes
-  event-keycount
   event-keypress
   event-source-model
   event-terminate
   event-tick
-  keycount->events
-  keycount-controller
   keypress-event-source
   latency-default
   markout-model-control-loop
   markout-view-model
   model-control-loop
-  multi-controller
-  multi-msg-add
-  multi-msg-remove
-  multi-msg-dispatch
-  multi-msg-broadcast
   note-terminated
   note-view
   sleep-remaining
@@ -53,8 +45,7 @@
 (records base-event
   (event-terminate)
   (event-tick dt)
-  (event-keypress char)
-  (event-keycount char count))
+  (event-keypress char))
 
 (records base-note
   (note-terminated)
@@ -139,107 +130,6 @@
     (gen-susp result ctrl) = (dctrl event)
     (gen-susp result (decorate-controller dec ctrl))))
 
-(define keycount-controller
-  ((lambda ()
-     (define (digits->count digits)
-       (if (empty? digits) 1 (string->number (list->string (reverse digits)))))
-     (define (new digits)
-       (fn (event)
-        (list digits mevent) =
-        (match event
-          ((event-keypress char)
-           (if (char-numeric? char)
-             (lets
-               digits = (list* char digits)
-               (list digits (left (digits->count digits))))
-             (list '() (right (event-keycount char (digits->count digits))))))
-          (_ (list digits (right event))))
-        (gen-susp mevent (new digits))))
-     (new '()))))
-
-(define ((keycount->events keymap) event)
-  (match event
-    ((event-keycount char count)
-     (match (dict-get keymap char)
-       ((just action) (action count))
-       ((nothing) (list event))))
-    (_ (list event))))
-
-(module+ test
-  (define test-keymap
-    (hash
-      #\v (lambda (count) (list (note-view count)))
-      #\q (lambda (_) (list (event-terminate)))))
-  (define key-ctrl
-    (gen-compose* (fn->gen (curry either-from '()))
-                  (either-gen (fn->gen (keycount->events test-keymap)))
-                  keycount-controller))
-  (define (test-key-source dt)
-    (list (event-keypress #\4) (event-keypress #\2) (event-keypress #\v)
-          (event-keypress #\q)))
-  (check-equal?
-    (lets
-      (right (gen-susp result _)) =
-      (dispatch-events key-ctrl (test-key-source 12))
-      (append* result))
-    (list (note-view 42) (event-terminate))
-    ))
-
-(records multi-msg
-  (multi-msg-add key ctrl)
-  (multi-msg-remove key)
-  (multi-msg-dispatch kevents)
-  (multi-msg-broadcast event))
-
-(define multi-controller (gn yield (event)
-  dispatch = (fn (cdict key event)
-    ctrl = (dict-ref cdict key)
-    (match (ctrl event)
-      ((gen-susp v k) (list (dict-set cdict key k) (cons key v)))
-      ((gen-result r) (list (dict-remove cdict key) (cons key r)))))
-  dispatch-many = (fn (cdict kevents)
-    (forf (list cdict kcmds) = (list cdict '())
-          (cons key event) <- kevents
-          (list cdict kcmd) = (dispatch cdict key event)
-          (list cdict (list* kcmd kcmds))))
-  (letn loop (list cdict event) = (list (hash) event)
-    (list cdict kcmds) =
-    (match event
-      ((multi-msg-add key ctrl) (list (dict-set cdict key ctrl) '()))
-      ((multi-msg-remove key) (list (dict-remove cdict key) '()))
-      ((multi-msg-dispatch kevents) (dispatch-many cdict kevents))
-      ((multi-msg-broadcast event)
-       (dispatch-many cdict
-        (map (lambda (key) (cons key event)) (dict-keys cdict)))))
-    event = (yield (multi-msg-dispatch kcmds))
-    (loop (list cdict event)))))
-
-(module+ test
-  (check-equal?
-    (lets
-      mc = multi-controller
-      (gen-susp _ mc) = (mc (multi-msg-add 'one (const-gen 'c1)))
-      (gen-susp _ mc) = (mc (multi-msg-add 'two (gn _ (ev) (list 'c2 ev))))
-      (gen-susp _ mc) = (mc (multi-msg-add 'three
-                              (gn y (ev)
-                                ev = (y (list 'c3 ev))
-                                ev = (y (list 'c4 ev))
-                                (y (list 'c5 ev)))))
-      (gen-susp cmds0 mc) = (mc (multi-msg-broadcast 't0))
-      (gen-susp cmds1 mc) = (mc (multi-msg-dispatch '((one . t1))))
-      (gen-susp cmds2 mc) = (mc (multi-msg-dispatch '((three . t1))))
-      (gen-susp _ mc) = (mc (multi-msg-remove 'one))
-      (gen-susp cmds3 mc) = (mc (multi-msg-broadcast 't2))
-      (map (compose1 make-immutable-hash multi-msg-dispatch-kevents)
-           (list cmds0 cmds1 cmds2 cmds3)))
-    (list (hash 'one 'c1
-                'two (list 'c2 't0)
-                'three (list 'c3 't0))
-          (hash 'one 'c1)
-          (hash 'three (list 'c4 't1))
-          (hash 'three (list 'c5 't2)))
-    ))
-
 (def (display-doc doc)
   (size width height) = (screen-size)
   ctx = (sizing-context-new-default)
@@ -321,6 +211,32 @@
         (model-control-loop ctrl (markout-model latency-default doc))))))
 
 (module+ main
+  (record event-keycount char count)
+  (define keycount-controller
+    ((lambda ()
+       (define (digits->count digits)
+         (if (empty? digits) 1 (string->number (list->string (reverse digits)))))
+       (define (new digits)
+         (fn (event)
+             (list digits mevent) =
+             (match event
+               ((event-keypress char)
+                (if (char-numeric? char)
+                  (lets
+                    digits = (list* char digits)
+                    (list digits (left (digits->count digits))))
+                  (list '() (right (event-keycount char (digits->count digits))))))
+               (_ (list digits (right event))))
+             (gen-susp mevent (new digits))))
+       (new '()))))
+  (define ((keycount->events keymap) event)
+    (match event
+      ((event-keycount char count)
+       (match (dict-get keymap char)
+         ((just action) (action count))
+         ((nothing) (list event))))
+      (_ (list event))))
+
   (define (doc-str str) (doc-atom style-empty str))
   (define (doc-append . docs) (vertical-list style-empty docs))
   (define ((ctrl doc) event)
