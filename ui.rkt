@@ -119,9 +119,9 @@
         (gen-susp result (decorate-controller dec ctrl))))
 
   (def (display-doc doc)
-       (size width height) = (screen-size)
+       sz = (screen-size)
        ctx = (sizing-context-new-default)
-       block = (doc->styled-block ctx style-empty width doc)
+       block = (doc->styled-block ctx style-empty sz doc)
        doc-str = (styled-block->string block)
        _ = (screen-clear)
        (displayln doc-str))
