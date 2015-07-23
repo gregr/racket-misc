@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  display-view-thread
   event-keypress
   event-terminate
   event-tick
@@ -13,6 +14,8 @@
   "generator.rkt"
   "record.rkt"
   "sugar.rkt"
+  "terminal.rkt"
+  racket/function
   )
 
 (module+ test
@@ -25,9 +28,7 @@
     "markout.rkt"
     "maybe.rkt"
     "monad.rkt"
-    "terminal.rkt"
     racket/dict
-    racket/function
     racket/list
     racket/match
     ))
@@ -53,6 +54,26 @@
       (channel-put chan (event-keypress (read-char)))
       (loop))
     (thread loop))
+
+(define (display-view-thread latency chan)
+    (define fetch-chan (make-channel))
+    (def (display-view view)
+      view-str = (view)
+      _ = (screen-clear)
+      (display view-str))
+    (define (display-loop timer)
+      (display-view (channel-get fetch-chan))
+      (sleep-remaining latency timer)
+      (display-loop (gen-susp-k (timer))))
+    (def (fetch-loop view)
+      evt = (sync chan (channel-put-evt fetch-chan view))
+      (if (channel-put-evt? evt)
+        (fetch-loop (channel-get chan))
+        (fetch-loop evt)))
+    (define fetch-thread (thread (thunk (fetch-loop (channel-get chan)))))
+    (define display-thread (thread (thunk (display-loop (timer-now)))))
+    (thread (thunk (thread-wait fetch-thread) (kill-thread display-thread)))
+    fetch-thread)
 
 (module+ main
   (define latency-default 0.1)
@@ -118,42 +139,27 @@
         (gen-susp result ctrl) = (dctrl event)
         (gen-susp result (decorate-controller dec ctrl))))
 
-  (def (display-doc doc)
-       sz = (screen-size)
-       ctx = (sizing-context-new-default)
-       block = (doc->styled-block ctx style-empty sz doc)
-       doc-str = (styled-block->string block)
-       _ = (screen-clear)
-       (displayln doc-str))
-
-  (define (display-doc-thread latency doc)
-    (define chan (make-channel))
-    (define fetch-chan (make-channel))
-    (def (fetch-loop doc)
-         evt = (sync chan (channel-put-evt fetch-chan doc))
-         (if (channel-put-evt? evt)
-           (fetch-loop (channel-get chan))
-           (fetch-loop evt)))
-    (define (display-loop timer)
-      (display-doc (channel-get fetch-chan))
-      (sleep-remaining latency timer)
-      (display-loop (gen-susp-k (timer))))
-    (define ts (list (thread (thunk (fetch-loop doc)))
-                     (thread (thunk (display-loop (timer-now))))))
-    (list chan (thunk (map kill-thread ts))))
+  (def (doc->str doc)
+    sz = (screen-size)
+    ctx = (sizing-context-new-default)
+    block = (doc->styled-block ctx style-empty sz doc)
+    (styled-block->string block))
 
   (def (markout-view-model latency doc submodel)
-       (list chan-display kill-threads) = (display-doc-thread latency doc)
+       chan-display = (make-channel)
+       display-thread = (display-view-thread latency chan-display)
+       _ = (channel-put chan-display (thunk (doc->str doc)))
        (gn yield (note)
            result = (letn loop (list submodel note) = (list submodel note)
                           (match note
                             ((note-view next-doc)
-                             (channel-put chan-display next-doc)
+                             (channel-put chan-display
+                                          (thunk (doc->str next-doc)))
                              (loop (list submodel (yield (nothing)))))
                             (_ (match (submodel note)
                                  ((gen-susp v k) (loop (list k (yield v))))
                                  (r r)))))
-           _ = (kill-threads)
+           _ = (kill-thread display-thread)
            result))
 
   (def (dispatch-notes yield model notes)
