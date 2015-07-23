@@ -3,6 +3,7 @@
   event-keypress
   event-terminate
   event-tick
+  keypress-thread
   sleep-remaining
   timer-new
   timer-now
@@ -47,6 +48,12 @@
   sleep-duration = (/ (max 0 (- (* total 1000) overhead)) 1000)
   (sleep sleep-duration))
 
+(define (keypress-thread chan)
+    (define (loop)
+      (channel-put chan (event-keypress (read-char)))
+      (loop))
+    (thread loop))
+
 (module+ main
   (define latency-default 0.1)
 
@@ -84,13 +91,6 @@
   (define (keypress-event-source dt) (map event-keypress (read-chars-ready)))
   (define terminal-event-source
     (sources->source (list keypress-event-source tick-event-source)))
-
-
-  (define (keypress-thread chan)
-    (define (loop)
-      (channel-put chan (event-keypress (read-char)))
-      (loop))
-    (thread loop))
 
   (define (tick-thread duration chan)
     (def (loop timer)
