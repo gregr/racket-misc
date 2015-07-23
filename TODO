@@ -1,9 +1,6 @@
 ===============================================================================
 = current
 ===============================================================================
-consolidate ui.rkt
-  a lot of this is unnecessary
-
 markout:
   design is sucking due to too many special cases; can it be fixed?
   seem to need height management, not just width
