@@ -6,8 +6,11 @@
   )
 
 (require
-  (for-syntax racket/base)
-  (for-syntax racket/list)
+  (for-syntax
+    "syntax.rkt"
+    racket/base
+    racket/list
+    )
   racket/dict
   racket/list
   racket/match
@@ -68,10 +71,3 @@
      (let ((kvs (flatten (map syntax->list
                               (syntax->list #'(('field field) ...))))))
        #`(hash #,@kvs)))))
-
-(define-for-syntax (identifier-with-? ident)
-  (datum->syntax
-    ident
-    (string->symbol
-      (string-append (symbol->string (syntax->datum ident))
-                     "?"))))
