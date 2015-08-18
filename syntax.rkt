@@ -9,6 +9,7 @@
 (require
   "idset.rkt"
   "typed/syntax.rkt"
+  racket/function
   racket/list
   racket/match
   racket/string
@@ -45,7 +46,8 @@
     (#f (idset-single type))))
 
 (define (typenames-used params type)
-  (idset-intersect (list->idset params) (typenames-free type)))
+  (let ((used (idset-intersect (list->idset params) (typenames-free type))))
+    (filter (curry idset-member? used) params)))
 
 (module+ test
   (check-equal?
@@ -54,8 +56,8 @@
         #'(All (a b) (-> (->* (a b) (a) Number) c (Listof String) Number))))))
     (list->set '(Number String c)))
   (check-equal?
-    (map syntax->datum (idset->list
+    (map syntax->datum
       (typenames-used
         (syntax->list #'(a b c))
-        #'(All (a b) (-> (->* (a b) (a) Number) c (Listof String) Number)))))
+        #'(All (a b) (-> (->* (a b) (a) Number) c (Listof String) Number))))
     '(c)))

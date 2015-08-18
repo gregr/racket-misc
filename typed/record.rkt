@@ -31,7 +31,7 @@
   (syntax-case stx (:)
     ((_ (name type-params ...) (rec-name (field-name : field-type) ...) ...)
      (let* ((params (syntax->list #'(type-params ...)))
-            (useds (map (compose1 idset->list (curry typenames-used params))
+            (useds (map (curry typenames-used params)
                         (syntax->list #'((() field-type ...) ...))))
             (templates
               (map syntax->list (syntax->list
