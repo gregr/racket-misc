@@ -4,9 +4,11 @@
 
 (require
   "dict.rkt"
+  "list.rkt"
   "maybe.rkt"
   "record.rkt"
   "sugar.rkt"
+  racket/function
   racket/list
   racket/match
   )
@@ -69,3 +71,119 @@
     ((app proc arg)
      (lets dproc = (denote proc) darg = (denote arg)
            (lambda (env) ((dproc env) (darg env)))))))
+
+(define nil (literal '()))
+(define (build-lambda params body)
+  (forf body = body
+        param <- (reverse params)
+        (lam param body)))
+(define (build-application proc args)
+  (foldl (lambda (arg proc) (app proc arg)) proc args))
+
+(define (env-reify env)
+  (def (binding<? (cons s0 _) (cons s1 _)) (symbol<? s0 s1))
+  (forf reified-env = nil
+        (cons sym val) <- (sort (env->list env) binding<?)
+        (pair (pair (literal sym) val) reified-env)))
+
+(define (parse-identifier senv ident)
+  (unless boolean? (env-lookup senv ident)
+    (error (format "invalid use of special identifier")))
+  (bvar ident))
+
+(def (parse-quoted senv stx)
+  (list senv renv term) =
+  (let loop ((senv senv) (stx stx))
+    (match stx
+      ((? symbol?)
+       (list (env-single stx (literal (env-lookup senv stx)))
+             (env-single stx (parse senv stx))
+             (literal stx)))
+      ((cons head tail)
+       (lets (list senv-h renv-h qhead) = (loop senv head)
+             (list senv-t renv-t qtail) = (loop senv tail)
+             (list (env-merge senv-h senv-t) (env-merge renv-h renv-t)
+                   (pair qhead qtail))))
+      (_ (list env-empty env-empty (literal stx)))))
+  (pair (pair (env-reify senv) (env-reify renv)) (pair term nil)))
+
+(define (syntactic? senv stx) (and (symbol? stx) (env-lookup senv stx)))
+
+(define (parse-application senv head tail)
+  (build-application (parse senv head)
+    (if (syntactic? senv head)
+      (parse-quoted senv tail) (map (curry parse senv) tail))))
+
+(define (parse senv stx)
+  (match stx
+    ((? symbol?)      (parse-identifier senv stx))
+    ((cons head tail) (parse-application senv head tail))
+    ('()              (literal (void)))
+    (_                (literal stx))))
+
+(define (parse-applicative senv stx)
+  (match stx
+    ((cons head tail)
+     (match (if (symbol? head) (env-get senv head) (nothing))
+       ((just (? procedure? special)) (special senv tail))
+       (_ (build-application
+            (parse-applicative senv head)
+            (map (curry parse-applicative senv) tail)))))
+    (_ (parse senv stx))))
+
+(define (parse-special-quote senv tail)
+  (match tail
+    ('(()) nil)
+    ((list (? symbol? sym)) (literal sym))
+    (_ (error (format "invalid quote: ~a" `(quote . ,tail))))))
+(define (parse-special-lambda senv tail)
+  (match tail
+    ((list (? non-empty-list? params) body)
+     (build-lambda params (parse-applicative (env-extend senv params) body)))
+    (_ (error (format "invalid lambda: ~a" `(lambda . ,tail))))))
+(define (parse-special-pair senv tail)
+  (match tail
+    ((list l r) (apply pair (map (curry parse-applicative senv) tail)))
+    (_ (error (format "invalid pair: ~a" `(pair . ,tail))))))
+(define (parse-special-pair-head senv tail)
+  (match tail
+    ((list t) (pair-head (parse-applicative senv tail)))
+    (_ (error (format "invalid pair-head: ~a" `(pair-head . ,tail))))))
+(define (parse-special-pair-tail senv tail)
+  (match tail
+    ((list t) (pair-tail (parse-applicative senv tail)))
+    (_ (error (format "invalid pair-tail: ~a" `(pair-tail . ,tail))))))
+(define (parse-special-type senv tail)
+  (match tail
+    ((list t) (type (parse-applicative senv tail)))
+    (_ (error (format "invalid type: ~a" `(type . ,tail))))))
+(define (parse-special-if-equal senv tail)
+  (match tail
+    ((list a0 a1 t f)
+     (apply if-equal (map (curry parse-applicative senv) tail)))
+    (_ (error (format "invalid if-equal: ~a" `(if-equal . ,tail))))))
+(define (parse-special-if senv tail)
+  (match tail
+    ((list cnd t f)
+     (apply (lambda (cnd t f) (if-equal (literal #f) cnd f t))
+            (map (curry parse-applicative senv) tail)))
+    (_ (error (format "invalid if: ~a" `(if-equal . ,tail))))))
+
+(define specials `(
+  (quote ,parse-special-quote)
+  (lambda ,parse-special-lambda)
+  (pair ,parse-special-pair)
+  (pair-head ,parse-special-pair-head)
+  (pair-tail ,parse-special-pair-tail)
+  (type ,parse-special-type)
+  (if-equal ,parse-special-if-equal)
+  (if ,parse-special-if)
+  ))
+(define senv-applicative-new (list->env (map (curry apply cons) specials)))
+
+; TODO: should be able to embed this within the term language
+(def ((eval-applicative env) tree)
+  (cons senv-assoc renv-assoc) = env
+  senv = (list->env senv-assoc)
+  renv = (list->env renv-assoc)
+  ((denote (parse senv tree)) renv))
