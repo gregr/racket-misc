@@ -34,6 +34,7 @@
   list-inits
   list-path
   iterate
+  non-empty-list?
   sum
   )
 
@@ -281,3 +282,10 @@
   (check-equal?
     (list-remove '(a b c d) 4)
     '(a b c d)))
+
+(define (non-empty-list? v) (and (list? v) (pair? v)))
+
+(module+ test
+  (check-equal? (non-empty-list? '()) #f)
+  (check-equal? (non-empty-list? '(a)) #t)
+  (check-equal? (non-empty-list? '(a b)) #t))
