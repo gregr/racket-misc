@@ -96,16 +96,19 @@
   (let loop ((senv senv) (stx stx))
     (match stx
       ((? symbol?)
-       (list (env-single stx (literal (env-lookup senv stx)))
-             (env-single stx (parse senv stx))
-             (literal stx)))
+       (match (env-get senv stx)
+         ((nothing) (list env-empty env-empty (literal stx)))
+         ((just syntax-type)
+          (list (env-single stx (literal syntax-type))
+                (env-single stx (parse senv stx))
+                (literal stx)))))
       ((cons head tail)
        (lets (list senv-h renv-h qhead) = (loop senv head)
              (list senv-t renv-t qtail) = (loop senv tail)
              (list (env-merge senv-h senv-t) (env-merge renv-h renv-t)
                    (pair qhead qtail))))
       (_ (list env-empty env-empty (literal stx)))))
-  (pair (pair (env-reify senv) (env-reify renv)) (pair term nil)))
+  (list (pair (env-reify senv) (env-reify renv)) term))
 
 (define (syntactic? senv stx) (and (symbol? stx) (env-lookup senv stx)))
 
