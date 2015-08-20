@@ -1,4 +1,19 @@
 #lang racket/base
+; Inspired by John Shutt's Kernel Programming Language
+; http://web.cs.wpi.edu/~jshutt/kernel.html
+; Differences from the original Kernel include:
+; - Applicative vs. Operative behavior can be statically specified per-binding.
+;   Names bound by $lambda$ are considered operative.  Their appearance at the
+;   head of what would normally be a procedure application causes the program
+;   text of that application tree to be passed directly as an argument,
+;   without the usual interpretation.  An environment is also built to be
+;   passed alongside the tree.  Behavior from the original Kernel PL can be
+;   recovered by always using $lambda$ instead of $lambda, and defining
+;   applicatives in terms of a wrapper that explicitly evaluates the elements
+;   of the application tree passed as an argument.
+; - Environments passed to operatives are constrained to include only bindings
+;   for symbols appearing in the application tree that is being passed to the
+;   operative.  This reduces the risk of unintentional context-capture.
 (provide
   run/builtins
   )
