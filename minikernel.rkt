@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  run/builtins
   )
 
 (require
@@ -191,3 +192,60 @@
   renv = (list->env (reverse renv-assoc))
   parsed = (parse senv tree)
   ((denote parsed) renv))
+
+(define bootstrap/builtins
+  (parse-applicative senv-applicative-new
+    '(lambda (eval prog-stx)
+       ((lambda (fix nil? cons head tail type env-add)
+          ((lambda (foldr)
+             ((lambda ($lambda/syntax-type)
+                ((lambda ($lambda $lambda$ $if-equal)
+                   (($lambda$ (cons '() '())
+                      (cons
+                        (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
+                        (cons
+                          (cons '$lambda
+                                (cons
+                                  (cons 'cons (cons 'head (cons 'tail
+                                    (cons 'type (cons 'eval '())))))
+                                  (cons prog-stx '())))
+                          '())))
+                    $lambda $lambda$ $if-equal
+                    cons head tail type eval))
+                 ($lambda/syntax-type #f)
+                 ($lambda/syntax-type #t)
+                 (lambda (env tree)
+                   (if-equal (eval env (head tree))
+                             (eval env (head (tail tree)))
+                             (eval env (head (tail (tail tree))))
+                             (eval env (head (tail (tail (tail tree)))))))))
+              (lambda (syntax-type env tree)
+                (((lambda (params body)
+                    (foldr
+                      (lambda (param body)
+                        (lambda (env arg)
+                          (body (env-add env param arg syntax-type))))
+                      (lambda (env) (eval env body))
+                      params))
+                  (head tree)
+                  (head (tail tree)))
+                 env))))
+           (fix (lambda (foldr f acc xs)
+                  (if (nil? xs) acc
+                    (f (head xs) (foldr f acc (tail xs))))))))
+        (lambda (f) ((lambda (d) (d d))
+                     (lambda (x) (f (lambda (a) ((x x) a))))))
+        (lambda (v) (if-equal 'nil (type v) #t #f))
+        (lambda (l r) (pair l r))
+        (lambda (p) (pair-head p))
+        (lambda (p) (pair-tail p))
+        (lambda (v) (type v))
+        (lambda (env key val syntax-type)
+          (pair (pair (pair key syntax-type) (pair-head env))
+                (pair (pair key val) (pair-tail env))))))))
+
+; run a minikernel program, providing it access to the following builtins:
+; operatives: $lambda, $lambda$, $if-equal
+; applicatives: cons, head, tail, type, eval
+(define run/builtins
+  (((denote bootstrap/builtins) env-empty) eval-applicative))
