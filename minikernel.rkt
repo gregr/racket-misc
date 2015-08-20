@@ -187,6 +187,7 @@
 ; TODO: should be able to embed this within the term language
 (def ((eval-applicative env) tree)
   (cons senv-assoc renv-assoc) = env
-  senv = (list->env senv-assoc)
-  renv = (list->env renv-assoc)
-  ((denote (parse senv tree)) renv))
+  senv = (list->env (reverse senv-assoc))
+  renv = (list->env (reverse renv-assoc))
+  parsed = (parse senv tree)
+  ((denote parsed) renv))
