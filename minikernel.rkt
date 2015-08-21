@@ -222,13 +222,15 @@
                         (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
                         (cons
                           (cons '$lambda
-                                (cons
-                                  (cons 'cons (cons 'head (cons 'tail
-                                    (cons 'type (cons 'eval '())))))
-                                  (cons prog-stx '())))
+                            (cons
+                              (cons 'cons (cons 'head (cons 'tail (cons 'type
+                                (cons 'eval (cons 'env-add (cons 'null?
+                                  (cons 'fix (cons 'foldr '())))))))))
+                              (cons prog-stx '())))
                           '())))
                     $lambda $lambda$ $if-equal
-                    cons head tail type eval))
+                    cons head tail type eval env-add
+                    nil? fix foldr))
                  ($lambda/syntax-type #f)
                  ($lambda/syntax-type #t)
                  (lambda (env tree)
@@ -263,7 +265,7 @@
 
 ; run a minikernel program, providing it access to the following builtins:
 ; operatives: $lambda, $lambda$, $if-equal
-; applicatives: cons, head, tail, type, eval
+; applicatives: cons, head, tail, type, eval, env-add, null?, fix
 (define run/builtins
   (((denote bootstrap/builtins) env-empty) eval-applicative))
 
