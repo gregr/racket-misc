@@ -292,7 +292,7 @@
 ; applicatives:
 ;   type=?: determine whether a value has a particular type
 ;   not?, and?, or?, equal?,
-;   apply, list, list*, assoc
+;   fix*, apply, list, list*, assoc
 ;   foldl, foldr, filter, map, append, reverse
 (define (run/std prog)
   (run/builtins
@@ -301,34 +301,49 @@
            ($lambda (type=? foldl map append first second)
              (($lambda (not? and? or? apply reverse filter)
                ($lambda$ (list)
-                 (($lambda ($let/lambda)
+                 (($lambda ($let/lambda fix*)
                     (($lambda$ ($let $let$)
-                       ($let$
-                         ((list*
-                            ($lambda (env tree)
-                              ($let ((rargs (reverse (map (eval env) tree))))
-                                (foldl cons (head rargs) (tail rargs)))))
-                          ($let*
-                            ($lambda (env tree)
-                              ($let ((bindings (first tree))
-                                     (body (second tree)))
-                                (eval
-                                  (foldl
-                                    ($lambda (binding env)
-                                      (env-add env (first binding)
-                                               (eval env (second binding)) #f))
-                                    env bindings)
-                                  body))))
-                          ($cond
-                            (fix ($lambda ($cond env tree)
-                              ($let ((cond0 (first (head tree)))
-                                     (body0 (second (head tree)))
-                                     (rest (tail tree)))
-                                ($if (eval env cond0)
-                                  (eval env body0) ($cond env rest))))))
-                          ; TODO: $letrec, equal?, assoc
-                          )
-                       ,prog))
+  ($let$
+    ((list* ($lambda (env tree)
+              ($let ((rargs (reverse (map (eval env) tree))))
+                    (foldl cons (head rargs) (tail rargs)))))
+     ($let* ($lambda (env tree)
+              ($let ((bindings (first tree))
+                    (body (second tree)))
+                    (eval
+                      (foldl
+                        ($lambda (binding env)
+                          (env-add env (first binding)
+                                   (eval env (second binding)) #f))
+                        env bindings)
+                      body))))
+     ($cond (fix ($lambda ($cond env tree)
+                   ($let ((cond0 (first (head tree)))
+                          (body0 (second (head tree)))
+                          (rest (tail tree)))
+                         ($if (eval env cond0)
+                           (eval env body0) ($cond env rest)))))))
+    ($let$
+      (($letrec ($lambda (env tree)
+                  ($let*
+                    ((defs (first tree))
+                     (body (second tree))
+                     (names (map ($lambda (def) (head (first def))) defs))
+                     (procs-raw
+                       (map ($lambda (def)
+                              (apply $lambda
+                                (list env
+                                  (list (append names (tail (first def)))
+                                        (second def)))))
+                            defs))
+                     (procs-final (fix* procs-raw)))
+                    (apply
+                      (apply $lambda (list env (list names body)))
+                      procs-final)
+                    )))
+       ; TODO: equal?, assoc
+       )
+      ,prog)))
                    ; $let
                    ($let/lambda $lambda)
                    ; $let$
@@ -340,7 +355,10 @@
                             (map (eval env) args)))
                    (map first (first tree))
                    (map second (first tree))
-                   (second tree))))))
+                   (second tree)))
+                ; fix*: similar to http://okmij.org/ftp/Computation/fixed-point-combinators.html#Poly-variadic
+                (fix ($lambda (self ps)
+                       (map ($lambda (pi x) ((apply pi (self ps)) x)) ps))))))
             ; not?
             ($lambda (b) ($if b #f #t))
             ; and?
@@ -416,4 +434,23 @@
            (filter ($lambda (p) (null? (first p))) input)
            (filter ($lambda (p) (not? (null? (first p)))) input))))
     '((() 0)  (() 2)  (1 1)  (3 3)))
+  (check-equal?
+    (run/std
+      '((first (fix* (list
+                       ($lambda (even-length? odd-length? xs)
+                                ($if (null? xs) #t (odd-length? (tail xs))))
+                       ($lambda (even-length? odd-length? xs)
+                                ($if (null? xs) #f (even-length? (tail xs)))))))
+        (list 1 2 3 4)))
+    #t)
+  (check-equal?
+    (run/std
+      '($letrec (((even-length? xs)
+                  ($if (null? xs) #t (odd-length? (tail xs))))
+                 ((odd-length? xs)
+                  ($if (null? xs) #f (even-length? (tail xs)))))
+         (list
+           (even-length? (list 1 2 3 4 5))
+           (even-length? (list 1 2 3 4 5 6 7 8)))))
+    '(#f #t))
   )
