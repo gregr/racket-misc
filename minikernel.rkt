@@ -230,42 +230,72 @@
 (define bootstrap/builtins
   (parse-applicative senv-applicative-new
     '(lambda (eval prog-stx)
-       ((lambda (fix nil? cons head tail type env-add)
-          ((lambda (foldr)
-             ((lambda ($lambda/syntax-type)
-                ((lambda ($lambda $lambda$ $if-equal)
-                   (($lambda$ '()
-                      (cons
-                        (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
-                        (cons
-                          (cons '$lambda
-                            (cons
-                              (cons 'cons (cons 'head (cons 'tail (cons 'type
-                                (cons 'eval (cons 'env-add (cons 'null?
-                                  (cons 'fix (cons 'foldr '())))))))))
-                              (cons prog-stx '())))
-                          '())))
-                    $lambda $lambda$ $if-equal
-                    cons head tail type eval env-add
-                    nil? fix foldr))
-                 ($lambda/syntax-type #f)
-                 ($lambda/syntax-type #t)
-                 (lambda (env tree)
-                   (if-equal (eval env (head tree))
-                             (eval env (head (tail tree)))
-                             (eval env (head (tail (tail tree))))
-                             (eval env (head (tail (tail (tail tree)))))))))
-              (lambda (syntax-type env tree)
-                (((lambda (params body)
-                    (foldr
-                      (lambda (param body)
-                        (lambda (env arg)
-                          (body (env-add env param arg syntax-type))))
-                      (lambda (env) (eval env body))
-                      params))
-                  (head tree)
-                  (head (tail tree)))
-                 env))))
+       ((lambda (fix nil? cons head tail type symbol? pair? eqv? env-add)
+          ((lambda (foldl foldr)
+             ((lambda (equal? map append apply)
+                ((lambda (assoc)
+                   ((lambda (eval2)
+                      ((lambda ($lambda/syntax-type)
+                         ((lambda ($lambda $lambda$ $if-equal)
+                            (($lambda$ '()
+                              (cons
+                                (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
+                                (cons
+                                  (cons '$lambda
+                                    (cons
+                                      (cons 'cons (cons 'head (cons 'tail (cons 'type
+                                      (cons 'symbol? (cons 'pair? (cons 'eqv? (cons 'equal?
+                                      (cons 'eval (cons 'env-add (cons 'null? (cons 'fix (cons 'assoc
+                                      (cons 'foldl (cons 'foldr (cons 'map (cons 'append (cons 'apply (cons eval2 '())))))))))))))))))))
+                                          (cons prog-stx '())))
+                                  '())))
+                             $lambda $lambda$ $if-equal
+                             cons head tail type symbol? pair? eqv? equal? eval env-add
+                             nil? fix assoc foldl foldr map append apply eval2))
+                          ($lambda/syntax-type #f)
+                          ($lambda/syntax-type #t)
+                          (lambda (env tree)
+                            (if-equal (eval env (head tree))
+                                      (eval env (head (tail tree)))
+                                      (eval env (head (tail (tail tree))))
+                                      (eval env (head (tail (tail (tail tree)))))))))
+                       (lambda (syntax-type env tree)
+                         (((lambda (params body)
+                             (foldr
+                               (lambda (param body)
+                                 (lambda (env arg)
+                                   (body (env-add env param arg syntax-type))))
+                               (lambda (env) (eval env body))
+                               params))
+                           (head tree)
+                           (head (tail tree)))
+                          env))))
+                    ; TODO: eval2
+                    #f
+                    ))
+                 (fix (lambda (assoc key kvs)
+                        (if (pair? kvs)
+                          (if (equal? key (head (head kvs)))
+                            (head kvs) (assoc key (tail kvs)))
+                          #f)))))
+              ; equal?
+              (fix (lambda (equal? v0 v1)
+                     (if (eqv? (type v0) (type v1))
+                       (if (pair? v0)
+                         (if (equal? (head v0) (head v1))
+                           (equal? (tail v0) (tail v1))
+                           #f)
+                         (eqv? v0 v1))
+                       #f)))
+              ; map
+              (lambda (f xs) (foldr (lambda (x ys) (cons (f x) ys)) '() xs))
+              ; append
+              (lambda (xs ys) (foldr cons ys xs))
+              ; apply
+              (lambda (f xs) (foldl (lambda (arg f) (f arg)) f xs))))
+           (fix (lambda (foldl f acc xs)
+                  (if (nil? xs) acc
+                    (foldl f (f (head xs) acc) (tail xs)))))
            (fix (lambda (foldr f acc xs)
                   (if (nil? xs) acc
                     (f (head xs) (foldr f acc (tail xs))))))))
@@ -276,6 +306,9 @@
         (lambda (p) (pair-head p))
         (lambda (p) (pair-tail p))
         (lambda (v) (type v))
+        (lambda (v) (if-equal 'symbol (type v) #t #f))
+        (lambda (v) (if-equal 'pair (type v) #t #f))
+        (lambda (v0 v1) (if-equal v0 v1 #t #f))
         (lambda (env key val syntax-type)
           (pair (pair key (pair syntax-type val)) env))))))
 
@@ -314,8 +347,8 @@
   (run/builtins
     `(($lambda$ (quote $ $if)
         (($lambda$ ($and? $or?)
-           ($lambda (type=? foldl map append first second)
-             (($lambda (not? and? or? apply reverse filter)
+           ($lambda (type=? first second)
+             (($lambda (not? and? or? reverse filter)
                ($lambda$ (list)
                  (($lambda ($let/lambda fix*)
                     (($lambda$ (@ $let $let$)
@@ -356,23 +389,6 @@
                       (@ $lambda env (list names body))
                       procs-final)
                     ))))
-      ($let*
-        ((pair? ($lambda (v) (type=? 'pair v)))
-         (symbol? ($lambda (v) (type=? 'symbol v)))
-         (eqv? ($lambda (v0 v1) ($if-equal v0 v1 #t #f)))
-         (equal?
-           (fix ($lambda (equal? v0 v1)
-             ($let ((t0 (type v0)) (t1 (type v1)))
-               ($and? (eqv? t0 t1)
-                      ($if (pair? v0)
-                           ($and? (equal? (head v0) (head v1))
-                                  (equal? (tail v0) (tail v1)))
-                           (eqv? v0 v1)))))))
-         (assoc
-           (fix ($lambda (assoc key kvs)
-                  ($and? (pair? kvs)
-                    ($if (equal? key (head (head kvs)))
-                         (head kvs) (assoc key (tail kvs))))))))
         ($let$
           (($match
              ($let*
@@ -463,7 +479,7 @@
                        (apply proc args))
                 ($if (symbol? tree) (tail (env-get env tree)) tree)
               )))
-           ,prog))))))
+           ,prog)))))
                    ; @
                    ($lambda (env tree)
                      (apply (eval env (head tree)) (map (eval env) (tail tree))))
@@ -488,8 +504,6 @@
             ($lambda (a b) ($and? a b))
             ; or?
             ($lambda (a b) ($or? a b))
-            ; apply
-            ($lambda (f xs) (foldl ($lambda (arg f) (f arg)) f xs))
             ; reverse
             (foldl cons '())
             ; filter
@@ -506,14 +520,6 @@
             (eval env (head tree))))
          ; type=?
          ($lambda (type-tag val) ($if-equal type-tag (type val) #t #f))
-         ; foldl
-         (fix ($lambda (foldl f acc xs)
-                ($if (null? xs) acc
-                  (foldl f (f (head xs) acc) (tail xs)))))
-         ; map
-         ($lambda (f xs) (foldr ($lambda (x ys) (cons (f x) ys)) '() xs))
-         ; append
-         ($lambda (xs ys) (foldr cons ys xs))
          ; first
          head
          ; second
