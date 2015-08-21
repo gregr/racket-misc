@@ -106,7 +106,7 @@
         (pair (pair (literal sym) val) reified-env)))
 
 (define (parse-identifier senv ident)
-  (unless boolean? (env-lookup senv ident)
+  (unless (boolean? (env-lookup senv ident))
     (error (format "invalid use of special identifier")))
   (bvar ident))
 
