@@ -436,7 +436,34 @@
                                    (apply cont extracted)
                                    (loop (tail clauses)))))))))
                         (loop clauses))))))
-          ,prog)))))
+          ($letrec
+            (((env-get env key)
+              ($let ((found (assoc key env)))
+                ($and? found (tail found))))
+             ((syntactic? env key)
+              ($and? (symbol? key)
+                     ($let ((assignment (env-get env key)))
+                       ($and? assignment (head assignment)))))
+             ((env-constrain env tree)
+              ($if (pair? tree)
+                (append (env-constrain env (head tree))
+                        (env-constrain env (tail tree)))
+                ($if (symbol? tree)
+                     ($let ((bnd (assoc tree env)))
+                           ($if bnd (list bnd)
+                                '()))
+                     '())))
+             ((eval2 env tree)
+              ($if (pair? tree)
+                ($let* ((hd (head tree)) (tl (tail tree))
+                        (proc (eval2 env hd))
+                        (args ($if (syntactic? env hd)
+                                   (list (env-constrain env tl) tl)
+                                   (map (eval2 env) tl))))
+                       (apply proc args))
+                ($if (symbol? tree) (tail (env-get env tree)) tree)
+              )))
+           ,prog))))))
                    ; @
                    ($lambda (env tree)
                      (apply (eval env (head tree)) (map (eval env) (tail tree))))
@@ -571,4 +598,57 @@
          (`((0 ,a) 2 (,b . 4)) (list a b))
          (2 'no)))
     '(1 3))
+
+  (check-equal?
+    (run/std
+      '(eval ($ ($lambda (env _) env) (append list))
+             '(append (list 1 2) (list 3 4))))
+    '(1 2 3 4))
+  (check-equal?
+    (run/std
+      '(eval2 ($ ($lambda (env _) env) (append list))
+              '(append (list 1 2) (list 3 4))))
+    '(1 2 3 4))
+  (check-equal?
+    (run/std
+      '(eval ($ ($lambda (env _) env) (quote $match list cons))
+        '($match (list (list 0 1) 2 (cons 3 4))
+           (`(a b) 'no)
+           (`((0 ,a) 2 (,b . 4)) (list a b))
+           (2 'no))))
+    '(1 3))
+  (check-equal?
+    (run/std
+      '(eval2 ($ ($lambda (env _) env) (quote $match list cons))
+        '($match (list (list 0 1) 2 (cons 3 4))
+           (`(a b) 'no)
+           (`((0 ,a) 2 (,b . 4)) (list a b))
+           (2 'no))))
+    '(1 3))
+  (check-equal?
+    (run/std
+      '(eval ($ ($lambda (env _) env) ($letrec list $if null? tail))
+       '($letrec (((even-length? xs)
+                  ($if (null? xs) #t (odd-length? (tail xs))))
+                 ((odd-length? xs)
+                  ($if (null? xs) #f (even-length? (tail xs)))))
+         (list
+           (even-length? (list 1 2 3 4 5))
+           (even-length? (list 1 2 3 4 5 6 7 8)))))
+
+      )
+    '(#f #t))
+  (check-equal?
+    (run/std
+      '(eval2 ($ ($lambda (env _) env) ($letrec list $if null? tail))
+       '($letrec (((even-length? xs)
+                  ($if (null? xs) #t (odd-length? (tail xs))))
+                 ((odd-length? xs)
+                  ($if (null? xs) #f (even-length? (tail xs)))))
+         (list
+           (even-length? (list 1 2 3 4 5))
+           (even-length? (list 1 2 3 4 5 6 7 8)))))
+
+      )
+    '(#f #t))
   )
