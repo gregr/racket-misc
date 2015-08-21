@@ -13,7 +13,12 @@
 ;   of the application tree passed as an argument.
 ; - Environments passed to operatives are constrained to include only bindings
 ;   for symbols appearing in the application tree that is being passed to the
-;   operative.  This reduces the risk of unintentional context-capture.
+;   operative.  This reduces the risk of unintentional context capture.
+; - Procedures are built with single-argument lambdas, with applications being
+;   automatically curried.  Procedures applied operatively will receive the
+;   entire application tree as a single argument.
+; - A different set of primitives are built in due to simpler core evaluation
+;   machinery.  Some former primitives can now be derived instead.
 (provide
   run/builtins
   run/std
