@@ -16,6 +16,7 @@
 ;   operative.  This reduces the risk of unintentional context-capture.
 (provide
   run/builtins
+  run/std
   )
 
 (require
@@ -280,3 +281,137 @@
                     ($lambda (e t) t)
                     4))
     9))
+
+; run a minikernel program, providing it a more complete standard library:
+; operatives:
+;   quote: named without a prefix-$ for convenience
+;   $: treats its first argument like an operative
+;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec
+; applicatives:
+;   type=?: determine whether a value has a particular type
+;   not?, and?, or?, equal?,
+;   apply, list, list*, assoc
+;   foldl, foldr, filter, map, append, reverse
+(define (run/std prog)
+  (run/builtins
+    `(($lambda$ (quote $ $if)
+        (($lambda$ ($and? $or)
+           ($lambda (type=? foldl map append first second)
+             (($lambda (not? and? or? apply reverse filter)
+               ($lambda$ (list)
+                 (($lambda ($let/lambda)
+                    (($lambda$ ($let $let$)
+                       ($let$
+                         ((list*
+                            ($lambda (env tree)
+                              ($let ((rargs (reverse (map (eval env) tree))))
+                                (foldl cons (head rargs) (tail rargs)))))
+                          ($let*
+                            ($lambda (env tree)
+                              ($let ((bindings (first tree))
+                                     (body (second tree)))
+                                (eval
+                                  (foldl
+                                    ($lambda (binding env)
+                                      (env-add env (first binding)
+                                               (eval env (second binding)) #f))
+                                    env bindings)
+                                  body))))
+                          ($cond
+                            (fix ($lambda ($cond env tree)
+                              ($let ((cond0 (first (head tree)))
+                                     (body0 (second (head tree)))
+                                     (rest (tail tree)))
+                                ($if (eval env cond0)
+                                  (eval env body0) ($cond env rest))))))
+                          ; TODO: $letrec, equal?, assoc
+                          )
+                       ,prog))
+                   ; $let
+                   ($let/lambda $lambda)
+                   ; $let$
+                   ($let/lambda $lambda$)))
+                ; $let/lambda
+                ($lambda (lambda env tree)
+                  (($lambda (params args body)
+                     (apply (lambda env (list params body))
+                            (map (eval env) args)))
+                   (map first (first tree))
+                   (map second (first tree))
+                   (second tree))))))
+            ; not?
+            ($lambda (b) ($if b #f #t))
+            ; and?
+            ($lambda (a b) ($and? a b))
+            ; or?
+            ($lambda (a b) ($or? a b))
+            ; apply
+            ($lambda (f xs) (foldl ($lambda (arg f) (f arg)) f xs))
+            ; reverse
+            (foldl cons '())
+            ; filter
+            ($lambda (keep? xs)
+              (foldr ($lambda (x ys) ($if (keep? x) (cons x ys) ys)) '() xs))
+            ; list
+            ($lambda (env tree) (map (eval env) tree)))))
+         ; $and?
+         ($lambda (env tree)
+           ($if (eval env (head tree)) (eval env (head (tail tree))) #f))
+         ; $or?
+         ($lambda (env tree)
+           ($if (eval env (head tree)) #t (eval env (head (tail tree)))))
+         ; type=?
+         ($lambda (type-tag val) ($if-equal type-tag (type val) #t #f))
+         ; foldl
+         (fix ($lambda (foldl f acc xs)
+                ($if (null? xs) acc
+                  (foldl f (f (head xs) acc) (tail xs)))))
+         ; map
+         ($lambda (f xs) (foldr ($lambda (x ys) (cons (f x) ys)) '() xs))
+         ; append
+         ($lambda (xs ys) (foldr cons ys xs))
+         ; first
+         head
+         ; second
+         ($lambda (xs) (head (tail xs)))))
+      ; quote
+      ($lambda (_ t) (head t))
+      ; $
+      ($lambda (env tree) ((eval env (head tree)) env (tail tree)))
+      ; $if
+      ($lambda (env tree)
+        ($if-equal #f (eval env (head tree))
+                   (eval env (head (tail (tail tree))))
+                   (eval env (head (tail tree))))))))
+
+(module+ test
+  (check-equal? (run/std ''()) '())
+  (check-equal? (run/std '($if (type=? 'nil '()) 'yes 'no)) 'yes)
+  (check-equal?
+    (run/std '(apply ($lambda (a b c) (list a c b)) (list 1 2 3)))
+    '(1 3 2))
+  (check-equal?
+    (run/std
+      '(((($lambda (x) x) $lambda)
+         ($ ($lambda (env _) env) (list))
+         (list (list 'a 'b 'c) (list 'list 'c 'b 'a)))
+        9 8 7))
+    '(7 8 9))
+  (check-equal? (run/std '($let* ((a 5) (b (list a 7))) b)) '(5 7))
+  (check-equal? (run/std '(list* 1 2 (list 3 4))) '(1 2 3 4))
+  (check-equal?
+    (run/std
+      '($cond
+         (#f 'wrong)
+         ((not? #t) 'wrong)
+         ((null? '()) 'ok)
+         (#t 'wrong)))
+    'ok)
+  (check-equal?
+    (run/std
+      '($let ((input (list (list '() 0) (list 1 1) (list '() 2) (list 3 3))))
+         (append
+           (filter ($lambda (p) (null? (first p))) input)
+           (filter ($lambda (p) (not? (null? (first p)))) input))))
+    '((() 0)  (() 2)  (1 1)  (3 3)))
+  )
