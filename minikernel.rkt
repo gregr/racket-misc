@@ -305,6 +305,7 @@
 ;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec, $match
 ; applicatives:
 ;   type=?: determine whether a value has a particular type
+;   @: treats its first argument like an applicative
 ;   not?, and?, or?, pair?, symbol?, eqv?, equal?,
 ;   fix*, apply, list, list*, assoc
 ;   foldl, foldr, filter, map, append, reverse
@@ -316,7 +317,7 @@
              (($lambda (not? and? or? apply reverse filter)
                ($lambda$ (list)
                  (($lambda ($let/lambda fix*)
-                    (($lambda$ ($let $let$)
+                    (($lambda$ (@ $let $let$)
   ($let$
     ((list* ($lambda (env tree)
               ($let ((rargs (reverse (map (eval env) tree))))
@@ -345,14 +346,13 @@
                      (names (map ($lambda (def) (head (first def))) defs))
                      (procs-raw
                        (map ($lambda (def)
-                              (apply $lambda
-                                (list env
-                                  (list (append names (tail (first def)))
-                                        (second def)))))
+                              (@ $lambda env
+                                 (list (append names (tail (first def)))
+                                       (second def))))
                             defs))
                      (procs-final (fix* procs-raw)))
                     (apply
-                      (apply $lambda (list env (list names body)))
+                      (@ $lambda env (list names body))
                       procs-final)
                     ))))
       ($let*
@@ -421,9 +421,9 @@
                                  pair? head tail))
                 (clause->lambda
                   ($lambda (env clause)
-                    (apply $lambda (list env
-                      (list (pattern->params (first clause))
-                            (second clause))))))
+                    (@ $lambda env
+                       (list (pattern->params (first clause))
+                             (second clause)))))
                 )
                ($lambda (env tree)
                  ($let* ((arg (eval env (first tree))) (clauses (tail tree))
@@ -437,6 +437,9 @@
                                    (loop (tail clauses)))))))))
                         (loop clauses))))))
           ,prog)))))
+                   ; @
+                   ($lambda (env tree)
+                     (apply (eval env (head tree)) (map (eval env) (tail tree))))
                    ; $let
                    ($let/lambda $lambda)
                    ; $let$
@@ -505,9 +508,8 @@
     '(1 3 2))
   (check-equal?
     (run/std
-      '(((($lambda (x) x) $lambda)
-         ($ ($lambda (env _) env) (list))
-         (list (list 'a 'b 'c) (list 'list 'c 'b 'a)))
+      '((@ $lambda ($ ($lambda (env _) env) (list))
+           (list (list 'a 'b 'c) (list 'list 'c 'b 'a)))
         9 8 7))
     '(7 8 9))
   (check-equal? (run/std '($let* ((a 5) (b (list a 7))) b)) '(5 7))
