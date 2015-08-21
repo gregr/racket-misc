@@ -291,7 +291,7 @@
 ;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec
 ; applicatives:
 ;   type=?: determine whether a value has a particular type
-;   not?, and?, or?, equal?,
+;   not?, and?, or?, pair?, eqv?, equal?,
 ;   fix*, apply, list, list*, assoc
 ;   foldl, foldr, filter, map, append, reverse
 (define (run/std prog)
@@ -340,10 +340,26 @@
                     (apply
                       (apply $lambda (list env (list names body)))
                       procs-final)
-                    )))
-       ; TODO: equal?, assoc
-       )
-      ,prog)))
+                    ))))
+       ; TODO:
+      ($let*
+        ((pair? ($lambda (v) (type=? 'pair v)))
+         (eqv? ($lambda (v0 v1) ($if-equal v0 v1 #t #f)))
+         (equal?
+           (fix ($lambda (equal? v0 v1)
+             ($let ((t0 (type v0)) (t1 (type v1)))
+               ($and? (eqv? t0 t1)
+                      ($if (pair? t0)
+                           ($and? (equal? (head v0) (head v1))
+                                  (equal? (tail v0) (tail v1)))
+                           (eqv? v0 v1)))))))
+         (assoc
+           (fix ($lambda (assoc key kvs)
+                  ($if (pair? kvs)
+                    ($if (equal? key (head (head kvs)))
+                         (head kvs) (assoc key (tail kvs)))
+                    kvs)))))
+        ,prog))))
                    ; $let
                    ($let/lambda $lambda)
                    ; $let$
@@ -453,4 +469,16 @@
            (even-length? (list 1 2 3 4 5))
            (even-length? (list 1 2 3 4 5 6 7 8)))))
     '(#f #t))
+  (check-equal?
+    (run/std
+      '(assoc 'needle
+        '(((a b) . 0) (c . 1) (2 . 2) (() . 3) (#t . 4) (#f . 5)
+          (needle . found) (missed . 6))))
+    '(needle . found))
+  (check-equal?
+    (run/std
+      '(assoc '(burried needle)
+        '(((a b) . 0) (c . 1) (2 . 2) (() . 3) (#t . 4) (#f . 5)
+          ((burried needle) . found) (missed . 6))))
+    '((burried needle) . found))
   )
