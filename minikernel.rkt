@@ -272,14 +272,16 @@
 
 (module+ test
   (check-equal?
-    (run/builtins '(($lambda$ (f) ($lambda (g) (f (cons f g) 9)))
-                    ($lambda (e t) (cons (cons (head e) (head (tail e))) t))
-                    4))
+    (run/builtins
+      '(($lambda$ (f) ($lambda (g) (f (cons f g) 9)))
+        ($lambda (e t) (cons (cons (head e) (head (tail e))) t))
+        4))
     '((((g . #f) (f . #t) (cons . #f)) g . 4) (cons f g) 9))
   (check-equal?
-    (run/builtins '(($lambda$ (f) ($lambda (g) ((($lambda (x) x) f) (cons f g) 9)))
-                    ($lambda (e t) t)
-                    4))
+    (run/builtins
+      '(($lambda$ (f) ($lambda (g) ((($lambda (x) x) f) (cons f g) 9)))
+        ($lambda (e t) t)
+        4))
     9))
 
 ; run a minikernel program, providing it a more complete standard library:
