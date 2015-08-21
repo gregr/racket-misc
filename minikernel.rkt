@@ -349,7 +349,7 @@
            (fix ($lambda (equal? v0 v1)
              ($let ((t0 (type v0)) (t1 (type v1)))
                ($and? (eqv? t0 t1)
-                      ($if (pair? t0)
+                      ($if (pair? v0)
                            ($and? (equal? (head v0) (head v1))
                                   (equal? (tail v0) (tail v1)))
                            (eqv? v0 v1)))))))
