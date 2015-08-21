@@ -294,7 +294,7 @@
 ;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec
 ; applicatives:
 ;   type=?: determine whether a value has a particular type
-;   not?, and?, or?, pair?, eqv?, equal?,
+;   not?, and?, or?, pair?, symbol?, eqv?, equal?,
 ;   fix*, apply, list, list*, assoc
 ;   foldl, foldr, filter, map, append, reverse
 (define (run/std prog)
@@ -344,9 +344,9 @@
                       (apply $lambda (list env (list names body)))
                       procs-final)
                     ))))
-       ; TODO:
       ($let*
         ((pair? ($lambda (v) (type=? 'pair v)))
+         (symbol? ($lambda (v) (type=? 'symbol v)))
          (eqv? ($lambda (v0 v1) ($if-equal v0 v1 #t #f)))
          (equal?
            (fix ($lambda (equal? v0 v1)
