@@ -313,7 +313,7 @@
 (define (run/std prog)
   (run/builtins
     `(($lambda$ (quote $ $if)
-        (($lambda$ ($and? $or)
+        (($lambda$ ($and? $or?)
            ($lambda (type=? foldl map append first second)
              (($lambda (not? and? or? apply reverse filter)
                ($lambda$ (list)
@@ -476,7 +476,8 @@
            ($if (eval env (head tree)) (eval env (head (tail tree))) #f))
          ; $or?
          ($lambda (env tree)
-           ($if (eval env (head tree)) #t (eval env (head (tail tree)))))
+           (($lambda (fst) ($if fst fst (eval env (head (tail tree)))))
+            (eval env (head tree))))
          ; type=?
          ($lambda (type-tag val) ($if-equal type-tag (type val) #t #f))
          ; foldl
