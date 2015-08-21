@@ -107,11 +107,14 @@
 (define (build-application proc args)
   (foldl (lambda (arg proc) (app proc arg)) proc args))
 
-(define (env-reify env)
+(define (env-reify senv renv)
   (def (binding<? (cons s0 _) (cons s1 _)) (symbol<? s0 s1))
   (forf reified-env = nil
-        (cons sym val) <- (sort (env->list env) binding<?)
-        (pair (pair (literal sym) val) reified-env)))
+        (cons ssym sval) <- (sort (env->list senv) binding<?)
+        (cons rsym rval) <- (sort (env->list renv) binding<?)
+        _ = (unless (eq? ssym rsym)
+              (error (format "corrupt env: ~a ~a" senv renv)))
+        (pair (pair (literal ssym) (pair sval rval)) reified-env)))
 
 (define (parse-identifier senv ident)
   (unless (boolean? (env-lookup senv ident))
@@ -135,7 +138,7 @@
              (list (env-merge senv-h senv-t) (env-merge renv-h renv-t)
                    (pair qhead qtail))))
       (_ (list env-empty env-empty (literal stx)))))
-  (list (pair (env-reify senv) (env-reify renv)) term))
+  (list (env-reify senv renv) term))
 
 (define (syntactic? senv stx) (and (symbol? stx) (env-lookup senv stx)))
 
@@ -213,7 +216,11 @@
 
 ; TODO: should be able to embed this within the term language
 (def ((eval-applicative env) tree)
-  (cons senv-assoc renv-assoc) = env
+  assocs = (forl (cons sym (cons sval rval)) <- env
+                 (list (cons sym sval) (cons sym rval)))
+  senv-assoc = (map first assocs)
+  renv-assoc = (map second assocs)
+
   senv = (list->env (reverse senv-assoc))
   renv = (list->env (reverse renv-assoc))
   parsed = (parse senv tree)
@@ -226,7 +233,7 @@
           ((lambda (foldr)
              ((lambda ($lambda/syntax-type)
                 ((lambda ($lambda $lambda$ $if-equal)
-                   (($lambda$ (cons '() '())
+                   (($lambda$ '()
                       (cons
                         (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
                         (cons
@@ -269,8 +276,7 @@
         (lambda (p) (pair-tail p))
         (lambda (v) (type v))
         (lambda (env key val syntax-type)
-          (pair (pair (pair key syntax-type) (pair-head env))
-                (pair (pair key val) (pair-tail env))))))))
+          (pair (pair key (pair syntax-type val)) env))))))
 
 ; run a minikernel program, providing it access to the following builtins:
 ; operatives: $lambda, $lambda$, $if-equal
@@ -282,9 +288,9 @@
   (check-equal?
     (run/builtins
       '(($lambda$ (f) ($lambda (g) (f (cons f g) 9)))
-        ($lambda (e t) (cons (cons (head e) (head (tail e))) t))
+        ($lambda (e t) (cons (head e) t))
         4))
-    '((((g . #f) (f . #t) (cons . #f)) g . 4) (cons f g) 9))
+    '((g #f . 4) (cons f g) 9))
   (check-equal?
     (run/builtins
       '(($lambda$ (f) ($lambda (g) ((($lambda (x) x) f) (cons f g) 9)))
@@ -429,8 +435,7 @@
                                  ($if extracted
                                    (apply cont extracted)
                                    (loop (tail clauses)))))))))
-                        (loop clauses)))))
-           )
+                        (loop clauses))))))
           ,prog)))))
                    ; $let
                    ($let/lambda $lambda)
