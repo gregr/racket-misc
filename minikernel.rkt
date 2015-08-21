@@ -76,7 +76,7 @@
      (lets dt = (denote t)
            (lambda (env) (match (dt env)
                            ((? symbol?) 'symbol)
-                           ((? pair?) 'pair)
+                           ((cons _ _) 'pair)
                            ('() 'nil)
                            ((? procedure?) 'procedure)
                            ((? boolean?) 'boolean)
