@@ -370,10 +370,9 @@
                            (eqv? v0 v1)))))))
          (assoc
            (fix ($lambda (assoc key kvs)
-                  ($if (pair? kvs)
+                  ($and? (pair? kvs)
                     ($if (equal? key (head (head kvs)))
-                         (head kvs) (assoc key (tail kvs)))
-                    kvs)))))
+                         (head kvs) (assoc key (tail kvs))))))))
         ($let$
           (($match
              ($let*
