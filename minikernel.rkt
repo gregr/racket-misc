@@ -93,7 +93,9 @@
      (lets (list da0 da1 dt df) = (map denote (list arg0 arg1 t f))
            (lambda (env)
              (let ((v0 (da0 env)) (v1 (da1 env)))
-               (if (match v0 ((cons _ _) #f) (_ (equal? v0 v1)))
+               (if (match* (v0 v1)
+                     (((cons _ _) (cons _ _)) #t)
+                     ((_ _) (equal? v0 v1)))
                  (dt env) (df env))))))
     ((app proc arg)
      (lets dproc = (denote proc) darg = (denote arg)
@@ -220,7 +222,6 @@
                  (list (cons sym sval) (cons sym rval)))
   senv-assoc = (map first assocs)
   renv-assoc = (map second assocs)
-
   senv = (list->env (reverse senv-assoc))
   renv = (list->env (reverse renv-assoc))
   parsed = (parse senv tree)
