@@ -291,7 +291,7 @@
 ; operatives:
 ;   quote: named without a prefix-$ for convenience
 ;   $: treats its first argument like an operative
-;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec
+;   $if, $cond, $and?, $or?, $let, $let$, $let*, $letrec, $match
 ; applicatives:
 ;   type=?: determine whether a value has a particular type
 ;   not?, and?, or?, pair?, symbol?, eqv?, equal?,
@@ -362,7 +362,71 @@
                     ($if (equal? key (head (head kvs)))
                          (head kvs) (assoc key (tail kvs)))
                     kvs)))))
-        ,prog))))
+        ($let$
+          (($match
+             ($let*
+               ((pattern-matcher
+                  ($lambda (on-extract on-match on-pair? on-head on-tail)
+                    ($letrec
+                      (((singleton-list? xs) ($and? (pair? xs) (null? (tail xs))))
+                       ((self pattern arg)
+                        ($cond
+                          ((symbol? pattern) (on-extract pattern arg))
+                          ((pair? pattern)
+                           ($let ((hd (head pattern)))
+                                 ($cond
+                                   ((equal? hd 'quote)
+                                    ($and? (singleton-list? (tail pattern))
+                                           (on-match (second pattern) arg)))
+                                   ((equal? hd 'quasiquote)
+                                    ($and? (singleton-list? (tail pattern))
+                                           (on-quasiquote (second pattern) arg)))
+                                   (#t #f))))
+                          (#t (on-match pattern arg))))
+                       ((on-quasiquote pattern arg)
+                        ($if (pair? pattern)
+                             ($if (equal? (head pattern) ,''unquote)
+                               ($and? (singleton-list? (tail pattern))
+                                      (self (second pattern) arg))
+                               ($let* ((subs
+                                         (list ($and? (on-pair? arg)
+                                                      (on-quasiquote (head pattern) (on-head arg)))
+                                               ($and? (on-pair? arg)
+                                                      (on-quasiquote (tail pattern) (on-tail arg)))))
+                                       (continue? (null? (filter not? subs))))
+                                      ($and? continue? (foldr append '() subs))))
+                             (on-match pattern arg))))
+                      self)))
+                (pattern->params
+                  ($let ((self (pattern-matcher
+                                 ($lambda (pattern _) (list pattern))
+                                 ($lambda (_ _) '())
+                                 ($lambda (_) #t) ($lambda (x) x) ($lambda (x) x))))
+                        ($lambda (pattern) (self pattern #f))))
+                (pattern-match (pattern-matcher
+                                 ($lambda (_ arg) (list arg))
+                                 ($lambda (pattern arg)
+                                          ($and? (equal? pattern arg) '()))
+                                 pair? head tail))
+                (clause->lambda
+                  ($lambda (env clause)
+                    (apply $lambda (list env
+                      (list (pattern->params (first clause))
+                            (second clause))))))
+                )
+               ($lambda (env tree)
+                 ($let* ((arg (eval env (first tree))) (clauses (tail tree))
+                         (loop
+                           (fix ($lambda (loop clauses)
+                             ($and? (pair? clauses)
+                               ($let ((extracted (pattern-match (first (head clauses)) arg))
+                                      (cont (clause->lambda env (head clauses))))
+                                 ($if extracted
+                                   (apply cont extracted)
+                                   (loop (tail clauses)))))))))
+                        (loop clauses)))))
+           )
+          ,prog)))))
                    ; $let
                    ($let/lambda $lambda)
                    ; $let$
@@ -484,4 +548,14 @@
         '(((a b) . 0) (c . 1) (2 . 2) (() . 3) (#t . 4) (#f . 5)
           ((burried needle) . found) (missed . 6))))
     '((burried needle) . found))
+  (check-equal?
+    (run/std '($match 3 (4 'no) (3 'yes) (2 'no)))
+    'yes)
+  (check-equal?
+    (run/std
+      '($match (list (list 0 1) 2 (cons 3 4))
+         (`(a b) 'no)
+         (`((0 ,a) 2 (,b . 4)) (list a b))
+         (2 'no)))
+    '(1 3))
   )
