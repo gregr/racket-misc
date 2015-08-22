@@ -251,21 +251,22 @@
                                           (cons prog-stx '())))
                                   '())))
                              $lambda $lambda$ $if-equal
-                             cons head tail type symbol? pair? eqv? equal? eval env-add
+                             cons head tail type symbol? pair? eqv? equal? eval2 env-add
                              nil? fix assoc foldl foldr map append apply eval2))
                           ($lambda/syntax-type #f)
                           ($lambda/syntax-type #t)
                           (lambda (env tree)
-                            (if-equal (eval env (head tree))
-                                      (eval env (head (tail tree)))
-                                      (eval env (head (tail (tail tree))))
-                                      (eval env (head (tail (tail (tail tree)))))))))
+                            (if-equal (eval2 env (head tree))
+                                      (eval2 env (head (tail tree)))
+                                      (eval2 env (head (tail (tail tree))))
+                                      (eval2 env (head (tail (tail (tail tree)))))))))
                        (lambda (syntax-type env tree)
                          (((lambda (params body)
                              (foldr
                                (lambda (param body)
                                  (lambda (env arg)
                                    (body (env-add env param arg syntax-type))))
+                               ; s/eval/eval2 for slower (but still passing) test runs!
                                (lambda (env) (eval env body))
                                params))
                            (head tree)
@@ -349,12 +350,6 @@
   (((denote bootstrap/builtins) env-empty) eval-applicative))
 
 (module+ test
-  (check-equal?
-    (run/builtins
-      '(($lambda$ (f) ($lambda (g) (f (cons f g) 9)))
-        ($lambda (e t) (cons (head e) t))
-        4))
-    '((g #f . 4) (cons f g) 9))
   (check-equal?
     (run/builtins
       '(($lambda$ (f) ($lambda (g) ((($lambda (x) x) f) (cons f g) 9)))
