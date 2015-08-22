@@ -18,7 +18,10 @@
 ;   automatically curried.  Procedures applied operatively will receive the
 ;   entire application tree as a single argument.
 ; - A different set of primitives are built in due to simpler core evaluation
-;   machinery.  Some former primitives can now be derived instead.
+;   machinery.  Some former primitives can now be derived instead.  That
+;   includes eval itself!  This should help enable static analysis and
+;   specialization techniques (partial evaluation, supercompilation, etc.) for
+;   reasoning and optimization.
 (provide
   run/builtins
   run/std
@@ -216,7 +219,8 @@
   ))
 (define senv-applicative-new (list->env (map (curry apply cons) specials)))
 
-; TODO: should be able to embed this within the term language
+; This is not logically necessary as a complete self-evaluator is embedded
+; (see eval2), but this does support significantly faster test runs.
 (def ((eval-applicative env) tree)
   assocs = (forl (cons sym (cons sval rval)) <- env
                  (list (cons sym sval) (cons sym rval)))
