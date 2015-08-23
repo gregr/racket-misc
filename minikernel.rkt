@@ -169,10 +169,13 @@
             (map (curry parse-applicative senv) tail)))))
     (_ (parse senv stx))))
 
+(define (build-quoted tree)
+  (match tree
+    (`(,hd . ,tl) (pair (build-quoted hd) (build-quoted tl)))
+    (_ (literal tree))))
 (define (parse-special-quote senv tail)
   (match tail
-    ('(()) nil)
-    ((list (? symbol? sym)) (literal sym))
+    ((list tree) (build-quoted tree))
     (_ (error (format "invalid quote: ~a" `(quote . ,tail))))))
 (define (parse-special-lambda senv tail)
   (match tail
@@ -243,15 +246,12 @@
                          ((lambda ($lambda $lambda$ $if-equal)
                             (($lambda$ '()
                               (cons
-                                (cons '$lambda (cons '$lambda$ (cons '$if-equal '())))
+                                '($lambda $lambda$ $if-equal)
                                 (cons
                                   (cons '$lambda
-                                    (cons
-                                      (cons 'cons (cons 'head (cons 'tail (cons 'type
-                                      (cons 'symbol? (cons 'pair? (cons 'eqv? (cons 'equal?
-                                      (cons 'eval (cons 'env-add (cons 'null? (cons 'fix (cons 'assoc
-                                      (cons 'foldl (cons 'foldr (cons 'map (cons 'append (cons 'apply
-                                      (cons 'eval2 '())))))))))))))))))))
+                                        (cons
+                                          '(cons head tail type symbol? pair? eqv? equal? eval env-add
+                                            null? fix assoc foldl foldr map append apply eval2)
                                           (cons prog-stx '())))
                                   '())))
                              $lambda $lambda$ $if-equal
