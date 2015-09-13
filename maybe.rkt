@@ -5,6 +5,7 @@
   (struct-out just)
   maybe-filter
   maybe-fold
+  maybe-fold1
   maybe-from
   maybe-iterate
   maybe-map
@@ -33,11 +34,12 @@
     ((nothing) nothing-fold)
     ((just x)  (just-fold x))))
 
+(define (maybe-fold1 just-fold val) (maybe-fold val just-fold val))
+
 (define (maybe-from default maybe-value)
   (maybe-fold default identity maybe-value))
 
-(define (maybe-map f val)
-  (maybe-fold val (compose1 just f) val))
+(define (maybe-map f val) (maybe-fold1 (compose1 just f) val))
 
 (define (maybe-filter ms) (map just-x (filter just? ms)))
 
