@@ -11,6 +11,7 @@
   zip-default
   zip*
   zip-with
+  zip-with*
   zip-with-default
   list-get
   list-index
@@ -128,6 +129,7 @@
 (define (zip-with-default default f xss)
   (if (empty? xss) default (apply map f xss)))
 (define (zip-with f xss) (zip-with-default '() f xss))
+(define (zip-with* f . xss) (zip-with f xss))
 (define (zip-default default xss) (zip-with-default default list xss))
 (define (zip xss) (zip-default '() xss))
 (define (zip* . xss) (zip xss))
