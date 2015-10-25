@@ -31,19 +31,19 @@
 
 (define-syntax method-table
   (syntax-rules ()
-    ((_ this (method-name method-params method-body ...) ...)
+    ((_ self (method-name method-params method-body ...) ...)
      (make-immutable-hash
        (list (cons 'method-name
-                   (lambda (this . method-params) method-body ...)) ...)))))
+                   (lambda (self . method-params) method-body ...)) ...)))))
 
 (define-syntax class
   (syntax-rules ()
-    ((_ this (constructor-params ...) (member-bindings ...) (prototypes ...)
+    ((_ self (constructor-params ...) (member-bindings ...) (prototypes ...)
         methods ...)
      (lambda (constructor-params ...)
        (let* (member-bindings ...)
          (object-new (list prototypes ...)
-                     (method-table this methods ...)))))))
+                     (method-table self methods ...)))))))
 
 (module+ test
   (require
@@ -51,19 +51,19 @@
     racket/set
     )
   (lets
-    c0 = (class this (one two) ((three (+ one two))
+    c0 = (class self (one two) ((three (+ one two))
                                 (four (+ three one)))
                 ()
                 (one () one)
                 (three+ args (apply + three args))
-                (five+ args (apply o@ this 'three+ two args)))
-    c1 = (class this (motd one) ((two (+ one one)))
+                (five+ args (apply o@ self 'three+ two args)))
+    c1 = (class self (motd one) ((two (+ one one)))
                 ((c0 one two))
                 (format (format-str . args)
-                  (format format-str motd (apply o@ this 'five+ args))))
+                  (format format-str motd (apply o@ self 'five+ args))))
     obj0 = (c1 "welcome!" 1)
     obj1 = (object-new `(,obj0)
-             (method-table this
+             (method-table self
                (three+ args (+ 100 (apply o@ obj0 'three+ args)))))
     (begin
       (check-equal?
