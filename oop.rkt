@@ -31,6 +31,7 @@
 
 (define-syntax method-table
   (syntax-rules ()
+    ((_) hash-empty)
     ((_ self (method-name method-params method-body ...) ...)
      (make-immutable-hash
        (list (cons 'method-name
@@ -66,6 +67,7 @@
              (method-table self
                (three+ args (+ 100 (apply o@ obj0 'three+ args)))))
     (begin
+      (check-equal? (method-table) hash-empty)
       (check-equal?
         (o@ obj0 'format "motd: ~a; result: ~a" 7 3)
         "motd: welcome!; result: 15")
