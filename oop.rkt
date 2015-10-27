@@ -3,9 +3,9 @@
   class
   method-table
   o@
+  object
   object-empty
   object-method-names
-  object-new
   object-understands?
   )
 
@@ -30,9 +30,9 @@
   (if (hash? prototype-methods)
     prototype-methods (dict-join hash-empty prototype-methods))
   (object-repr (dict-join prototype-methods methods) dm du?))
-(define (object-new prototypes (methods hash-empty)
-                    (default-method unknown-method)
-                    (default-understands? unknown-understands?))
+(define (object prototypes (methods hash-empty)
+                (default-method unknown-method)
+                (default-understands? unknown-understands?))
   (object-inherit (object-repr methods default-method default-understands?)
                   (foldl object-inherit object-empty prototypes)))
 (def (object-method-names (object-repr methods _ _)) (dict-keys methods))
@@ -57,8 +57,7 @@
         methods ...)
      (lambda (constructor-params ...)
        (let* (member-bindings ...)
-         (object-new (list prototypes ...)
-                     (method-table self methods ...)))))))
+         (object (list prototypes ...) (method-table self methods ...)))))))
 
 (module+ test
   (require
@@ -77,14 +76,14 @@
                 (format (format-str . args)
                   (format format-str motd (apply o@ self 'five+ args))))
     obj0 = (c1 "welcome!" 1)
-    obj1 = (object-new `(,obj0)
+    obj1 = (object `(,obj0)
              (method-table self
                (three+ args (+ 100 (apply o@ obj0 'three+ args)))))
     default = (lambda (method)
                 (lambda (self . args)
                   (format "received ~a with args: ~v" method args)))
-    obj2 = (object-new (list obj1) (method-table) default (const #t))
-    obj3 = (object-new (list obj2))
+    obj2 = (object (list obj1) (method-table) default (const #t))
+    obj3 = (object (list obj2))
     (begin
       (check-equal? (method-table) hash-empty)
       (check-equal?
