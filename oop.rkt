@@ -3,6 +3,7 @@
   class
   method-table
   o@
+  o@*
   object
   object-empty
   object-method-names
@@ -11,6 +12,7 @@
 
 (require
   "dict.rkt"
+  "list.rkt"
   "record.rkt"
   "sugar.rkt"
   racket/dict
@@ -38,10 +40,14 @@
 (def (object-method-names (object-repr methods _ _)) (dict-keys methods))
 (def (object-understands? (object-repr methods _ default-understands?) method)
   (or (default-understands? method) (dict-has-key? methods method)))
-(define (o@ obj method . args)
+(define (o@*0 obj method args)
   (lets (object-repr methods default-method _) = obj
         (apply (dict-ref methods method (thunk (default-method method)))
                obj args)))
+(define (o@ obj method . args) (o@*0 obj method args))
+(define (o@* obj method arg0 . args)
+  (lets (values initial final) = (list-init+last (list* arg0 args))
+        (o@*0 obj method (append initial final))))
 
 (define-syntax method-table
   (syntax-rules ()
@@ -93,7 +99,7 @@
         (o@ obj1 'format "~a; ~a" 1 2)
         "welcome!; 108")
       (check-equal?
-        (o@ obj2 'format "~a; ~a" 1 2)
+        (o@* obj2 'format "~a; ~a" '(1 2))
         "welcome!; 108")
       (check-equal?
         (o@ obj2 'format2 "~a; ~a" 1 2)
