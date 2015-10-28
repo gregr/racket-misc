@@ -7,6 +7,7 @@
   dict-diff
   dict-empty
   dict-get
+  dict-invert
   dict-join
   dict-subtract
   dict-subtract1
@@ -47,6 +48,15 @@
     (if found? (just result) (nothing))))
 (define (dict-update-if-has dct key update)
   (if (dict-has-key? dct key) (dict-update dct key update) dct))
+
+(define (dict-invert dct)
+  (make-immutable-hash
+    (map (match-lambda ((cons k v) (cons v k))) (dict->list dct))))
+
+(module+ test
+  (check-equal?
+    (dict-invert (vector 5 3 9 2))
+    (hash 5 0 3 1 9 2 2 3)))
 
 (define (dict-join d0 d1)
   (for/fold ((d0 d0))
