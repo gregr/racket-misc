@@ -59,11 +59,11 @@
 
 (define (ref+set datum)
   (cond
-    ((pair? datum) (values list-ref-key list-set-key))
+    ((pair? datum) (values pair-ref-key pair-set-key))
     ((dict? datum) (values dict-ref dict-set))))
 (define (datum-has-key? datum key)
   ((cond
-     ((pair? datum) list-has-key?)
+     ((pair? datum) pair-has-key?)
      ((dict? datum) dict-has-key?)
      (else (const #f))) datum key))
 

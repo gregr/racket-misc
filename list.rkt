@@ -26,14 +26,14 @@
   list-range-reverse
   list-remove
   list-set
-  list-has-key?
   list-ref-default
-  list-ref-key
-  list-set-key
   list-init+last
   list-init
   list-inits
   list-path
+  pair-has-key?
+  pair-ref-key
+  pair-set-key
   iterate
   non-empty-list?
   sum
@@ -71,17 +71,17 @@
   (let-values (((start end) (split-at xs idx)))
               (append start (cons val (cdr end)))))
 
-(define (list-has-key? _ key) (or (eq? key 'first) (eq? key 'rest)))
-(define (list-ref-key-failure-result key)
-  (error (format "list-ref-key: no value found for key\n  key: ~v" key)))
-(define (list-ref-key xs key (failure-result list-ref-key-failure-result))
+(define (pair-has-key? _ key) (or (eq? key 'first) (eq? key 'rest)))
+(define (pair-ref-key-failure-result key)
+  (error (format "pair-ref-key: no value found for key\n  key: ~v" key)))
+(define (pair-ref-key xs key (failure-result pair-ref-key-failure-result))
   (match key
     ('head (car xs))
     ('tail (cdr xs))
     ('first (first xs))
     ('rest (rest xs))
     (_ (if (procedure? failure-result) (failure-result key) failure-result))))
-(define/destruct (list-set-key (cons x xs) key val)
+(define/destruct (pair-set-key (cons x xs) key val)
   (match key
     ('head (cons val xs))
     ('tail (cons x val))
