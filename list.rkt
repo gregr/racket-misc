@@ -46,6 +46,7 @@
   racket/function
   racket/list
   racket/match
+  racket/set
   )
 
 (module+ test
@@ -71,11 +72,14 @@
   (let-values (((start end) (split-at xs idx)))
               (append start (cons val (cdr end)))))
 
-(define (pair-has-key? _ key) (or (eq? key 'first) (eq? key 'rest)))
+(define (pair-has-key? _ key)
+  (set-member? (set 0 1 'head 'tail 'first 'rest) key))
 (define (pair-ref-key-failure-result key)
   (error (format "pair-ref-key: no value found for key\n  key: ~v" key)))
 (define (pair-ref-key xs key (failure-result pair-ref-key-failure-result))
   (match key
+    (0 (car xs))
+    (1 (cdr xs))
     ('head (car xs))
     ('tail (cdr xs))
     ('first (first xs))
@@ -83,6 +87,8 @@
     (_ (if (procedure? failure-result) (failure-result key) failure-result))))
 (define/destruct (pair-set-key (cons x xs) key val)
   (match key
+    (0 (cons val xs))
+    (1 (cons x val))
     ('head (cons val xs))
     ('tail (cons x val))
     ('first (cons val xs))
@@ -94,7 +100,7 @@
 (define (list-init lst) (let-values (((init _) (list-init+last lst))) init))
 (define (list-inits lst) (reverse (iterate list-init lst (length lst))))
 
-(define (list-path index . path) (append (make-list index 'rest) path))
+(define (list-path index . path) (append (make-list index 1) path))
 
 (module+ test
   (check-equal? (list-inits '(a b c d))
