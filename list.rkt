@@ -25,7 +25,6 @@
   list-range-replace
   list-range-reverse
   list-remove
-  list-set
   list-ref-default
   list-init+last
   list-init
@@ -47,6 +46,7 @@
   racket/list
   racket/match
   racket/set
+  (for-syntax racket/base)
   )
 
 (module+ test
@@ -68,9 +68,18 @@
     -1)
   )
 
-(define (list-set xs idx val)
-  (let-values (((start end) (split-at xs idx)))
-              (append start (cons val (cdr end)))))
+(define-syntax (version<? stx)
+  (syntax-case stx ()
+    ((_ version-str true false)
+     (if (string<? (version) (syntax-e #'version-str))
+       #'true #'false))))
+
+(version<? "6.3"
+  (begin (provide list-set)
+         (define (list-set xs idx val)
+           (let-values (((start end) (split-at xs idx)))
+                       (append start (cons val (cdr end))))))
+  (void))
 
 (define (pair-has-key? _ key)
   (set-member? (set 0 1 'head 'tail 'first 'rest) key))
