@@ -5,6 +5,25 @@
   runc*
   runc-depth
   runc*-depth
+  domain->disjfd
+  !=fd
+  <=fd
+  +fd
+  *fd
+  -fd
+  <fd
+  all-difffd
+  betweenfd
+  domainfd
+  infd
+  not-betweenfd
+  not-infd
+  booleano
+  charo
+  numbero
+  stringo
+  symbolo
+  typeo
   )
 
 (require
