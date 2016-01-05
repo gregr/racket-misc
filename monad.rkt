@@ -13,6 +13,8 @@
   let/with-monad
   begin/monad
   begin/with-monad
+  for/fold/monad
+  for/list/monad
   monad-map
   monad-foldl
   )
@@ -22,6 +24,7 @@
   "match.rkt"
   "record.rkt"
   racket/match
+  racket/sequence
   )
 
 (module+ test
@@ -116,3 +119,26 @@
   (check-equal?
     (monad-map ident-monad (compose1 ident add1) '(1 2 3))
     (ident '(2 3 4))))
+
+(define-syntax (for/fold/monad stx)
+  (syntax-case stx ()
+    ((_ monad acc acc-init ((seq seq-src) ...) body ...)
+     (with-syntax (((seqname ...) (generate-temporaries #'(seq-src ...))))
+       #'(begin/with-monad monad
+           (match-let loop ((acc-lifted (pure acc-init))
+                            (seqname (sequence->list seq-src)) ...)
+             (if (null? (filter null? (list seqname ...)))
+               (begin/with-monad monad
+                 acc <- acc-lifted
+                 (list seq ...) = (list (car seqname) ...)
+                 (loop (begin/monad body ...) (cdr seqname) ...))
+               acc-lifted)))))))
+
+(define-syntax for/list/monad
+  (syntax-rules ()
+    ((_ monad seqs body ... final)
+     (begin/with-monad monad
+       result <- (for/fold/monad monad acc '() seqs body ...
+                                 result <- final
+                                 (pure (list* result acc)))
+       (pure (reverse result))))))
