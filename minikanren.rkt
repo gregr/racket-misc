@@ -346,6 +346,27 @@
         ((1 2 3 4) (5))
         ((1 2 3 4 5) ()))))
 
+  (define (evalo expr env val)
+    (matche `(,expr ,val)
+      (`((cons ,e1 ,e2) (,v1 . ,v2))
+        (evalo e1 env v1)
+        (evalo e2 env v2))
+      ; poor man's numbero for the test example
+      ('(3 3))
+      ('(4 4))))
+
+  (check-true
+    (= 1 (length (run 1 (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
+  (check-true
+    (= 1 (length (run 1 (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
+
+  (check-equal?
+    (run 1 (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
+    '())
+  (check-equal?
+    (run 1 (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
+    '())
+
   ; slow test (faster without compression)
   ;(lets
     ;;   S E N D
