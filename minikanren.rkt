@@ -42,17 +42,17 @@
 
 (define-syntax conj*
   (syntax-rules ()
-    ((_) muk-unit)
+    ((_) (muk-succeed))
     ((_ g0) g0)
     ((_ g0 gs ...) (conj g0 (conj* gs ...)))))
 (define-syntax conj-seq*
   (syntax-rules ()
-    ((_) muk-unit)
+    ((_) (muk-succeed))
     ((_ g0) g0)
     ((_ g0 gs ...) (conj-seq g0 (conj-seq* gs ...)))))
 (define-syntax disj*
   (syntax-rules ()
-    ((_) (const muk-mzero))
+    ((_) (muk-fail))
     ((_ g0) g0)
     ((_ g0 gs ...) (disj g0 (disj* gs ...)))))
 (define-syntax disj+-Zzz

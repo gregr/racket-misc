@@ -56,6 +56,7 @@
     (forl (list st comp) <- (in-list results)
           (list st ((eval-goal-cont cont) comp))))
   (match value-goal
+    ((muk-failure _) (const muk-mzero))
     ((muk-success value) (cont value))
     ((muk-conj-seq _ c0 c1) (conj-seq c0 ((eval-goal-cont cont) c1)))
     ((muk-conj-conc _ c0 c1) (conj c0 ((eval-goal-cont cont) c1)))

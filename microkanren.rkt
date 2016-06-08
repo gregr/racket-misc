@@ -12,6 +12,8 @@
   muk-constraint
   muk-cost-goal
   muk-evaluator
+  muk-fail
+  muk-failure
   muk-goal
   muk-mzero
   muk-pause
@@ -23,6 +25,7 @@
   muk-state-empty/constraints
   muk-sub-get
   muk-sub-new-bindings
+  muk-succeed
   muk-success
   muk-take
   muk-unification
@@ -89,6 +92,7 @@
   (values (muk-state '() sub cxs) new-bindings))
 
 (records muk-computation
+  (muk-failure details)
   (muk-success result)
   (muk-unification e0 e1)
   (muk-constraint name args)
@@ -107,6 +111,7 @@
   (if c0 (if c1 (min c0 c1) c0) c1))
 (define (muk-computation-cost comp)
   (match comp
+    ((muk-failure _) muk-cost-cheap)
     ((muk-success _) muk-cost-unknown)
     ((muk-unification _ _) muk-cost-unification)
     ((muk-constraint _ _) muk-cost-constraint)
@@ -118,6 +123,8 @@
 (define (muk-comps->cost c0 c1)
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
 
+(define (muk-fail (details (void))) (muk-failure details))
+(define (muk-succeed (result (void))) (muk-success result))
 (define (muk-goal st comp) (list (list st comp)))
 (define muk-mzero '())
 (define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
@@ -175,6 +182,7 @@
   (define (muk-step-known st comp cost-max)
     (define (cost? cost) (and cost (<= cost cost-max)))
     (match comp
+      ((muk-failure _) muk-mzero)
       ((muk-conj-conc (? cost?) c0 c1)
        (muk-step-conj-conc muk-step-known cost-max st c0 c1))
       ((muk-conj-seq (? cost?) c0 c1)
@@ -189,6 +197,7 @@
     (define next-depth (- depth 1))
     (if (= depth 0) (muk-goal st comp)
       (match comp
+        ((muk-failure _) muk-mzero)
         ((muk-success _) (muk-goal st comp))
         ((muk-conj-conc cost c0 c1)
          (muk-step-conj-conc muk-step depth st c0 c1))
