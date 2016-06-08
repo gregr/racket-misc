@@ -7,10 +7,12 @@
   conj
   conj-seq
   disj
+  muk-choices
   muk-conj-conc
   muk-conj-seq
   muk-constraint
   muk-cost-goal
+  muk-disj
   muk-evaluator
   muk-fail
   muk-failure
@@ -98,6 +100,7 @@
   (muk-constraint name args)
   (muk-conj-conc cost c0 c1)
   (muk-conj-seq cost c0 c1)
+  (muk-disj c0 c1)
   (muk-cost-goal cost goal)
   (muk-pause paused)
   )
@@ -117,6 +120,7 @@
     ((muk-constraint _ _) muk-cost-constraint)
     ((muk-conj-conc cost _ _) cost)
     ((muk-conj-seq cost _ _) cost)
+    ((muk-disj _ _) muk-cost-unknown)
     ((muk-cost-goal cost _) cost)
     ((muk-pause _) muk-cost-unknown)
     (_ muk-cost-unknown)))
@@ -126,6 +130,7 @@
 (define (muk-fail (details (void))) (muk-failure details))
 (define (muk-succeed (result (void))) (muk-success result))
 (define (muk-goal st comp) (list (list st comp)))
+(define (muk-choices st c0 c1) (list (list st c0) (list st c1)))
 (define muk-mzero '())
 (define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
 
@@ -142,7 +147,11 @@
     ((muk-failure _) c0)
     ((muk-success _) c1)
     (_ (muk-conj-seq (muk-computation-cost c0) c0 c1))))
-(define ((disj g0 g1) st) (list (list st g0) (list st g1)))
+(define (disj c0 c1)
+  (match* (c0 c1)
+    (((muk-failure _) _) c1)
+    ((_ (muk-failure _)) c0)
+    ((_ _) (muk-disj c0 c1))))
 
 (define (call/var f (name '?)) (f (muk-var (gensym name))))
 (define-syntax let/vars
@@ -210,6 +219,8 @@
          (muk-step-conj-conc muk-step depth st c0 c1))
         ((muk-conj-seq cost c0 c1)
          (muk-step-conj-seq muk-step depth st c0 c1))
+        ((muk-disj c0 c1)
+         (muk-step-results muk-step next-depth (muk-choices st c0 c1)))
         ((muk-pause paused) (muk-goal st paused))
         (_ (muk-step-results muk-step next-depth (comp st))))))
 
