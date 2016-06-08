@@ -38,6 +38,7 @@
   muk-unit
   (struct-out muk-var)
   muk-var->symbol
+  muk-Zzz
   Zzz
   )
 
@@ -103,11 +104,13 @@
   (muk-disj c0 c1)
   (muk-cost-goal cost goal)
   (muk-pause paused)
+  (muk-Zzz thunk)
   )
 
 (define muk-cost-cheap 0)
 (define muk-cost-expensive #f)
 (define muk-cost-unknown muk-cost-expensive)
+(define muk-cost-Zzz muk-cost-cheap)
 (define muk-cost-unification muk-cost-cheap)
 (define muk-cost-constraint muk-cost-cheap)
 (define (muk-cost-min c0 c1)
@@ -123,6 +126,7 @@
     ((muk-disj _ _) muk-cost-unknown)
     ((muk-cost-goal cost _) cost)
     ((muk-pause _) muk-cost-unknown)
+    ((muk-Zzz _) muk-cost-Zzz)
     (_ muk-cost-unknown)))
 (define (muk-comps->cost c0 c1)
   (muk-cost-min (muk-computation-cost c0) (muk-computation-cost c1)))
@@ -162,7 +166,7 @@
      (call/var (lambda (qvar) (let/vars (qvars ...) body ...)) 'qvar))))
 
 (define-syntax Zzz
-  (syntax-rules () ((_ goal) (lambda (st) (muk-goal st goal)))))
+  (syntax-rules () ((_ goal) (muk-Zzz (thunk goal)))))
 
 (define (muk-force ss) (if (procedure? ss) (muk-force (ss)) ss))
 
@@ -207,6 +211,7 @@
       ((muk-constraint name args) (muk-step-constraint st name args))
       ((muk-cost-goal (? cost?) goal)
        (muk-step-results muk-step-known cost-max (goal st)))
+      ((muk-Zzz thunk) (muk-step-known st (thunk) cost-max))
       (_ (muk-goal st comp))))
 
   (define (muk-step-depth st comp depth)
@@ -222,6 +227,7 @@
         ((muk-disj c0 c1)
          (muk-step-results muk-step next-depth (muk-choices st c0 c1)))
         ((muk-pause paused) (muk-goal st paused))
+        ((muk-Zzz thunk) (muk-step st (thunk) depth))
         (_ (muk-step-results muk-step next-depth (comp st))))))
 
   (define (muk-step st comp depth)

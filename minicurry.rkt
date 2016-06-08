@@ -65,6 +65,7 @@
     ((muk-cost-goal cost goal)
      (muk-cost-goal cost (lambda (st) (absorb-results (goal st)))))
     ((muk-disj c0 c1) (lambda (st) (absorb-results (muk-choices st c0 c1))))
+    ((muk-Zzz thunk) ((eval-goal-cont cont) (thunk)))
     (_ (lambda (st) (absorb-results (value-goal st))))))
 
 (define (eval-logic-var value)
