@@ -130,8 +130,18 @@
 (define (muk-unit st (result (void))) (muk-goal st (muk-success result)))
 
 (define == muk-unification)
-(define (conj c0 c1) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))
-(define (conj-seq c0 c1) (muk-conj-seq (muk-computation-cost c0) c0 c1))
+(define (conj c0 c1)
+  (match* (c0 c1)
+    (((muk-failure _) _) c0)
+    ((_ (muk-failure _)) c1)
+    (((muk-success _) _) c1)
+    ((_ (muk-success (? void?))) c0)
+    ((_ _) (muk-conj-conc (muk-comps->cost c0 c1) c0 c1))))
+(define (conj-seq c0 c1)
+  (match c0
+    ((muk-failure _) c0)
+    ((muk-success _) c1)
+    (_ (muk-conj-seq (muk-computation-cost c0) c0 c1))))
 (define ((disj g0 g1) st) (list (list st g0) (list st g1)))
 
 (define (call/var f (name '?)) (f (muk-var (gensym name))))
@@ -167,10 +177,7 @@
                 (r1 (in-list (cont (first r0) c1 arg))))
                (lets (list _ c0) = r0
                      (list st c1) = r1
-                     (list st (match* (c0 c1)
-                                (((muk-success _) _) c1)
-                                ((_ (muk-success (? void?))) c0)
-                                ((_ _) (conj c0 c1)))))))
+                     (list st (conj c0 c1)))))
   (define (muk-step-conj-seq cont arg st c0 c1)
     (append* (forl (list st c0) <- (in-list (cont st c0 arg))
                    (match c0
