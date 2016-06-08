@@ -420,6 +420,22 @@
               ;(,(build-num p) ,(build-num r)))))
     ;(check-equal? actual expected))
 
+  ; too slow to find the second answer
+  ;(print (run-depth 2 1 (b q r)
+    ;(logo '(0 0 1 0 0 0 1) b q r)
+    ;(>1o q)))
+
+      ;246 collections
+      ;3.404931000s elapsed cpu time, including 0.274265000s collecting
+      ;3.407526000s elapsed real time, including 0.274941000s collecting
+      ;2 071 928 368 bytes allocated, including 2059553856 bytes reclaimed
+  ;((() (_0 _1 . _2) (0 0 1 0 0 0 1)) ((1) (_0 _1 . _2) (1 1 0 0 0 0 1))
+  ;((0 1) (0 1 1) (0 0 1))
+    ;((1 1) (1 1) (1 0 0 1 0 1)) ((0 0 1) (1 1) (0 0 1))
+    ;((0 0 0 1) (0 1) (0 0 1)) ((1 0 1) (0 1) (1 1 0 1 0 1))
+    ;((0 1 1) (0 1) (0 0 0 0 0 1)) ((1 1 1) (0 1) (1 1 0 0 1)))
+
+
   ; missing dependencies for these
 
   ;(define number-primo
