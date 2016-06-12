@@ -15,6 +15,7 @@
   run*
   run-depth
   run*-depth
+  run-dls
   )
 
 (require
@@ -95,6 +96,15 @@
   (syntax-rules () ((_ n body ...) (run-depth n 1 body ...))))
 (define-syntax run*
   (syntax-rules () ((_ body ...) (run #f body ...))))
+
+(define run-config-default-dls
+  (run-config
+    (curry (muk-evaluator-dls muk-unify muk-add-constraint-default
+                              muk-constrain-default) state-empty)
+    (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
+(define-syntax run-dls
+  (syntax-rules ()
+    ((_ n depth body ...) (run/config run-config-default-dls n depth body ...))))
 
 (define-for-syntax (pattern->identifiers pat)
   (define (unquote-pats stx)

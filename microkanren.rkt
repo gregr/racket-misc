@@ -14,6 +14,7 @@
   muk-cost-goal
   muk-disj
   muk-evaluator
+  muk-evaluator-dls
   muk-fail
   muk-failure
   muk-goal
@@ -175,6 +176,87 @@
     (match (muk-force ss)
       ('() '())
       ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
+
+(define (muk-evaluator-dls unify add-constraint constrain)
+  (define (muk-step-unification st e0 e1)
+    (match (unify st e0 e1)
+      ((nothing) muk-mzero)
+      ((just st) (muk-unit st))))
+  (define (muk-step-constraint st name args)
+    (match (add-constraint st name args)
+      (#f muk-mzero)
+      (st (muk-unit st))))
+  (define (muk-step-conj-conc cont arg st c0 c1)
+    (for*/list ((r0 (in-list (cont st c0 arg)))
+                (r1 (in-list (cont (first r0) c1 arg))))
+               (lets (list _ c0) = r0
+                     (list st c1) = r1
+                     (list st (conj c0 c1)))))
+  (define (muk-step-conj-seq cont arg st c0 c1)
+    (append* (forl (list st c0) <- (in-list (cont st c0 arg))
+                   (match c0
+                     ((muk-success _) (cont st c1 arg))
+                     (_ (muk-goal st (conj-seq c0 c1)))))))
+  (define (muk-step-results cont arg results)
+    (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
+
+  (define (muk-step-known st comp cost-max)
+    (define (cost? cost) (and cost (<= cost cost-max)))
+    (match comp
+      ((muk-failure _) muk-mzero)
+      ((muk-conj-conc (? cost?) c0 c1)
+       (muk-step-conj-conc muk-step-known cost-max st c0 c1))
+      ((muk-conj-seq (? cost?) c0 c1)
+       (muk-step-conj-seq muk-step-known cost-max st c0 c1))
+      ((muk-unification e0 e1) (muk-step-unification st e0 e1))
+      ((muk-constraint name args) (muk-step-constraint st name args))
+      ((muk-cost-goal (? cost?) goal)
+       (muk-step-results muk-step-known cost-max (goal st)))
+      (_ (muk-goal st comp))))
+
+  (define (muk-step-depth-conj-conc depth st c0 c1)
+    (for*/list ((r0 (in-list (muk-step-depth st c0 depth)))
+                (r1 (in-list (muk-step-depth (first r0) c1 depth))))
+               r1))
+  (define (muk-step-depth-conj-seq depth st c0 c1)
+    (append* (forl (list st c0) <- (in-list (muk-step-depth st c0 depth))
+                   (muk-step-depth st c1 depth))))
+
+  (define (muk-step-depth st comp depth)
+    (define next-depth (- depth 1))
+    (if (= depth 0) muk-mzero
+      (match comp
+        ((muk-failure _) muk-mzero)
+        ((muk-success _) (muk-goal st comp))
+        ((muk-conj-conc cost c0 c1)
+         (muk-step-depth-conj-conc depth st c0 c1))
+        ((muk-conj-seq cost c0 c1)
+         (muk-step-depth-conj-seq depth st c0 c1))
+        ((muk-disj c0 c1)
+         (muk-step-results muk-step depth (muk-choices st c0 c1)))
+        ((muk-pause paused) (muk-goal st paused))
+        ((muk-Zzz thunk) (muk-step st (thunk) next-depth))
+        (_ (muk-step-results muk-step next-depth (comp st))))))
+
+  (define (muk-step st comp depth)
+    (let ((cost (muk-computation-cost comp)))
+      (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
+        (append* (forl st <- (constrain st)
+                       (muk-step-depth st comp depth))))))
+
+  (def (muk-eval-loop pending depth)
+       (values finished pending) =
+       (forf finished = '() unfinished = '()
+             (list st comp) <- (in-list (muk-step-results muk-step depth pending))
+             (match comp
+               ((muk-success _) (values (list* st finished) unfinished))
+               (_ (values finished (list* (list st comp) unfinished)))))
+       finished)
+
+  (define (muk-eval st comp (depth 1))
+    (muk-eval-loop (muk-goal st comp) depth))
+
+  muk-eval)
 
 (define (muk-evaluator unify add-constraint constrain)
   (define (muk-step-unification st e0 e1)
