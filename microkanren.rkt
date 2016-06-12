@@ -39,6 +39,7 @@
   muk-unit
   (struct-out muk-var)
   muk-var->symbol
+  muk-var->symbol-trans
   muk-Zzz
   Zzz
   )
@@ -383,26 +384,35 @@
 (define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
+(define (muk-var->symbol-trans mv)
+  (values muk-var->symbol-trans (muk-var->symbol mv)))
 (def (muk-reify-term st term vtrans)
-  (values st term) = (muk-walk st term)
-  (match term
-    ((muk-var _) (vtrans term))
-    ((cons hd tl) (cons (muk-reify-term st hd vtrans)
-                        (muk-reify-term st tl vtrans)))
-    ((? no-split?) term)
-    (_ (match (muk-split (list term))
-         ((nothing) term)
-         ((just (list (repr type components)))
-          (muk-rebuild
-            (repr type (map (fn (el) (muk-reify-term st el vtrans))
-                            components))))))))
+  (values _ result) =
+  (letn loop (values st term vtrans) = (values st term vtrans)
+    (values st term) = (muk-walk st term)
+    (match term
+      ((muk-var _) (vtrans term))
+      ((cons hd tl) (lets (values vtrans rhd) = (loop st hd vtrans)
+                          (values vtrans rtl) = (loop st tl vtrans)
+                          (values vtrans (cons rhd rtl))))
+      ((? no-split?) (values vtrans term))
+      (_ (match (muk-split (list term))
+          ((nothing) (values vtrans term))
+          ((just (list (repr type components)))
+           (lets (values vtrans rels) =
+                 (forf vtrans = vtrans rels = '()
+                       el <- components
+                       (values vtrans rel) = (loop st el vtrans)
+                       (values vtrans (list* rel rels)))
+                 (values vtrans (muk-rebuild (repr type (reverse rels))))))))))
+  result)
 
 (module+ test
   (define eval-simple
     (muk-evaluator muk-unify muk-add-constraint-default muk-constrain-default))
   (define (run comp) (eval-simple (muk-state-empty/constraints (void)) comp))
   (define (reify-states vr states)
-    (forl st <- states (muk-reify-term st vr muk-var->symbol)))
+    (forl st <- states (muk-reify-term st vr muk-var->symbol-trans)))
   (check-equal?
     (muk-take #f (run (== '#(a b) '#(c))))
     '())

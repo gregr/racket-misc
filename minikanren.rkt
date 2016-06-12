@@ -75,7 +75,7 @@
   (run-config
     (curry (muk-evaluator muk-unify muk-add-constraint-default
                           muk-constrain-default) state-empty)
-    (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
+    (lambda (vr st) (muk-reify-term st vr muk-var->symbol-trans))))
 
 (define-syntax run/config
   (syntax-rules ()
@@ -101,7 +101,7 @@
   (run-config
     (curry (muk-evaluator-dls muk-unify muk-add-constraint-default
                               muk-constrain-default) state-empty)
-    (lambda (vr st) (muk-reify-term st vr muk-var->symbol))))
+    (lambda (vr st) (muk-reify-term st vr muk-var->symbol-trans))))
 (define-syntax run-dls
   (syntax-rules ()
     ((_ n depth body ...) (run/config run-config-default-dls n depth body ...))))
