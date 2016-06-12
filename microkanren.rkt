@@ -110,7 +110,7 @@
 (define muk-cost-cheap 0)
 (define muk-cost-expensive #f)
 (define muk-cost-unknown muk-cost-expensive)
-(define muk-cost-Zzz muk-cost-cheap)
+(define muk-cost-Zzz muk-cost-expensive)
 (define muk-cost-unification muk-cost-cheap)
 (define muk-cost-constraint muk-cost-cheap)
 (define (muk-cost-min c0 c1)
@@ -211,7 +211,6 @@
       ((muk-constraint name args) (muk-step-constraint st name args))
       ((muk-cost-goal (? cost?) goal)
        (muk-step-results muk-step-known cost-max (goal st)))
-      ((muk-Zzz thunk) (muk-step-known st (thunk) cost-max))
       (_ (muk-goal st comp))))
 
   (define (muk-step-depth st comp depth)
@@ -225,9 +224,9 @@
         ((muk-conj-seq cost c0 c1)
          (muk-step-conj-seq muk-step depth st c0 c1))
         ((muk-disj c0 c1)
-         (muk-step-results muk-step next-depth (muk-choices st c0 c1)))
+         (muk-step-results muk-step depth (muk-choices st c0 c1)))
         ((muk-pause paused) (muk-goal st paused))
-        ((muk-Zzz thunk) (muk-step st (thunk) depth))
+        ((muk-Zzz thunk) (muk-step st (thunk) next-depth))
         (_ (muk-step-results muk-step next-depth (comp st))))))
 
   (define (muk-step st comp depth)
