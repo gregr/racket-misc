@@ -38,6 +38,8 @@
   muk-constrain-default
   muk-unit
   (struct-out muk-var)
+  muk-var->indexed-symbol-trans
+  muk-var->indexed-symbol-trans-default
   muk-var->symbol
   muk-var->symbol-trans
   muk-Zzz
@@ -386,6 +388,15 @@
   (string->symbol (string-append "_." (symbol->string name))))
 (define (muk-var->symbol-trans mv)
   (values muk-var->symbol-trans (muk-var->symbol mv)))
+(def ((muk-var->indexed-symbol-trans n->i index) (muk-var name))
+  (values n->i index ni) =
+  (match (hash-get n->i name)
+    ((nothing) (values (hash-set n->i name index) (+ 1 index) index))
+    ((just ni) (values n->i index ni)))
+  (values (muk-var->indexed-symbol-trans n->i index)
+          (string->symbol (string-append "_." (number->string ni)))))
+(define muk-var->indexed-symbol-trans-default
+  (muk-var->indexed-symbol-trans hash-empty 0))
 (def (muk-reify-term st term vtrans)
   (values _ result) =
   (letn loop (values st term vtrans) = (values st term vtrans)
