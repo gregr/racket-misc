@@ -328,6 +328,7 @@
          (if exact?
            (begin
              (check-equal? (set-subtract expected-set result-set) (set))
+             (check-equal? (set-subtract result-set expected-set) (set))
              (check-equal? result-set expected-set))
            (check-equal? overlap expected-set))))))
   (define-syntax mk-test
@@ -343,14 +344,15 @@
     (run* (n m) (*o n m (build-num 6)))
     '(((1) (0 1 1)) ((0 1 1) (1)) ((0 1) (1 1)) ((1 1) (0 1))))
 
-  ; seems to work, but reifier names unbound variables differently
-  ;(mk-test "sums"
-    ;(run 5 (x y z) (pluso x y z))
-    ;'((_.0 () _.0)
-      ;(() (_.0 . _.1) (_.0 . _.1))
-      ;((1) (1) (0 1))
-      ;((1) (0 _.0 . _.1) (1 _.0 . _.1))
-      ;((1) (1 1) (0 0 1))))
+  (mk-test "sums"
+    (run 5 (x y z) (pluso x y z))
+    '((_.0 () _.0)
+      (() (_.0 . _.1) (_.0 . _.1))
+      ((1) (1) (0 1))
+      ((1) (0 _.0 . _.1) (1 _.0 . _.1))
+      ; other implementation finds ((1) (1 1) (0 0 1)) first
+      ((0 1) (0 1) (0 0 1))
+      ))
 
   (mk-test "factors"
     (run* q
