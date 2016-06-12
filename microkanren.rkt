@@ -197,8 +197,6 @@
                    (match c0
                      ((muk-success _) (cont st c1 arg))
                      (_ (muk-goal st (conj-seq c0 c1)))))))
-  (define (muk-step-results cont arg results)
-    (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
 
   (define (muk-step-known st comp cost-max)
     (define (cost? cost) (and cost (<= cost cost-max)))
@@ -214,13 +212,18 @@
        (muk-step-results muk-step-known cost-max (goal st)))
       (_ (muk-goal st comp))))
 
-  (define (muk-step-depth-conj-conc depth st c0 c1)
-    (for*/list ((r0 (in-list (muk-step-depth st c0 depth)))
-                (r1 (in-list (muk-step-depth (first r0) c1 depth))))
-               r1))
-  (define (muk-step-depth-conj-seq depth st c0 c1)
-    (append* (forl (list st c0) <- (in-list (muk-step-depth st c0 depth))
-                   (muk-step-depth st c1 depth))))
+  (define (muk-mplus ss1 ss2)
+    (match ss1
+      ('() ss2)
+      ((? procedure?) (thunk (muk-mplus (ss1) ss2)))
+      ((cons result ss) (list* result (muk-mplus ss ss2)))))
+  (define (muk-bind-depth depth ss comp)
+    (match ss
+      ('() muk-mzero)
+      ((? procedure?)
+       (thunk (muk-bind-depth depth (ss) comp)))
+      ((cons (list st _) ss) (muk-mplus (muk-step-depth st comp depth)
+                                        (muk-bind-depth depth ss comp)))))
 
   (define (muk-step-depth st comp depth)
     (define next-depth (- depth 1))
@@ -229,32 +232,32 @@
         ((muk-failure _) muk-mzero)
         ((muk-success _) (muk-goal st comp))
         ((muk-conj-conc cost c0 c1)
-         (muk-step-depth-conj-conc depth st c0 c1))
+         (muk-bind-depth depth (muk-step-depth st c0 depth) c1))
         ((muk-conj-seq cost c0 c1)
-         (muk-step-depth-conj-seq depth st c0 c1))
+         (muk-bind-depth depth (muk-step-depth st c0 depth) c1))
         ((muk-disj c0 c1)
-         (muk-step-results muk-step depth (muk-choices st c0 c1)))
+         (muk-mplus (muk-step st c0 depth) (thunk (muk-step st c1 depth))))
         ((muk-pause paused) (muk-goal st paused))
-        ((muk-Zzz thunk) (muk-step st (thunk) next-depth))
-        (_ (muk-step-results muk-step next-depth (comp st))))))
+        ((muk-Zzz thunk) (muk-step-depth st (thunk) next-depth))
+        (_ (comp st)))))
 
+  (define (muk-step-results cont arg results)
+    (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
   (define (muk-step st comp depth)
     (let ((cost (muk-computation-cost comp)))
-      (if cost (muk-step-results muk-step depth (muk-step-known st comp cost))
-        (append* (forl st <- (constrain st)
-                       (muk-step-depth st comp depth))))))
+      (if cost
+        (muk-step-results muk-step depth (muk-step-known st comp cost))
+        (muk-bind-depth depth
+                        (forl st <- (constrain st) (list st (muk-succeed)))
+                        comp))))
 
-  (def (muk-eval-loop pending depth)
-       (values finished pending) =
-       (forf finished = '() unfinished = '()
-             (list st comp) <- (in-list (muk-step-results muk-step depth pending))
-             (match comp
-               ((muk-success _) (values (list* st finished) unfinished))
-               (_ (values finished (list* (list st comp) unfinished)))))
-       finished)
-
+  (define (muk-strip results)
+    (match results
+      ('() '())
+      ((? procedure?) (thunk (muk-strip (results))))
+      ((cons (list st _) rs) (list* st (muk-strip rs)))))
   (define (muk-eval st comp (depth 1))
-    (muk-eval-loop (muk-goal st comp) depth))
+    (muk-strip (muk-step st comp depth)))
 
   muk-eval)
 
