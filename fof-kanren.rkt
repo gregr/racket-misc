@@ -205,7 +205,7 @@
 
 (define run-config-fof
   (run-config (curry fof-eval muk-fof-state-empty)
-              (curry fof-reify muk-var->symbol)))
+              (curry fof-reify muk-var->indexed-symbol-trans-default)))
 
 (define-syntax runfof-depth
   (syntax-rules ()
