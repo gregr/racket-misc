@@ -54,6 +54,7 @@
   "record.rkt"
   "repr.rkt"
   "sugar.rkt"
+  racket/control
   racket/function
   racket/list
   (except-in racket/match ==)
@@ -180,7 +181,9 @@
       ('() '())
       ((cons st ss) (list* st (muk-take (and n (- n 1)) ss))))))
 
+(record muk-incomplete resume state goal)
 (define (muk-evaluator-dls unify add-constraint constrain)
+  (define ptag (make-continuation-prompt-tag))
   (define (muk-step-unification st e0 e1)
     (match (unify st e0 e1)
       ((nothing) muk-mzero)
@@ -223,21 +226,37 @@
   (define (muk-bind-depth depth ss comp)
     (match ss
       ('() muk-mzero)
-      ((? procedure?)
-       (thunk (muk-bind-depth depth (ss) comp)))
+      ((? procedure?) (thunk (muk-bind-depth/incomplete depth ss comp)))
       ((cons (list st _) ss) (muk-mplus (muk-step-depth st comp depth)
                                         (muk-bind-depth depth ss comp)))))
+  (define (muk-bind-depth/incomplete depth th comp)
+    (let loop ((result (reset-at ptag (th))))
+      (match result
+        ((muk-incomplete k st _)
+         (let loop2 ((scout (muk-step-depth st comp depth)))
+           (match scout
+             ('() (loop (k muk-mzero)))
+             ((? procedure?) (loop2 (scout)))
+             ((cons (list st comp) ss)
+              (begin (raise-incomplete st comp) (loop2 ss))))))
+        (ss (muk-bind-depth depth ss comp)))))
+  (define incomplete?! (box #f))
+  (define (raise-incomplete st comp)
+    (if (unbox incomplete?!) muk-mzero
+      (shift-at ptag k (muk-incomplete k st comp))))
 
   (define (muk-step-depth st comp depth)
     (define next-depth (- depth 1))
-    (if (= depth 0) muk-mzero
+    (if (= depth 0) (raise-incomplete st comp)
       (match comp
         ((muk-failure _) muk-mzero)
         ((muk-success _) (muk-goal st comp))
         ((muk-conj-conc cost c0 c1)
-         (muk-bind-depth depth (muk-step-depth st c0 depth) c1))
+         (muk-bind-depth/incomplete
+           depth (thunk (muk-step-depth st c0 depth)) c1))
         ((muk-conj-seq cost c0 c1)
-         (muk-bind-depth depth (muk-step-depth st c0 depth) c1))
+         (muk-bind-depth/incomplete
+           depth (thunk (muk-step-depth st c0 depth)) c1))
         ((muk-disj c0 c1)
          (muk-mplus (muk-step st c0 depth) (thunk (muk-step st c1 depth))))
         ((muk-pause paused) (muk-goal st paused))
@@ -254,13 +273,38 @@
                         (forl st <- (constrain st) (list st (muk-succeed)))
                         comp))))
 
-  (define (muk-strip results)
+  (define (muk-strip n results)
     (match results
       ('() '())
-      ((? procedure?) (thunk (muk-strip (results))))
+      ((? procedure?)
+       (thunk (muk-strip (results))))
       ((cons (list st _) rs) (list* st (muk-strip rs)))))
-  (define (muk-eval st comp (depth 1))
-    (muk-strip (muk-step st comp depth)))
+  (define (muk-eval st comp n (depth-min 1) (depth-inc add1) (depth-max #f))
+    (let loop0 ((depth depth-min))
+      (set-box! incomplete?! #f)
+      (match (reset-at ptag
+        (let loop1 ((n n) (results (thunk (muk-step st comp depth))))
+          (if (= n 0) '()
+            (match results
+              ('() (if n (shift-at ptag k (muk-incomplete k (void) (void)))
+                    muk-mzero))
+              ((? procedure?)
+              (let loop2 ((results (reset-at ptag (results))))
+                (match results
+                  ((muk-incomplete k _ _)
+                    (set-box! incomplete?! #t)
+                    (if n (loop2 (k muk-mzero))
+                      (loop2 (shift-at ptag k
+                                      (muk-incomplete k (void) (void))))))
+                  (_ (loop1 n results)))))
+              ((cons (list st _) rs)
+              (list* st (loop1 (and n (- n 1)) rs)))))))
+        ((muk-incomplete k _ _)
+         (lets depth = (depth-inc depth)
+               _ = (displayln `(descending ,depth))
+               (if (and depth-max (> depth depth-max))
+                 (k muk-mzero) (loop0 depth))))
+        (results results))))
 
   muk-eval)
 

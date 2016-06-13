@@ -98,6 +98,21 @@
 (define-syntax run*
   (syntax-rules () ((_ body ...) (run #f body ...))))
 
+(define-syntax run/config-dls
+  (syntax-rules ()
+    ((_ cfg n (depth) body ...)
+     (run/config-dls cfg n (depth add1 #f) body ...))
+    ((_ cfg n (depth-min depth-max) body ...)
+     (run/config-dls cfg n (depth-min add1 depth-max) body ...))
+    ((_ cfg n (depth-min depth-inc depth-max) (xs ...) gs ...)
+     (run/config-dls cfg n (depth-min depth-inc depth-max) qvar
+                     (exist (xs ...) (== qvar (list xs ...)) gs ...)))
+    ((_ cfg n (depth-min depth-inc depth-max) qvar gs ...)
+     (lets (run-config eval reify) = cfg
+           (let/vars (qvar)
+             (forl st <- (in-list (eval (conj* gs ...)
+                                        n depth-min depth-inc depth-max))
+                   (reify qvar st)))))))
 (define run-config-default-dls
   (run-config
     (curry (muk-evaluator-dls muk-unify muk-add-constraint-default
@@ -106,7 +121,7 @@
       (muk-reify-term st vr muk-var->indexed-symbol-trans-default))))
 (define-syntax run-dls
   (syntax-rules ()
-    ((_ n depth body ...) (run/config run-config-default-dls n depth body ...))))
+    ((_ n depth body ...) (run/config-dls run-config-default-dls n depth body ...))))
 
 (define-for-syntax (pattern->identifiers pat)
   (define (unquote-pats stx)
