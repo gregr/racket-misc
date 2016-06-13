@@ -488,7 +488,7 @@
   (forl (cons mv fdd) <- (hash->list var=>desc)
         (cons (muk-var-name mv) fdd)))
 (define (c-reify vr st)
-  (list* (muk-reify-term st vr muk-var->symbol)
+  (list* (muk-reify-term st vr muk-var->indexed-symbol-trans-default)
          (reify-constraints st)))
 
 (define run-config-c
