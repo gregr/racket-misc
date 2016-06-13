@@ -100,6 +100,8 @@
 
 (define-syntax run/config-dls
   (syntax-rules ()
+    ((_ cfg n () body ...)
+     (run/config-dls cfg n (1 add1 #f) body ...))
     ((_ cfg n (depth) body ...)
      (run/config-dls cfg n (depth add1 #f) body ...))
     ((_ cfg n (depth-min depth-max) body ...)
@@ -121,7 +123,7 @@
       (muk-reify-term st vr muk-var->indexed-symbol-trans-default))))
 (define-syntax run-dls
   (syntax-rules ()
-    ((_ n depth body ...) (run/config-dls run-config-default-dls n depth body ...))))
+    ((_ n body ...) (run/config-dls run-config-default-dls n body ...))))
 
 (define-for-syntax (pattern->identifiers pat)
   (define (unquote-pats stx)
@@ -383,15 +385,15 @@
       ('(4 4))))
 
   (check-true
-    (= 1 (length (run 1 (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
+    (= 1 (length (run-dls 1 () (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
   (check-true
-    (= 1 (length (run 1 (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
+    (= 1 (length (run-dls 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
 
   (check-equal?
-    (run 1 (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
+    (run-dls 1 () (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
     '())
   (check-equal?
-    (run 1 (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
+    (run-dls 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
     '())
 
   ; slow test (faster without compression)

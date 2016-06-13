@@ -286,7 +286,8 @@
         (let loop1 ((n n) (results (thunk (muk-step st comp depth))))
           (if (= n 0) '()
             (match results
-              ('() (if n (shift-at ptag k (muk-incomplete k (void) (void)))
+              ('() (if (and (unbox incomplete?!) n)
+                     (shift-at ptag k (muk-incomplete k (void) (void)))
                     muk-mzero))
               ((? procedure?)
               (let loop2 ((results (reset-at ptag (results))))
@@ -301,7 +302,6 @@
               (list* st (loop1 (and n (- n 1)) rs)))))))
         ((muk-incomplete k _ _)
          (lets depth = (depth-inc depth)
-               _ = (displayln `(descending ,depth))
                (if (and depth-max (> depth depth-max))
                  (k muk-mzero) (loop0 depth))))
         (results results))))
