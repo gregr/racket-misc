@@ -150,7 +150,8 @@
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))
 
-(define da-eval (muk-evaluator-dls muk-unify da-add-constraint da-constrain))
+(define da-eval (muk-evaluator muk-unify da-add-constraint da-constrain))
+(define da-eval-dls (muk-evaluator-dls muk-unify da-add-constraint da-constrain))
 ; TODO: improve constraint visualization
 ;(def (da-reify-constraints st)
   ;(constraints var=>desc pending) = (muk-state-constraints st)
@@ -168,11 +169,12 @@
     )
 
 (define run-config-da (run-config (curry da-eval da-state-empty) da-reify))
+(define run-config-da-dls (run-config (curry da-eval-dls da-state-empty) da-reify))
 
 (define-syntax run/config-da
   (syntax-rules ()
     ((_ cfg n depth (xs ...) gs ...)
-     (run/config cfg n depth qvar
+     (run/config-da cfg n depth qvar
                  (exist (xs ...) (== qvar (list xs ...)) gs ...)))
     ((_ cfg n depth qvar gs ...)
      (lets (run-config eval reify) = cfg
@@ -208,7 +210,7 @@
                    (reify qvar st)))))))
 (define-syntax run-da-dls
   (syntax-rules ()
-    ((_ n body ...) (run/config-da-dls run-config-da n body ...))))
+    ((_ n body ...) (run/config-da-dls run-config-da-dls n body ...))))
 (define-syntax run*-da-dls
   (syntax-rules ()
     ((_ body ...) (run-da-dls #f body ...))))
