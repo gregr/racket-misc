@@ -113,15 +113,14 @@
 (def (da-constrain st)
   (values st vr-new) = (muk-sub-new-bindings st)
   st =
-  (if (null? vr-new) st
-    (forf st = st
-          (list cxs-get cxs-put cstrain) <-
-          (list (list da-state-constraints-diseqs
-                      da-state-constraints-diseqs-set
-                      da-constrain-diseq))
-          cxs = (and st (constraints-constrain
-                          (cxs-get st) (curry cstrain st) vr-new))
-          (and cxs (cxs-put st cxs))))
+  (forf st = st
+        (list cxs-get cxs-put cstrain) <-
+        (list (list da-state-constraints-diseqs
+                    da-state-constraints-diseqs-set
+                    da-constrain-diseq))
+        cxs = (and st (constraints-constrain
+                        (cxs-get st) (curry cstrain st) vr-new))
+        (and cxs (cxs-put st cxs)))
   (if st (list st) '()))
 
 (define (da-state-constraints-diseqs st)
@@ -134,7 +133,6 @@
   (def (total< e0 e1)
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (cons< (cons k0 v0) (cons k1 v1)) (muk-var< k0 k1))
-
   (match (monad-foldl maybe-monad
            (fn (st (cons e0 e1)) (muk-unify st e0 e1))
            st or-diseqs)
