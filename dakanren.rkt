@@ -108,11 +108,20 @@
   (muk-state-constraints-set st
     (da-constraints-diseqs-set
       cxs (constraints-pending-add diseqs args))))
+(def (da-constraints-absents-set (da-constraints ds _) as)
+  (da-constraints ds as))
+(def (da-state-constraints-absents-pending-add st args)
+  cxs = (muk-state-constraints st)
+  absents = (da-constraints-absents cxs)
+  (muk-state-constraints-set st
+    (da-constraints-absents-set
+      cxs (constraints-pending-add absents args))))
 (define da-state-empty (muk-state-empty/constraints da-constraints-empty))
 (def (da-add-constraint st name args)
   (match name
     ('=/=* (da-state-constraints-diseqs-pending-add st args))
-    ;('absent )
+    ('absento (da-state-constraints-absents-pending-add st args))
+    ;'num 'sym
     (_ (error (format "unsupported constraint: ~a ~a" name args)))))
 (def (da-constrain st)
   (values st vr-new) = (muk-sub-new-bindings st)
@@ -121,7 +130,11 @@
         (list cxs-get cxs-put cstrain) <-
         (list (list da-state-constraints-diseqs
                     da-state-constraints-diseqs-set
-                    da-constrain-diseq))
+                    da-constrain-diseq)
+              (list da-state-constraints-absents
+                    da-state-constraints-absents-set
+                    da-constrain-absent)
+              )
         cxs = (and st (constraints-constrain
                         (cxs-get st) (curry cstrain st) vr-new))
         (and cxs (cxs-put st cxs)))
@@ -151,6 +164,31 @@
            (and (pair? or-diseqs) (list or-diseqs))))))
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))
+
+(define (da-state-constraints-absents st)
+  (da-constraints-absents (muk-state-constraints st)))
+(def (da-state-constraints-absents-set st absents)
+  (muk-state-constraints-set
+    st (da-constraints-absents-set (muk-state-constraints st) absents)))
+(def (da-constrain-absent st (list ground tm))
+  (values st tm) = (muk-walk st tm)
+  (cond
+    ((muk-var? tm) (list (list ground tm)))
+    ((equal? ground tm) #f)
+    (else (match (muk-split (list tm))
+            ((nothing) '())
+            ((just (list (repr _ components)))
+             (forf new = '()
+                   component <- components
+                   #:break (not new)
+                   next = (da-constrain-absent st (list ground component))
+                   (and next (append next new))))))))
+(define (absento ground tm)
+  (match (muk-split (list ground))
+    ((nothing) (muk-constraint 'absento (list ground tm)))
+    ((just _)
+     (error (format "absento only supports absence of ground terms: ~a ~a"
+                    ground tm)))))
 
 (define da-eval (muk-evaluator muk-unify da-add-constraint da-constrain))
 (define da-eval-dls (muk-evaluator-dls muk-unify da-add-constraint da-constrain))
