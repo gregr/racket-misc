@@ -16,6 +16,7 @@
   run-depth
   run*-depth
   run-dls
+  run*-dls
   )
 
 (require
@@ -124,6 +125,8 @@
 (define-syntax run-dls
   (syntax-rules ()
     ((_ n body ...) (run/config-dls run-config-default-dls n body ...))))
+(define-syntax run*-dls
+  (syntax-rules () ((_ body ...) (run-dls #f body ...))))
 
 (define-for-syntax (pattern->identifiers pat)
   (define (unquote-pats stx)
