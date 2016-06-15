@@ -97,31 +97,39 @@
          current = (set-union (constraints-current cxs) (list->set new))
          (constraints-current-set cxs current))))
 
-(record da-constraints diseqs absents)
+(record da-constraints diseqs absents types)
 (define da-constraints-empty
-  (da-constraints constraints-empty constraints-empty))
-(def (da-constraints-diseqs-set (da-constraints _ as) ds)
-  (da-constraints ds as))
+  (da-constraints constraints-empty constraints-empty constraints-empty))
+(def (da-constraints-diseqs-set (da-constraints _ as ts) ds)
+  (da-constraints ds as ts))
 (def (da-state-constraints-diseqs-pending-add st args)
   cxs = (muk-state-constraints st)
   diseqs = (da-constraints-diseqs cxs)
   (muk-state-constraints-set st
     (da-constraints-diseqs-set
       cxs (constraints-pending-add diseqs args))))
-(def (da-constraints-absents-set (da-constraints ds _) as)
-  (da-constraints ds as))
+(def (da-constraints-absents-set (da-constraints ds _ ts) as)
+  (da-constraints ds as ts))
 (def (da-state-constraints-absents-pending-add st args)
   cxs = (muk-state-constraints st)
   absents = (da-constraints-absents cxs)
   (muk-state-constraints-set st
     (da-constraints-absents-set
       cxs (constraints-pending-add absents args))))
+(def (da-constraints-types-set (da-constraints ds as _) ts)
+  (da-constraints ds as ts))
+(def (da-state-constraints-types-pending-add st args)
+  cxs = (muk-state-constraints st)
+  types = (da-constraints-types cxs)
+  (muk-state-constraints-set st
+    (da-constraints-types-set
+      cxs (constraints-pending-add types args))))
 (define da-state-empty (muk-state-empty/constraints da-constraints-empty))
 (def (da-add-constraint st name args)
   (match name
     ('=/=* (da-state-constraints-diseqs-pending-add st args))
     ('absento (da-state-constraints-absents-pending-add st args))
-    ;'num 'sym
+    ('type (da-state-constraints-types-pending-add st args))
     (_ (error (format "unsupported constraint: ~a ~a" name args)))))
 (def (da-constrain st)
   (values st vr-new) = (muk-sub-new-bindings st)
@@ -134,6 +142,9 @@
               (list da-state-constraints-absents
                     da-state-constraints-absents-set
                     da-constrain-absent)
+              (list da-state-constraints-types
+                    da-state-constraints-types-set
+                    da-constrain-type)
               )
         cxs = (and st (constraints-constrain
                         (cxs-get st) (curry cstrain st) vr-new))
@@ -189,6 +200,24 @@
     ((just _)
      (error (format "absento only supports absence of ground terms: ~a ~a"
                     ground tm)))))
+
+(define (da-state-constraints-types st)
+  (da-constraints-types (muk-state-constraints st)))
+(def (da-state-constraints-types-set st types)
+  (muk-state-constraints-set
+    st (da-constraints-types-set (muk-state-constraints st) types)))
+(def (da-constrain-type st (list tag tm))
+  (values st tm) = (muk-walk st tm)
+  (cond
+    ((muk-var? tm) (list (list tag tm)))
+    ((or (and (symbol? tm) (eq? tag 'sym))
+         (and (number? tm) (eq? tag 'num))) '())
+    (else #f)))
+(define (typeo tag tm)
+  (if (set-member? (set 'num 'sym) tag) (muk-constraint 'type (list tag tm))
+    (error (format "invalid type tag: ~a ~a" tag tm))))
+(define (symbolo tm) (typeo 'sym tm))
+(define (numbero tm) (typeo 'num tm))
 
 (define da-eval (muk-evaluator muk-unify da-add-constraint da-constrain))
 (define da-eval-dls (muk-evaluator-dls muk-unify da-add-constraint da-constrain))
