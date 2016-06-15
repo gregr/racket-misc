@@ -214,6 +214,27 @@
     ((_ body ...) (run-da-dls #f body ...))))
 
 (module+ test
+  (define-syntax mk-test-cont
+    (syntax-rules ()
+      ((_ test-name exact? query expected)
+       (lets
+         result-set = (list->set query)
+         expected-set = (list->set expected)
+         overlap = (set-intersect result-set expected-set)
+         (if exact?
+           (begin
+             (when (not (equal? result-set expected-set))
+               (displayln (format "failed test: ~a" test-name)))
+             ;(check-equal? (set-subtract expected-set result-set) (set))
+             ;(check-equal? (set-subtract result-set expected-set) (set))
+             (check-equal? result-set expected-set)
+             )
+           (check-equal? overlap expected-set))))))
+  (define-syntax mk-test
+    (syntax-rules ()
+      ((_ test-name query expected)
+        (mk-test-cont test-name #t query expected))))
+
   (check-equal?
     (run-da-dls #f () (p r)
       (=/= '(1 2) `(,p ,r))
@@ -293,4 +314,461 @@
   (check-equal?
     (run-da 1 (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
     '())
+
+  ;(mk-test "=/=-0"
+    ;(run*-da q (=/= 5 q))
+    ;'((_.0 (=/= ((_.0 5))))))
+
+  (mk-test "=/=-1"
+    (run*-da q
+      (=/= 3 q)
+      (== q 3))
+    '())
+
+  (mk-test "=/=-2"
+    (run*-da q
+      (== q 3)
+      (=/= 3 q))
+    '())
+
+  (mk-test "=/=-3"
+    (run*-da q
+      (exist (x y)
+        (=/= x y)
+        (== x y)))
+    '())
+
+  (mk-test "=/=-4"
+    (run*-da q
+      (exist (x y)
+        (== x y)
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-5"
+    (run*-da q
+      (exist (x y)
+        (=/= x y)
+        (== 3 x)
+        (== 3 y)))
+    '())
+
+  (mk-test "=/=-6"
+    (run*-da q
+      (exist (x y)
+        (== 3 x)
+        (=/= x y)
+        (== 3 y)))
+    '())
+
+  (mk-test "=/=-7"
+    (run*-da q
+      (exist (x y)
+        (== 3 x)
+        (== 3 y)
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-8"
+    (run*-da q
+      (exist (x y)
+        (== 3 x)
+        (== 3 y)
+        (=/= y x)))
+    '())
+
+  (mk-test "=/=-9"
+    (run*-da q
+      (exist (x y z)
+        (== x y)
+        (== y z)
+        (=/= x 4)
+        (== z (+ 2 2))))
+    '())
+
+  (mk-test "=/=-10"
+    (run*-da q
+      (exist (x y z)
+        (== x y)
+        (== y z)
+        (== z (+ 2 2))
+        (=/= x 4)))
+    '())
+
+  (mk-test "=/=-11"
+    (run*-da q
+      (exist (x y z)
+        (=/= x 4)
+        (== y z)
+        (== x y)
+        (== z (+ 2 2))))
+    '())
+
+  (mk-test "=/=-12"
+    (run*-da q
+      (exist (x y z)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '(_.0))
+
+  (mk-test "=/=-13"
+    (run*-da q
+      (exist (x y z)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (== z 1)
+        (== `(,x ,y) q)))
+    '())
+
+  (mk-test "=/=-14"
+    (run*-da q
+      (exist (x y z)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (== z 0)))
+    '(_.0))
+
+  (mk-test "=/=-15"
+    (run*-da q
+      (exist (x y z)
+        (== z 0)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '(_.0))
+
+  (mk-test "=/=-16"
+    (run*-da q
+      (exist (x y z)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (=/= x y)))
+    '(_.0))
+
+  (mk-test "=/=-17"
+    (run*-da q
+      (exist (x y z)
+        (== z 1)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '())
+
+  (mk-test "=/=-18"
+    (run*-da q
+      (exist (x y z)
+        (== z 1)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-19"
+    (run*-da q
+      (exist (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)))
+    '(_.0))
+
+  (mk-test "=/=-20"
+    (run*-da q
+      (exist (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== y 1)))
+    '(_.0))
+
+  (mk-test "=/=-21"
+    (run*-da q
+      (exist (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 1)))
+    '())
+
+  ;(mk-test "=/=-22"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(=/= `(,x 1) `(2 ,y))
+        ;(== `(,x ,y) q)))
+    ;'(((_.0 _.1) (=/= ((_.0 2) (_.1 1))))))
+
+  ;(mk-test "=/=-23"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(=/= `(,x 1) `(2 ,y))
+        ;(== x 2)
+        ;(== `(,x ,y) q)))
+    ;'(((2 _.0) (=/= ((_.0 1))))))
+
+  (mk-test "=/=-24"
+    (run*-da q
+      (exist (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 9)
+        (== `(,x ,y) q)))
+    '((2 9)))
+
+  (mk-test "=/=-24b"
+    (run*-da q
+    (exist (a d)
+      (== `(,a . ,d) q)
+      (=/= q `(5 . 6))
+      (== a 5)
+      (== d 6)))
+    '())
+
+  (mk-test "=/=-25"
+    (run*-da q
+      (exist (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 1)
+        (== `(,x ,y) q)))
+    '())
+
+  (mk-test "=/=-26"
+    (run*-da q
+      (exist (a x z)
+        (=/= a `(,x 1))
+        (== a `(,z 1))
+        (== x z)))
+    '())
+
+  ;(mk-test "=/=-27"
+    ;(run*-da q
+      ;(exist (a x z)
+        ;(=/= a `(,x 1))
+        ;(== a `(,z 1))
+        ;(== x 5)
+        ;(== `(,x ,z) q)))
+    ;'(((5 _.0) (=/= ((_.0 5))))))
+
+  (mk-test "=/=-28"
+    (run*-da q
+      (=/= 3 4))
+    '(_.0))
+
+  (mk-test "=/=-29"
+    (run*-da q
+      (=/= 3 3))
+    '())
+
+  (mk-test "=/=-30"
+    (run*-da q (=/= 5 q)
+        (=/= 6 q)
+        (== q 5))
+    '())
+
+  ;(mk-test "=/=-31"
+    ;(run*-da q
+    ;(exist (a d)
+      ;(== `(,a . ,d) q)
+      ;(=/= q `(5 . 6))
+      ;(== a 5)))
+    ;'(((5 . _.0) (=/= ((_.0 6))))))
+
+  (mk-test "=/=-32"
+    (run*-da q
+      (exist (a)
+        (== 3 a)
+        (=/= a 4)))
+    '(_.0))
+
+  ;(mk-test "=/=-33"
+    ;(run*-da q
+      ;(=/= 4 q)
+      ;(=/= 3 q))
+    ;'((_.0 (=/= ((_.0 3)) ((_.0 4))))))
+
+  ;(mk-test "=/=-34"
+    ;(run*-da q (=/= q 5) (=/= q 5))
+    ;'((_.0 (=/= ((_.0 5))))))
+
+  (mk-test "=/=-35"
+    (let ((foo (lambda (x)
+                (exist (a)
+                  (=/= x a)))))
+      (run*-da q (exist (a) (foo a))))
+    '(_.0))
+
+  (mk-test "=/=-36"
+    (let ((foo (lambda (x)
+                (exist (a)
+                  (=/= x a)))))
+      (run*-da q (exist (b) (foo b))))
+    '(_.0))
+
+  ;(mk-test "=/=-37"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= x y)))
+    ;'(((_.0 _.1) (=/= ((_.0 _.1))))))
+
+  ;(mk-test "=/=-37b"
+    ;(run*-da q
+    ;(exist (a d)
+      ;(== `(,a . ,d) q)
+      ;(=/= q `(5 . 6))))
+    ;'(((_.0 . _.1) (=/= ((_.0 5) (_.1 6))))))
+
+  (mk-test "=/=-37c"
+    (run*-da q
+    (exist (a d)
+      (== `(,a . ,d) q)
+      (=/= q `(5 . 6))
+      (== a 3)))
+    '((3 . _.0)))
+
+  ;(mk-test "=/=-38"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= y x)))
+    ;'(((_.0 _.1) (=/= ((_.0 _.1))))))
+
+  ;(mk-test "=/=-39"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= x y)
+        ;(=/= y x)))
+    ;'(((_.0 _.1) (=/= ((_.0 _.1))))))
+
+  ;(mk-test "=/=-40"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= x y)
+        ;(=/= x y)))
+    ;'(((_.0 _.1) (=/= ((_.0 _.1))))))
+
+  ;(mk-test "=/=-41"
+    ;(run*-da q (=/= q 5) (=/= 5 q))
+    ;'((_.0 (=/= ((_.0 5))))))
+
+  ;(mk-test "=/=-42"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= `(,x ,y) `(5 6))
+        ;(=/= x 5)))
+    ;'(((_.0 _.1) (=/= ((_.0 5))))))
+
+  ;(mk-test "=/=-43"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(== `(,x ,y) q)
+        ;(=/= x 5)
+        ;(=/= `(,x ,y) `(5 6))))
+    ;'(((_.0 _.1) (=/= ((_.0 5))))))
+
+  ;(mk-test "=/=-44"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(=/= x 5)
+        ;(=/= `(,x ,y) `(5 6))
+        ;(== `(,x ,y) q)))
+    ;'(((_.0 _.1) (=/= ((_.0 5))))))
+
+  ;(mk-test "=/=-45"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(=/= 5 x)
+        ;(=/= `(,x ,y) `(5 6))
+        ;(== `(,x ,y) q)))
+    ;'(((_.0 _.1) (=/= ((_.0 5))))))
+
+  ;(mk-test "=/=-46"
+    ;(run*-da q
+      ;(exist (x y)
+        ;(=/= 5 x)
+        ;(=/= `( ,y ,x) `(6 5))
+        ;(== `(,x ,y) q)))
+    ;'(((_.0 _.1) (=/= ((_.0 5))))))
+
+  (mk-test "=/=-47"
+    (run*-da x
+      (exist (y z)
+        (=/= x `(,y 2))
+        (== x `(,z 2))))
+    '((_.0 2)))
+
+  (mk-test "=/=-48"
+    (run*-da x
+      (exist (y z)
+        (=/= x `(,y 2))
+        (== x `((,z) 2))))
+    '(((_.0) 2)))
+
+  (mk-test "=/=-49"
+    (run*-da x
+      (exist (y z)
+        (=/= x `((,y) 2))
+        (== x `(,z 2))))
+    '((_.0 2)))
+
+  (define distincto
+    (lambda (l)
+      (conde
+        ((== l '()))
+        ((exist (a) (== l `(,a))))
+        ((exist (a ad dd)
+          (== l `(,a ,ad . ,dd))
+          (=/= a ad)
+          (distincto `(,a . ,dd))
+          (distincto `(,ad . ,dd)))))))
+
+  ;(mk-test "=/=-50"
+    ;(run*-da q
+      ;(distincto `(2 3 ,q)))
+    ;'((_.0 (=/= ((_.0 2)) ((_.0 3))))))
+
+  (define rembero0
+    (lambda (x ls out)
+      (conde
+        ((== '() ls) (== '() out))
+        ((exist (a d res)
+          (== `(,a . ,d) ls)
+          (rembero0 x d res)
+          (conde
+            ((== a x) (== out res))
+            ((== `(,a . ,res) out))
+
+            ))))))
+
+  (mk-test "=/=-51"
+    (run*-da q (rembero0 'a '(a b a c) q))
+    '((b c) (b a c) (a b c) (a b a c)))
+
+  (mk-test "=/=-52"
+    (run*-da q (rembero0 'a '(a b c) '(a b c)))
+    '(_.0))
+
+  (define rembero
+    (lambda (x ls out)
+      (conde
+        ((== '() ls) (== '() out))
+        ((exist (a d res)
+          (== `(,a . ,d) ls)
+          (rembero x d res)
+          (conde
+            ((== a x) (== out res))
+            ((=/= a x) (== `(,a . ,res) out))))))))
+
+  ;(mk-test "=/=-53"
+    ;(run*-da q (rembero 'a '(a b a c) q))
+    ;'((b c)))
+
+  (mk-test "=/=-54"
+    (run*-da q (rembero 'a '(a b c) '(a b c)))
+    '())
+
+  ;(mk-test "=/=-55"
+    ;(run-da 1 q (=/= q #f))
+    ;'((_.0 (=/= ((_.0 #f))))))
   )
