@@ -2,6 +2,9 @@
 (provide
   =/=
   =/=*
+  absento
+  numbero
+  symbolo
   run-da
   run-da-depth
   run*-da
