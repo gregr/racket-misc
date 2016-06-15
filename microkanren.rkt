@@ -284,7 +284,7 @@
       (set-box! incomplete?! #f)
       (match (reset-at ptag
         (let loop1 ((n n) (results (thunk (muk-step st comp depth))))
-          (if (= n 0) '()
+          (if (equal? n 0) '()
             (match results
               ('() (if (and (unbox incomplete?!) n)
                      (shift-at ptag k (muk-incomplete k (void) (void)))
