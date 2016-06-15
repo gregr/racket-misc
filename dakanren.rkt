@@ -74,7 +74,7 @@
                                 (hash-remove var=>cxs peer)
                                 (hash-set var=>cxs peer cxs)))))))))))
   (constraints current pending var=>cxs))
-(def (constraints-constrain cxs state-constrain vr-new)
+(def (constraints-constrain cxs state-constrain simplify vr-new)
   cs = (constraints-new-bindings cxs vr-new)
   new =
   (let loop ((new '()) (pending (constraints-pending cs)))
@@ -83,6 +83,7 @@
       ((cons cx pending)
        (lets cxs = (state-constrain cx)
              (and cxs (loop (append cxs new) pending))))))
+  new = (and new (simplify cxs new))
   (and new
        (lets
          cxs =
@@ -135,19 +136,22 @@
   (values st vr-new) = (muk-sub-new-bindings st)
   st =
   (forf st = st
-        (list cxs-get cxs-put cstrain) <-
+        (list cxs-get cxs-put cstrain simplify) <-
         (list (list da-state-constraints-diseqs
                     da-state-constraints-diseqs-set
-                    da-constrain-diseq)
+                    da-constrain-diseq
+                    da-simplify-diseq)
               (list da-state-constraints-absents
                     da-state-constraints-absents-set
-                    da-constrain-absent)
+                    da-constrain-absent
+                    da-simplify-absent)
               (list da-state-constraints-types
                     da-state-constraints-types-set
-                    da-constrain-type)
+                    da-constrain-type
+                    da-simplify-type)
               )
         cxs = (and st (constraints-constrain
-                        (cxs-get st) (curry cstrain st) vr-new))
+                        (cxs-get st) (curry cstrain st) simplify vr-new))
         (and cxs (cxs-put st cxs)))
   (if st (list st) '()))
 
@@ -173,6 +177,7 @@
            or-diseqs = (sort or-diseqs cons<)
 
            (and (pair? or-diseqs) (list or-diseqs))))))
+(define (da-simplify-diseq cxs new) new)
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))
 
@@ -194,6 +199,7 @@
                    #:break (not new)
                    next = (da-constrain-absent st (list ground component))
                    (and next (append next new))))))))
+(define (da-simplify-absent cxs new) new)
 (define (absento ground tm)
   (match (muk-split (list ground))
     ((nothing) (muk-constraint 'absento (list ground tm)))
@@ -213,6 +219,14 @@
     ((or (and (symbol? tm) (eq? tag 'sym))
          (and (number? tm) (eq? tag 'num))) '())
     (else #f)))
+(define (da-simplify-type cxs new)
+  (and (forf vr=>tag = (hasheq)
+             (list tag vr) <- new
+             #:break (not vr=>tag)
+             (match (hash-get vr=>tag vr)
+               ((nothing) (hash-set vr=>tag vr tag))
+               ((just t0) (and (eq? t0 tag) vr=>tag))))
+       new))
 (define (typeo tag tm)
   (if (set-member? (set 'num 'sym) tag) (muk-constraint 'type (list tag tm))
     (error (format "invalid type tag: ~a ~a" tag tm))))
