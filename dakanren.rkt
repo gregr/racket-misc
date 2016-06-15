@@ -65,7 +65,7 @@
                            ((nothing) var=>cxs)
                            ((just cxs)
                             (lets
-                              cxs = (set-subtract cxs cx)
+                              cxs = (set-remove cxs cx)
                               (if (set-empty? cxs)
                                 (hash-remove var=>cxs peer)
                                 (hash-set var=>cxs peer cxs)))))))))))
