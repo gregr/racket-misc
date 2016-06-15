@@ -3,6 +3,11 @@
   =/=
   =/=*
   run-da
+  run-da-depth
+  run*-da
+  run*-da-depth
+  run-da-dls
+  run*-da-dls
   )
 
 (require
@@ -163,16 +168,37 @@
     )
 
 (define run-config-da (run-config (curry da-eval da-state-empty) da-reify))
+
 (define-syntax run/config-da
   (syntax-rules ()
+    ((_ cfg n depth (xs ...) gs ...)
+     (run/config cfg n depth qvar
+                 (exist (xs ...) (== qvar (list xs ...)) gs ...)))
+    ((_ cfg n depth qvar gs ...)
+     (lets (run-config eval reify) = cfg
+           (let/vars (qvar)
+             (forl st <- (in-list (muk-take n (eval (conj* gs ...) depth)))
+                   (reify qvar st)))))))
+(define-syntax run-da-depth
+  (syntax-rules ()
+    ((_ n depth body ...) (run/config-da run-config-da n depth body ...))))
+(define-syntax run*-da-depth
+  (syntax-rules () ((_ body ...) (run-da-depth #f body ...))))
+(define-syntax run-da
+  (syntax-rules () ((_ n body ...) (run-da-depth n 1 body ...))))
+(define-syntax run*-da
+  (syntax-rules () ((_ body ...) (run-da #f body ...))))
+
+(define-syntax run/config-da-dls
+  (syntax-rules ()
     ((_ cfg n () body ...)
-     (run/config-da cfg n (1 add1 #f) body ...))
+     (run/config-da-dls cfg n (1 add1 #f) body ...))
     ((_ cfg n (depth) body ...)
-     (run/config-da cfg n (depth add1 #f) body ...))
+     (run/config-da-dls cfg n (depth add1 #f) body ...))
     ((_ cfg n (depth-min depth-max) body ...)
-     (run/config-da cfg n (depth-min add1 depth-max) body ...))
+     (run/config-da-dls cfg n (depth-min add1 depth-max) body ...))
     ((_ cfg n (depth-min depth-inc depth-max) (xs ...) gs ...)
-     (run/config-da cfg n (depth-min depth-inc depth-max) qvar
+     (run/config-da-dls cfg n (depth-min depth-inc depth-max) qvar
                      (exist (xs ...) (== qvar (list xs ...)) gs ...)))
     ((_ cfg n (depth-min depth-inc depth-max) qvar gs ...)
      (lets (run-config eval reify) = cfg
@@ -180,29 +206,32 @@
              (forl st <- (in-list (eval (conj* gs ...)
                                         n depth-min depth-inc depth-max))
                    (reify qvar st)))))))
-(define-syntax run-da
+(define-syntax run-da-dls
   (syntax-rules ()
-    ((_ n body ...) (run/config-da run-config-da n body ...))))
+    ((_ n body ...) (run/config-da-dls run-config-da n body ...))))
+(define-syntax run*-da-dls
+  (syntax-rules ()
+    ((_ body ...) (run-da-dls #f body ...))))
 
 (module+ test
   (check-equal?
-    (run-da #f () (p r)
+    (run-da-dls #f () (p r)
       (=/= '(1 2) `(,p ,r))
       (== 2 p))
     `((2 _.0)))
   (check-equal?
-    (run-da #f () (p r)
+    (run-da-dls #f () (p r)
       (=/= '(1 2) `(,p ,r))
       (== 1 p))
     `((1 _.0)))
   (check-equal?
-    (run-da #f () (p r)
+    (run-da-dls #f () (p r)
       (=/= '(1 2) `(,p ,r))
       (== 2 r)
       (== 2 p))
     `((2 2)))
   (check-equal?
-    (run-da #f () (p r)
+    (run-da-dls #f () (p r)
       (=/= '(1 2) `(,p ,r))
       (== 2 r)
       (== 1 p))
@@ -218,14 +247,50 @@
       ('(4 4))))
 
   (check-true
-    (= 1 (length (run-da 1 () (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
+    (= 1 (length (run-da-dls 1 () (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
   (check-true
-    (= 1 (length (run-da 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
+    (= 1 (length (run-da-dls 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
 
   (check-equal?
-    (run-da 1 () (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
+    (run-da-dls 1 () (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
     '())
   (check-equal?
-    (run-da 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
+    (run-da-dls 1 () (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
+    '())
+
+  ; non-dls
+  (check-equal?
+    (run*-da (p r)
+      (=/= '(1 2) `(,p ,r))
+      (== 2 p))
+    `((2 _.0)))
+  (check-equal?
+    (run*-da (p r)
+      (=/= '(1 2) `(,p ,r))
+      (== 1 p))
+    `((1 _.0)))
+  (check-equal?
+    (run*-da (p r)
+      (=/= '(1 2) `(,p ,r))
+      (== 2 r)
+      (== 2 p))
+    `((2 2)))
+  (check-equal?
+    (run*-da (p r)
+      (=/= '(1 2) `(,p ,r))
+      (== 2 r)
+      (== 1 p))
+    `())
+
+  (check-true
+    (= 1 (length (run-da 1 (e v) (evalo `(cons 3 ,e) '() `(3 . ,v))))))
+  (check-true
+    (= 1 (length (run-da 1 (e v) (evalo `(cons ,e 3) '() `(,v . 3))))))
+
+  (check-equal?
+    (run-da 1 (e v) (evalo `(cons 3 ,e) '() `(4 . ,v)))
+    '())
+  (check-equal?
+    (run-da 1 (e v) (evalo `(cons ,e 3) '() `(,v . 4)))
     '())
   )
