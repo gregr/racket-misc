@@ -815,136 +815,136 @@
     ;'((_.0 (=/= ((_.0 #f))))))
 
   ;(mk-test "numbero-1"
-    ;(run* q (numbero q))
+    ;(run*-da q (numbero q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-2"
-    ;(run* q (numbero q) (== 5 q))
+    ;(run*-da q (numbero q) (== 5 q))
     ;'(5))
 
   ;(mk-test "numbero-3"
-    ;(run* q (== 5 q) (numbero q))
+    ;(run*-da q (== 5 q) (numbero q))
     ;'(5))
 
   ;(mk-test "numbero-4"
-    ;(run* q (== 'x q) (numbero q))
+    ;(run*-da q (== 'x q) (numbero q))
     ;'())
 
   ;(mk-test "numbero-5"
-    ;(run* q (numbero q) (== 'x q))
+    ;(run*-da q (numbero q) (== 'x q))
     ;'())
 
   ;(mk-test "numbero-6"
-    ;(run* q (numbero q) (== `(1 . 2) q))
+    ;(run*-da q (numbero q) (== `(1 . 2) q))
     ;'())
 
   ;(mk-test "numbero-7"
-    ;(run* q (== `(1 . 2) q) (numbero q))
+    ;(run*-da q (== `(1 . 2) q) (numbero q))
     ;'())
 
   ;(mk-test "numbero-8"
-    ;(run* q (fresh (x) (numbero x)))
+    ;(run*-da q (exist (x) (numbero x)))
     ;'(_.0))
 
   ;(mk-test "numbero-9"
-    ;(run* q (fresh (x) (numbero x)))
+    ;(run*-da q (exist (x) (numbero x)))
     ;'(_.0))
 
   ;(mk-test "numbero-10"
-    ;(run* q (fresh (x) (numbero x) (== x q)))
+    ;(run*-da q (exist (x) (numbero x) (== x q)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-11"
-    ;(run* q (fresh (x) (numbero q) (== x q) (numbero x)))
+    ;(run*-da q (exist (x) (numbero q) (== x q) (numbero x)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-12"
-    ;(run* q (fresh (x) (numbero q) (numbero x) (== x q)))
+    ;(run*-da q (exist (x) (numbero q) (numbero x) (== x q)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-13"
-    ;(run* q (fresh (x) (== x q) (numbero q) (numbero x)))
+    ;(run*-da q (exist (x) (== x q) (numbero q) (numbero x)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-14-a"
-    ;(run* q (fresh (x) (numbero q) (== 5 x)))
+    ;(run*-da q (exist (x) (numbero q) (== 5 x)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-14-b"
-    ;(run* q (fresh (x) (numbero q) (== 5 x) (== x q)))
+    ;(run*-da q (exist (x) (numbero q) (== 5 x) (== x q)))
     ;'(5))
 
   ;(mk-test "numbero-15"
-    ;(run* q (fresh (x) (== q x) (numbero q) (== 'y x)))
+    ;(run*-da q (exist (x) (== q x) (numbero q) (== 'y x)))
     ;'())
 
   ;(mk-test "numbero-16-a"
-    ;(run* q (numbero q) (=/= 'y q))
+    ;(run*-da q (numbero q) (=/= 'y q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-16-b"
-    ;(run* q (=/= 'y q) (numbero q))
+    ;(run*-da q (=/= 'y q) (numbero q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-17"
-    ;(run* q (numbero q) (=/= `(1 . 2) q))
+    ;(run*-da q (numbero q) (=/= `(1 . 2) q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "numbero-18"
-    ;(run* q (numbero q) (=/= 5 q))
+    ;(run*-da q (numbero q) (=/= 5 q))
     ;'((_.0 (=/= ((_.0 5))) (num _.0))))
 
   ;(mk-test "numbero-19"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(numbero y)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (num _.0 _.1))))
 
   ;(mk-test "numbero-20"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(numbero y)))
     ;'(((_.0 _.1) (num _.0 _.1))))
 
   ;(mk-test "numbero-21"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(numbero x)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-22"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(numbero x)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-23"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(== `(,x ,y) q)
         ;(numbero x)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-24-a"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(numbero w)
         ;(numbero z)))
     ;'(_.0))
 
   ;(mk-test "numbero-24-b"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(numbero w)
         ;(numbero z)
@@ -954,8 +954,8 @@
       ;(num _.0 _.3))))
 
   ;(mk-test "numbero-24-c"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(numbero w)
         ;(numbero y)
@@ -965,8 +965,8 @@
       ;(num _.0 _.2))))
 
   ;(mk-test "numbero-24-d"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(numbero w)
         ;(numbero y)
@@ -977,55 +977,55 @@
       ;(num _.0))))
 
   ;(mk-test "numbero-25"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(=/= `(,w . ,x) `(a . b))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (=/= ((_.0 a) (_.1 b))))))
 
   ;(mk-test "numbero-26"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(=/= `(,w . ,x) `(a . b))
         ;(numbero w)
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-27"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(numbero w)
         ;(=/= `(,w . ,x) `(a . b))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-28"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(numbero w)
         ;(=/= `(a . b) `(,w . ,x))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-29"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(numbero w)
         ;(=/= `(a . ,x) `(,w . b))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "numbero-30"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(numbero w)
         ;(=/= `(5 . ,x) `(,w . b))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (=/= ((_.0 5) (_.1 b))) (num _.0))))
 
   ;(mk-test "numbero-31"
-  ;(run* q
-    ;(fresh (x y z a b)
+  ;(run*-da q
+    ;(exist (x y z a b)
       ;(numbero x)
       ;(numbero y)
       ;(numbero z)
@@ -1036,8 +1036,8 @@
   ;'(((_.0 _.0 _.0 _.1 _.1) (num _.0 _.1))))
 
   ;(mk-test "numbero-32"
-  ;(run* q
-    ;(fresh (x y z a b)
+  ;(run*-da q
+    ;(exist (x y z a b)
       ;(== q `(,x ,y ,z ,a ,b))
       ;(== `(,y ,z ,x ,b) `(,z ,x ,y ,a))
       ;(numbero x)
@@ -1045,136 +1045,136 @@
   ;'(((_.0 _.0 _.0 _.1 _.1) (num _.0 _.1))))
 
   ;(mk-test "symbolo-1"
-    ;(run* q (symbolo q))
+    ;(run*-da q (symbolo q))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-2"
-    ;(run* q (symbolo q) (== 'x q))
+    ;(run*-da q (symbolo q) (== 'x q))
     ;'(x))
 
   ;(mk-test "symbolo-3"
-    ;(run* q (== 'x q) (symbolo q))
+    ;(run*-da q (== 'x q) (symbolo q))
     ;'(x))
 
   ;(mk-test "symbolo-4"
-    ;(run* q (== 5 q) (symbolo q))
+    ;(run*-da q (== 5 q) (symbolo q))
     ;'())
 
   ;(mk-test "symbolo-5"
-    ;(run* q (symbolo q) (== 5 q))
+    ;(run*-da q (symbolo q) (== 5 q))
     ;'())
 
   ;(mk-test "symbolo-6"
-    ;(run* q (symbolo q) (== `(1 . 2) q))
+    ;(run*-da q (symbolo q) (== `(1 . 2) q))
     ;'())
 
   ;(mk-test "symbolo-7"
-    ;(run* q (== `(1 . 2) q) (symbolo q))
+    ;(run*-da q (== `(1 . 2) q) (symbolo q))
     ;'())
 
   ;(mk-test "symbolo-8"
-    ;(run* q (fresh (x) (symbolo x)))
+    ;(run*-da q (exist (x) (symbolo x)))
     ;'(_.0))
 
   ;(mk-test "symbolo-9"
-    ;(run* q (fresh (x) (symbolo x)))
+    ;(run*-da q (exist (x) (symbolo x)))
     ;'(_.0))
 
   ;(mk-test "symbolo-10"
-    ;(run* q (fresh (x) (symbolo x) (== x q)))
+    ;(run*-da q (exist (x) (symbolo x) (== x q)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-11"
-    ;(run* q (fresh (x) (symbolo q) (== x q) (symbolo x)))
+    ;(run*-da q (exist (x) (symbolo q) (== x q) (symbolo x)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-12"
-    ;(run* q (fresh (x) (symbolo q) (symbolo x) (== x q)))
+    ;(run*-da q (exist (x) (symbolo q) (symbolo x) (== x q)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-13"
-    ;(run* q (fresh (x) (== x q) (symbolo q) (symbolo x)))
+    ;(run*-da q (exist (x) (== x q) (symbolo q) (symbolo x)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-14-a"
-    ;(run* q (fresh (x) (symbolo q) (== 'y x)))
+    ;(run*-da q (exist (x) (symbolo q) (== 'y x)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-14-b"
-    ;(run* q (fresh (x) (symbolo q) (== 'y x) (== x q)))
+    ;(run*-da q (exist (x) (symbolo q) (== 'y x) (== x q)))
     ;'(y))
 
   ;(mk-test "symbolo-15"
-    ;(run* q (fresh (x) (== q x) (symbolo q) (== 5 x)))
+    ;(run*-da q (exist (x) (== q x) (symbolo q) (== 5 x)))
     ;'())
 
   ;(mk-test "symbolo-16-a"
-    ;(run* q (symbolo q) (=/= 5 q))
+    ;(run*-da q (symbolo q) (=/= 5 q))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-16-b"
-    ;(run* q (=/= 5 q) (symbolo q))
+    ;(run*-da q (=/= 5 q) (symbolo q))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-17"
-    ;(run* q (symbolo q) (=/= `(1 . 2) q))
+    ;(run*-da q (symbolo q) (=/= `(1 . 2) q))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-18"
-    ;(run* q (symbolo q) (=/= 'y q))
+    ;(run*-da q (symbolo q) (=/= 'y q))
     ;'((_.0 (=/= ((_.0 y))) (sym _.0))))
 
   ;(mk-test "symbolo-19"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(symbolo x)
         ;(symbolo y)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (sym _.0 _.1))))
 
   ;(mk-test "symbolo-20"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(symbolo x)
         ;(symbolo y)))
     ;'(((_.0 _.1) (sym _.0 _.1))))
 
   ;(mk-test "symbolo-21"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(symbolo x)
         ;(symbolo x)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-22"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(symbolo x)
         ;(symbolo x)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-23"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(symbolo x)
         ;(== `(,x ,y) q)
         ;(symbolo x)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-24-a"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(symbolo w)
         ;(symbolo z)))
     ;'(_.0))
 
   ;(mk-test "symbolo-24-b"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(symbolo w)
         ;(symbolo z)
@@ -1184,8 +1184,8 @@
       ;(sym _.0 _.3))))
 
   ;(mk-test "symbolo-24-c"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(symbolo w)
         ;(symbolo y)
@@ -1195,8 +1195,8 @@
       ;(sym _.0 _.2))))
 
   ;(mk-test "symbolo-24-d"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w . ,x) `(,y . ,z))
         ;(symbolo w)
         ;(symbolo y)
@@ -1207,55 +1207,55 @@
       ;(sym _.0))))
 
   ;(mk-test "symbolo-25"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(=/= `(,w . ,x) `(5 . 6))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (=/= ((_.0 5) (_.1 6))))))
 
   ;(mk-test "symbolo-26"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(=/= `(,w . ,x) `(5 . 6))
         ;(symbolo w)
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-27"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(symbolo w)
         ;(=/= `(,w . ,x) `(5 . 6))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-28"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(symbolo w)
         ;(=/= `(5 . 6) `(,w . ,x))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-29"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(symbolo w)
         ;(=/= `(5 . ,x) `(,w . 6))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-30"
-    ;(run* q
-      ;(fresh (w x)
+    ;(run*-da q
+      ;(exist (w x)
         ;(symbolo w)
         ;(=/= `(z . ,x) `(,w . 6))
         ;(== `(,w ,x) q)))
     ;'(((_.0 _.1) (=/= ((_.0 z) (_.1 6))) (sym _.0))))
 
   ;(mk-test "symbolo-31-a"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== x 5)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== w 5)
@@ -1263,8 +1263,8 @@
     ;'(((5 5 _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-31-b"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== w 5)
         ;(== x 5)
@@ -1272,8 +1272,8 @@
     ;'(((5 5 _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-31-c"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== w 5)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== `(,w ,x ,y ,z) q)
@@ -1281,8 +1281,8 @@
     ;'(((5 5 _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-31-d"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== w 5)
         ;(== x 5)
         ;(=/= `(,w ,y) `(,x ,z))
@@ -1291,8 +1291,8 @@
 
 
   ;(mk-test "symbolo-32-a"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== x 'a)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== w 'a)
@@ -1300,8 +1300,8 @@
     ;'(((a a _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-32-b"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== w 'a)
         ;(== x 'a)
@@ -1309,8 +1309,8 @@
     ;'(((a a _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-32-c"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== w 'a)
         ;(=/= `(,w ,y) `(,x ,z))
         ;(== `(,w ,x ,y ,z) q)
@@ -1318,8 +1318,8 @@
     ;'(((a a _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-32-d"
-    ;(run* q
-      ;(fresh (w x y z)
+    ;(run*-da q
+      ;(exist (w x y z)
         ;(== w 'a)
         ;(== x 'a)
         ;(=/= `(,w ,y) `(,x ,z))
@@ -1327,351 +1327,351 @@
     ;'(((a a _.0 _.1) (=/= ((_.0 _.1))))))
 
   ;(mk-test "symbolo-numbero-1"
-    ;(run* q (symbolo q) (numbero q))
+    ;(run*-da q (symbolo q) (numbero q))
     ;'())
 
   ;(mk-test "symbolo-numbero-2"
-    ;(run* q (numbero q) (symbolo q))
+    ;(run*-da q (numbero q) (symbolo q))
     ;'())
 
   ;(mk-test "symbolo-numbero-3"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(numbero x)
         ;(symbolo x)))
     ;'())
 
   ;(mk-test "symbolo-numbero-4"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(symbolo x)
         ;(numbero x)))
     ;'())
 
   ;(mk-test "symbolo-numbero-5"
-    ;(run* q
+    ;(run*-da q
       ;(numbero q)
-      ;(fresh (x)
+      ;(exist (x)
         ;(symbolo x)
         ;(== x q)))
     ;'())
 
   ;(mk-test "symbolo-numbero-6"
-    ;(run* q
+    ;(run*-da q
       ;(symbolo q)
-      ;(fresh (x)
+      ;(exist (x)
         ;(numbero x)
         ;(== x q)))
     ;'())
 
   ;(mk-test "symbolo-numbero-7"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(numbero x)
         ;(== x q))
       ;(symbolo q))
     ;'())
 
   ;(mk-test "symbolo-numbero-7"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(symbolo x)
         ;(== x q))
       ;(numbero q))
     ;'())
 
   ;(mk-test "symbolo-numbero-8"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(== x q)
         ;(symbolo x))
       ;(numbero q))
     ;'())
 
   ;(mk-test "symbolo-numbero-9"
-    ;(run* q
-      ;(fresh (x)
+    ;(run*-da q
+      ;(exist (x)
         ;(== x q)
         ;(numbero x))
       ;(symbolo q))
     ;'())
 
   ;(mk-test "symbolo-numbero-10"
-    ;(run* q
+    ;(run*-da q
       ;(symbolo q)
-      ;(fresh (x)
+      ;(exist (x)
         ;(numbero x)))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "symbolo-numbero-11"
-    ;(run* q
+    ;(run*-da q
       ;(numbero q)
-      ;(fresh (x)
+      ;(exist (x)
         ;(symbolo x)))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "symbolo-numbero-12"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(symbolo x)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-13"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (num _.0))))
 
   ;(mk-test "symbolo-numbero-14"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(symbolo y)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (num _.0) (sym _.1))))
 
   ;(mk-test "symbolo-numbero-15"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(== `(,x ,y) q)
         ;(symbolo y)))
     ;'(((_.0 _.1) (num _.0) (sym _.1))))
 
   ;(mk-test "symbolo-numbero-16"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y)))
     ;'(((_.0 _.1) (num _.0) (sym _.1))))
 
   ;(mk-test "symbolo-numbero-17"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y))
-      ;(fresh (w z)
+      ;(exist (w z)
         ;(== `(,w ,z) q)))
     ;'(((_.0 _.1) (num _.0) (sym _.1))))
 
   ;(mk-test "symbolo-numbero-18"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y))
-      ;(fresh (w z)
+      ;(exist (w z)
         ;(== `(,w ,z) q)
         ;(== w 5)))
     ;'(((5 _.0) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-19"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y))
-      ;(fresh (w z)
+      ;(exist (w z)
         ;(== 'a z)
         ;(== `(,w ,z) q)))
     ;'(((_.0 a) (num _.0))))
 
   ;(mk-test "symbolo-numbero-20"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y))
-      ;(fresh (w z)
+      ;(exist (w z)
         ;(== `(,w ,z) q)
         ;(== 'a z)))
     ;'(((_.0 a) (num _.0))))
 
   ;(mk-test "symbolo-numbero-21"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(=/= `(5 a) q)))
     ;'(((_.0 _.1) (=/= ((_.0 5) (_.1 a))))))
 
   ;(mk-test "symbolo-numbero-22"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(=/= `(5 a) q)
         ;(symbolo x)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-23"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(symbolo x)
         ;(=/= `(5 a) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-24"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(symbolo x)
         ;(== `(,x ,y) q)
         ;(=/= `(5 a) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-25"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(=/= `(5 a) q)
         ;(symbolo x)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-26"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(=/= `(5 a) q)
         ;(== `(,x ,y) q)
         ;(symbolo x)))
     ;'(((_.0 _.1) (sym _.0))))
 
   ;(mk-test "symbolo-numbero-27"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(=/= `(5 a) q)
         ;(numbero y)))
     ;'(((_.0 _.1) (num _.1))))
 
   ;(mk-test "symbolo-numbero-28"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(== `(,x ,y) q)
         ;(numbero y)
         ;(=/= `(5 a) q)))
     ;'(((_.0 _.1) (num _.1))))
 
   ;(mk-test "symbolo-numbero-29"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero y)
         ;(== `(,x ,y) q)
         ;(=/= `(5 a) q)))
     ;'(((_.0 _.1) (num _.1))))
 
   ;(mk-test "symbolo-numbero-30"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(=/= `(5 a) q)
         ;(numbero y)
         ;(== `(,x ,y) q)))
     ;'(((_.0 _.1) (num _.1))))
 
   ;(mk-test "symbolo-numbero-31"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(=/= `(5 a) q)
         ;(== `(,x ,y) q)
         ;(numbero y)))
     ;'(((_.0 _.1) (num _.1))))
 
   ;(mk-test "symbolo-numbero-32"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(=/= `(,x ,y) q)
         ;(numbero x)
         ;(symbolo y)))
     ;'(_.0))
 
   ;(mk-test "symbolo-numbero-33"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(=/= `(,x ,y) q)
         ;(symbolo y)))
     ;'(_.0))
 
   ;(mk-test "symbolo-numbero-34"
-    ;(run* q
-      ;(fresh (x y)
+    ;(run*-da q
+      ;(exist (x y)
         ;(numbero x)
         ;(symbolo y)
         ;(=/= `(,x ,y) q)))
     ;'(_.0))
 
   ;(mk-test "test 8"
-    ;(run* q
-      ;(fresh (a b)
+    ;(run*-da q
+      ;(exist (a b)
         ;(absento 5 a)
         ;(symbolo b)
         ;(== `(,q ,b) a)))
     ;'((_.0 (absento (5 _.0)))))
 
   ;(mk-test "test 9"
-    ;(run* q
-      ;(fresh (a b)
+    ;(run*-da q
+      ;(exist (a b)
         ;(absento 5 a)
         ;(== `(,q ,b) a)))
     ;'((_.0 (absento (5 _.0)))))
 
   ;(mk-test "test 19"
-    ;(run* q (absento 5 q) (absento 5 q))
+    ;(run*-da q (absento 5 q) (absento 5 q))
     ;'((_.0 (absento (5 _.0)))))
 
   ;(mk-test "test 20"
-    ;(run* q (absento 5 q) (absento 6 q))
+    ;(run*-da q (absento 5 q) (absento 6 q))
     ;'((_.0 (absento (5 _.0) (6 _.0)))))
 
   ;(mk-test "test 21"
-    ;(run* q (absento 5 q) (symbolo q))
+    ;(run*-da q (absento 5 q) (symbolo q))
     ;'((_.0 (sym _.0))))
 
   ;(mk-test "test 22"
-    ;(run* q (numbero q) (absento 'tag q))
+    ;(run*-da q (numbero q) (absento 'tag q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "test 23"
-    ;(run* q (absento 'tag q) (numbero q))
+    ;(run*-da q (absento 'tag q) (numbero q))
     ;'((_.0 (num _.0))))
 
-  ;(mk-test "test 24"
-    ;(run* q (== 5 q) (absento 5 q))
-    ;'())
+  (mk-test "test 24"
+    (run*-da q (== 5 q) (absento 5 q))
+    '())
 
-  ;(mk-test "test 25"
-    ;(run* q (== q `(5 6)) (absento 5 q))
-    ;'())
+  (mk-test "test 25"
+    (run*-da q (== q `(5 6)) (absento 5 q))
+    '())
 
-  ;(mk-test "test 25b"
-    ;(run* q (absento 5 q) (== q `(5 6)))
-    ;'())
+  (mk-test "test 25b"
+    (run*-da q (absento 5 q) (== q `(5 6)))
+    '())
 
-  ;(mk-test "test 26"
-    ;(run* q (absento 5 q) (== 5 q))
-    ;'())
+  (mk-test "test 26"
+    (run*-da q (absento 5 q) (== 5 q))
+    '())
 
   ;(mk-test "test 27"
-    ;(run* q (absento 'tag1 q) (absento 'tag2 q))
+    ;(run*-da q (absento 'tag1 q) (absento 'tag2 q))
     ;'((_.0 (absento (tag1 _.0) (tag2 _.0)))))
 
   ;(mk-test "test 28"
-    ;(run* q (absento 'tag q) (numbero q))
+    ;(run*-da q (absento 'tag q) (numbero q))
     ;'((_.0 (num _.0))))
 
   ;(mk-test "test 32"
-    ;(run* q
-      ;(fresh (a b)
+    ;(run*-da q
+      ;(exist (a b)
         ;(absento 5 a)
         ;(absento 5 b)
         ;(== `(,a . ,b) q)))
     ;'(((_.0 . _.1) (absento (5 _.0) (5 _.1)))))
 
   ;(mk-test "test 33"
-    ;(run* q
-      ;(fresh (a b c)
+    ;(run*-da q
+      ;(exist (a b c)
         ;(== `(,a ,b) c)
         ;(== `(,c ,c) q)
         ;(symbolo b)
@@ -1679,46 +1679,46 @@
     ;'())
 
   ;(mk-test "test 34"
-    ;(run* q (absento 'tag q) (symbolo q))
+    ;(run*-da q (absento 'tag q) (symbolo q))
     ;'((_.0 (=/= ((_.0 tag))) (sym _.0))))
 
   ;(mk-test "test 35"
-    ;(run* q (absento 5 q) (numbero q))
+    ;(run*-da q (absento 5 q) (numbero q))
     ;'((_.0 (=/= ((_.0 5))) (num _.0))))
 
   ;(mk-test "test 38"
-    ;(run* q (absento '() q))
+    ;(run*-da q (absento '() q))
     ;'((_.0 (absento (() _.0)))))
 
-  ;(mk-test "test 40"
-    ;(run* q
-      ;(fresh (d a c)
-        ;(== `(3 . ,d) q)
-        ;(=/= `(,c . ,a) q)
-        ;(== '(3 . 4) d)))
-    ;'((3 3 . 4)))
+  (mk-test "test 40"
+    (run*-da q
+      (exist (d a c)
+        (== `(3 . ,d) q)
+        (=/= `(,c . ,a) q)
+        (== '(3 . 4) d)))
+    '((3 3 . 4)))
 
-  ;(mk-test "test 41"
-    ;(run* q
-      ;(fresh (a)
-        ;(== `(,a . ,a) q)))
-    ;'((_.0 . _.0)))
+  (mk-test "test 41"
+    (run*-da q
+      (exist (a)
+        (== `(,a . ,a) q)))
+    '((_.0 . _.0)))
 
   ;(mk-test "test 63"
-    ;(run* q (fresh (a b c) (=/= a b) (=/= b c) (=/= c q) (symbolo a)))
+    ;(run*-da q (exist (a b c) (=/= a b) (=/= b c) (=/= c q) (symbolo a)))
     ;'(_.0))
 
   ;(mk-test "test 64"
-    ;(run* q (symbolo q) (== 'tag q))
+    ;(run*-da q (symbolo q) (== 'tag q))
     ;'(tag))
 
-  ;(mk-test "test 66"
-    ;(run* q (absento 6 5))
-    ;'(_.0))
+  (mk-test "test 66"
+    (run*-da q (absento 6 5))
+    '(_.0))
 
   ;(mk-test "test 67"
-    ;(run* q
-      ;(fresh (a b)
+    ;(run*-da q
+      ;(exist (a b)
         ;(=/= a b)
         ;(symbolo a)
         ;(numbero b)
@@ -1726,8 +1726,8 @@
     ;'(((_.0 _.1) (num _.1) (sym _.0))))
 
   ;(mk-test "test 68"
-    ;(run* q
-      ;(fresh (a b c d)
+    ;(run*-da q
+      ;(exist (a b c d)
         ;(=/= `(,a ,b) `(,c ,d))
         ;(symbolo a)
         ;(numbero c)
@@ -1737,73 +1737,73 @@
     ;'(((_.0 _.1 _.2 _.3) (num _.2) (sym _.0 _.1))))
 
   ;(mk-test "test 69"
-    ;(run* q
-      ;(fresh (a b)
+    ;(run*-da q
+      ;(exist (a b)
         ;(=/= `(,a . 3) `(,b . 3))
         ;(symbolo a)
         ;(numbero b)
         ;(== `(,a ,b) q)))
     ;'(((_.0 _.1) (num _.1) (sym _.0))))
 
-  ;(mk-test "absento 'closure-1a"
-    ;(run* q (absento 'closure q) (== q 'closure))
-    ;'())
+  (mk-test "absento 'closure-1a"
+    (run*-da q (absento 'closure q) (== q 'closure))
+    '())
 
-  ;(mk-test "absento 'closure-1b"
-    ;(run* q (== q 'closure) (absento 'closure q))
-    ;'())
+  (mk-test "absento 'closure-1b"
+    (run*-da q (== q 'closure) (absento 'closure q))
+    '())
 
-  ;(mk-test "absento 'closure-2a"
-    ;(run* q (fresh (a d) (== q 'closure) (absento 'closure q)))
-    ;'())
+  (mk-test "absento 'closure-2a"
+    (run*-da q (exist (a d) (== q 'closure) (absento 'closure q)))
+    '())
 
-  ;(mk-test "absento 'closure-2b"
-    ;(run* q (fresh (a d) (absento 'closure q) (== q 'closure)))
-    ;'())
+  (mk-test "absento 'closure-2b"
+    (run*-da q (exist (a d) (absento 'closure q) (== q 'closure)))
+    '())
 
   ;(mk-test "absento 'closure-3a"
-    ;(run* q (fresh (a d) (absento 'closure q) (== `(,a . ,d) q)))
+    ;(run*-da q (exist (a d) (absento 'closure q) (== `(,a . ,d) q)))
     ;'(((_.0 . _.1) (absento (closure _.0) (closure _.1)))))
 
   ;(mk-test "absento 'closure-3b"
-    ;(run* q (fresh (a d) (== `(,a . ,d) q) (absento 'closure q)))
+    ;(run*-da q (exist (a d) (== `(,a . ,d) q) (absento 'closure q)))
     ;'(((_.0 . _.1) (absento (closure _.0) (closure _.1)))))
 
-  ;(mk-test "absento 'closure-4a"
-    ;(run* q (fresh (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure a)))
-    ;'())
+  (mk-test "absento 'closure-4a"
+    (run*-da q (exist (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure a)))
+    '())
 
-  ;(mk-test "absento 'closure-4b"
-    ;(run* q (fresh (a d) (absento 'closure q) (== 'closure a) (== `(,a . ,d) q)))
-    ;'())
+  (mk-test "absento 'closure-4b"
+    (run*-da q (exist (a d) (absento 'closure q) (== 'closure a) (== `(,a . ,d) q)))
+    '())
 
-  ;(mk-test "absento 'closure-4c"
-    ;(run* q (fresh (a d) (== 'closure a) (absento 'closure q) (== `(,a . ,d) q)))
-    ;'())
+  (mk-test "absento 'closure-4c"
+    (run*-da q (exist (a d) (== 'closure a) (absento 'closure q) (== `(,a . ,d) q)))
+    '())
 
-  ;(mk-test "absento 'closure-4d"
-    ;(run* q (fresh (a d) (== 'closure a) (== `(,a . ,d) q) (absento 'closure q)))
-    ;'())
+  (mk-test "absento 'closure-4d"
+    (run*-da q (exist (a d) (== 'closure a) (== `(,a . ,d) q) (absento 'closure q)))
+    '())
 
-  ;(mk-test "absento 'closure-5a"
-    ;(run* q (fresh (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure d)))
-    ;'())
+  (mk-test "absento 'closure-5a"
+    (run*-da q (exist (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure d)))
+    '())
 
-  ;(mk-test "absento 'closure-5b"
-    ;(run* q (fresh (a d) (absento 'closure q) (== 'closure d) (== `(,a . ,d) q)))
-    ;'())
+  (mk-test "absento 'closure-5b"
+    (run*-da q (exist (a d) (absento 'closure q) (== 'closure d) (== `(,a . ,d) q)))
+    '())
 
-  ;(mk-test "absento 'closure-5c"
-    ;(run* q (fresh (a d) (== 'closure d) (absento 'closure q) (== `(,a . ,d) q)))
-    ;'())
+  (mk-test "absento 'closure-5c"
+    (run*-da q (exist (a d) (== 'closure d) (absento 'closure q) (== `(,a . ,d) q)))
+    '())
 
-  ;(mk-test "absento 'closure-5d"
-    ;(run* q (fresh (a d) (== 'closure d) (== `(,a . ,d) q) (absento 'closure q)))
-    ;'())
+  (mk-test "absento 'closure-5d"
+    (run*-da q (exist (a d) (== 'closure d) (== `(,a . ,d) q) (absento 'closure q)))
+    '())
 
-  ;(mk-test "absento 'closure-6"
-    ;(run* q
-      ;(== `(3 (closure x (x x) ((y . 7))) #t) q)
-      ;(absento 'closure q))
-    ;'())
+  (mk-test "absento 'closure-6"
+    (run*-da q
+      (== `(3 (closure x (x x) ((y . 7))) #t) q)
+      (absento 'closure q))
+    '())
   )
