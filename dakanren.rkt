@@ -17,6 +17,7 @@
   "minikanren.rkt"
   "monad.rkt"
   "record.rkt"
+  "repr.rkt"
   "set.rkt"
   "sugar.rkt"
   racket/function
@@ -33,8 +34,11 @@
   (let tm->vars ((tm args))
     (match tm
       ((? muk-var?) (set tm))
-      ((cons t0 t1) (set-union (tm->vars t0) (tm->vars t1)))
-      (_ set-empty))))
+      (_ (match (muk-split (list tm))
+           ((nothing) set-empty)
+           ((just (list (repr _ components)))
+            (foldl set-union set-empty (map tm->vars components))
+            ))))))
 (record constraints current pending var=>cxs)
 (define constraints-empty (constraints set-empty '() (hasheq)))
 (def (constraints-current-set (constraints _ p vc) c) (constraints c p vc))
