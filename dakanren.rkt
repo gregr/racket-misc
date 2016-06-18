@@ -193,9 +193,8 @@
   (values st tm) = (muk-walk st tm)
   (cond
     ((muk-var? tm) (list (list ground tm)))
-    ((equal? ground tm) #f)
     (else (match (muk-split (list tm))
-            ((nothing) '())
+            ((nothing) (if (equal? ground tm) #f '()))
             ((just (list (repr _ components)))
              (forf new = '()
                    component <- components
