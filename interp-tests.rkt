@@ -440,23 +440,48 @@
     (run-da 1 q (evalo '7 q))
     '(7))
 
-  ;(check-equal?
-    ;(run-da-dls 1 () q (evalo '(quote foo) q))
-    ;'())
+  (check-equal?
+    (run-da-dls 1 () q (evalo '(quote foo) q))
+    '(foo))
 
   ;(check-equal?
     ;(run-da-dls 1 () q (evalo '(and 9) q))
     ;'())
 
-  ;(check-equal?
-    ;(run-da 1 q (evalo '(lambda y 8) q))
-    ;'())
+  (check-equal?
+    (run-da-dls 1 () q (evalo '(lambda y 8) q))
+    '((closure (lambda y 8)
+        ((list val closure (lambda x x) ())
+         (not val prim . not)
+         (equal? val prim . equal?)
+         (symbol? val prim . symbol?)
+         (cons val prim . cons)
+         (null? val prim . null?)
+         (car val prim . car)
+         (cdr val prim . cdr)))))
 
-  ;(check-equal?
-    ;(run-da 1 q (evalo '(lambda (x) x) q))
-    ;'())
+  (check-equal?
+    (run-da-dls 1 () q (evalo '(lambda (x) x) q))
+    '((closure (lambda (x) x)
+        ((list val closure (lambda x x) ())
+         (not val prim . not)
+         (equal? val prim . equal?)
+         (symbol? val prim . symbol?)
+         (cons val prim . cons)
+         (null? val prim . null?)
+         (car val prim . car)
+         (cdr val prim . cdr)))))
 
-  ;(check-equal?
-    ;(run-da 10 (e v) (evalo e v))
-    ;'())
+  (check-equal?
+    (run-da-dls 10 () (e v) (evalo e v))
+    '((_.0 _.0)
+      (list (closure (lambda x x) ()))
+      (not (prim . not))
+      (equal? (prim . equal?))
+      ((list) ())
+      ((list _.0) (_.0))
+      ((list _.0 _.1) (_.0 _.1))
+      ((list _.0 _.1 _.2) (_.0 _.1 _.2))
+      ((list list) ((closure (lambda x x) ())))
+      ((list list _.0) ((closure (lambda x x) ()) _.0))))
   )
