@@ -397,13 +397,27 @@
 (define (muk-walk st term)
   (if (muk-var? term) (muk-sub-get st term) (values st term)))
 
+(define (muk-occurs? st v tm)
+  (if (muk-var? tm) (eq? v tm)
+    (match (muk-split (list tm))
+      ((nothing) #f)
+      ((just (list (repr _ components)))
+       (forf result = #f
+             el <- components
+             #:break result
+             (values st tm) = (muk-walk st el)
+             (or result (muk-occurs? st v tm)))))))
+(define (sub-add st v tm)
+  (if (muk-occurs? st v tm) (nothing)
+    (just (muk-sub-add st v tm))))
+
 (def (muk-unify st e0 e1)
   (values st e0) = (muk-walk st e0)
   (values st e1) = (muk-walk st e1)
   (cond
     ((eq? e0 e1) (just st))
-    ((muk-var? e0) (just (muk-sub-add st e0 e1)))
-    ((muk-var? e1) (just (muk-sub-add st e1 e0)))
+    ((muk-var? e0) (sub-add st e0 e1))
+    ((muk-var? e1) (sub-add st e1 e0))
     (else
       (match* (e0 e1)
         (((cons h0 t0) (cons h1 t1))
