@@ -199,7 +199,7 @@
             (let ((next1 (da-constrain-absent st (list ground t0))))
               (and next1 (append next0 next1))))))
     (_ (match (muk-split (list tm))
-            ((nothing) (if (equal? ground tm) #f '()))
+            ((nothing) (if (eqv? ground tm) #f '()))
             ((just (list (repr _ components)))
              (forf new = '()
                    component <- components
