@@ -25,6 +25,8 @@
 
 (define (eval-expo expr env val)
   (conde
+    ((prim-expo expr env val))  ; trying this first greatly improves performance
+
     ((== `(quote ,val) expr)
      (absento 'closure val)
      (absento 'prim val)
@@ -91,9 +93,6 @@
        (eval-expo letrec-body
                   `((,p-name . (rec . (lambda ,x ,body))) . ,env)
                   val)))
-
-    ((prim-expo expr env val))
-
     ))
 
 (define empty-env '())
@@ -444,9 +443,9 @@
     (run-da-dls 1 () q (evalo '(quote foo) q))
     '(foo))
 
-  ;(check-equal?
-    ;(run-da-dls 1 () q (evalo '(and 9) q))
-    ;'())
+  (check-equal?
+    (run-da-dls 1 () q (evalo '(and 9) q))
+    '(9))
 
   (check-equal?
     (run-da-dls 1 () q (evalo '(lambda y 8) q))
@@ -474,14 +473,14 @@
 
   (check-equal?
     (run-da-dls 10 () (e v) (evalo e v))
-    '((_.0 _.0)
+    '((#t #t)
+      (#f #f)
+      (_.0 _.0)
       (list (closure (lambda x x) ()))
       (not (prim . not))
       (equal? (prim . equal?))
       ((list) ())
-      ((list _.0) (_.0))
-      ((list _.0 _.1) (_.0 _.1))
-      ((list _.0 _.1 _.2) (_.0 _.1 _.2))
-      ((list list) ((closure (lambda x x) ())))
-      ((list list _.0) ((closure (lambda x x) ()) _.0))))
+      ((list #t) (#t))
+      ((list #t _.0) (#t _.0))
+      ((list #t _.0 _.1) (#t _.0 _.1))))
   )
