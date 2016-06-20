@@ -48,9 +48,7 @@
   "dict.rkt"
   "list.rkt"
   "maybe.rkt"
-  "monad.rkt"
   "record.rkt"
-  "repr.rkt"
   "sugar.rkt"
   racket/control
   racket/function

@@ -1,18 +1,9 @@
 #lang racket/base
 (require
-  "dict.rkt"
-  "maybe.rkt"
+  "dakanren.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
-  "monad.rkt"
-  "record.rkt"
-  "repr.rkt"
-  "set.rkt"
-  "sugar.rkt"
-  racket/function
   (except-in racket/match ==)
-  racket/set
-  "dakanren.rkt"
   )
 
 (module+ test

@@ -20,7 +20,6 @@
   "minikanren.rkt"
   "monad.rkt"
   "record.rkt"
-  "repr.rkt"
   "set.rkt"
   "sugar.rkt"
   racket/function

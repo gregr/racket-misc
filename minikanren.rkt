@@ -21,11 +21,8 @@
 
 (require
   "list.rkt"
-  "maybe.rkt"
   "microkanren.rkt"
-  "monad.rkt"
   "record.rkt"
-  "repr.rkt"
   "sugar.rkt"
   racket/function
   racket/list
