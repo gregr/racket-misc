@@ -126,6 +126,19 @@
          ;(lambda (_.1)  (lambda (_.2)  (list _.1 _.2)))) x)
        ;(list (quote quote) x))))
 
+  ; same as above, but start at depth 10: very fast
+  (check-equal?
+    (run-da-dls 1 (10) q (eval-expo
+                  `((lambda (x) ,q)
+                   (quote
+                     (lambda (x) ,q)))
+                  '()
+                  `((lambda (x) ,q)
+                   (quote
+                     (lambda (x) ,q)))
+                  ))
+    '((list x (list (quote quote) x))))
+
   ;(check-equal?
     ;(run-da 1 q (eval-expo q '() q))
     ;'())
