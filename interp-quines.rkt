@@ -32,16 +32,17 @@
          (absento 'closure a*)
          (proper-listo a* env val)))
       ((symbolo exp) (lookupo exp env val))
+      ((exist (x body)
+         (== `(lambda (,x) ,body) exp)
+         (symbolo x)
+         (not-in-envo 'lambda env)
+         (== `(closure ,x ,body ,env) val)))
       ((exist (rator rand x body env^ a)
          (== `(,rator ,rand) exp)
          (eval-expo rator env `(closure ,x ,body ,env^))
          (eval-expo rand env a)
          (eval-expo body `((,x . ,a) . ,env^) val)))
-      ((exist (x body)
-         (== `(lambda (,x) ,body) exp)
-         (symbolo x)
-         (not-in-envo 'lambda env)
-         (== `(closure ,x ,body ,env) val))))))
+      )))
 
 (define lookupo
   (lambda (x env t)
@@ -111,24 +112,8 @@
                   ))
     '((list (quote quote) x)))
 
-  ; this one takes about 50 seconds
-  ;(check-equal?
-    ;(run-da-dls 1 () q (eval-expo
-                  ;`((lambda (x) ,q)
-                   ;(quote
-                     ;(lambda (x) ,q)))
-                  ;'()
-                  ;`((lambda (x) ,q)
-                   ;(quote
-                     ;(lambda (x) ,q)))
-                  ;))
-    ;'(((((lambda (_.0) _.0)
-         ;(lambda (_.1)  (lambda (_.2)  (list _.1 _.2)))) x)
-       ;(list (quote quote) x))))
-
-  ; same as above, but start at depth 10: very fast
   (check-equal?
-    (run-da-dls 1 (10) q (eval-expo
+    (run-da-dls 1 () q (eval-expo
                   `((lambda (x) ,q)
                    (quote
                      (lambda (x) ,q)))
@@ -137,7 +122,7 @@
                    (quote
                      (lambda (x) ,q)))
                   ))
-    '((list x (list (quote quote) x))))
+    '(((lambda (_.0)  (list x _.0))  (list (quote quote) x))))
 
   ;(check-equal?
     ;(run-da 1 q (eval-expo q '() q))
