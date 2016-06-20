@@ -33,15 +33,15 @@
     rackunit
     ))
 
-(define (cx->vars args)
-  (let tm->vars ((tm args))
-    (match tm
-      ((? muk-var?) (set tm))
-      (_ (match (muk-split (list tm))
-           ((nothing) set-empty)
-           ((just (list (repr _ components)))
-            (foldl set-union set-empty (map tm->vars components))
-            ))))))
+(define (cx->vars tm)
+  (match tm
+    ((? muk-var?) (set tm))
+    ((cons h0 t0) (set-union (cx->vars h0) (cx->vars t0)))
+    (_ (match (muk-split (list tm))
+         ((nothing) set-empty)
+         ((just (list (repr _ components)))
+          (foldl set-union set-empty (map cx->vars components))
+          )))))
 (record constraints current pending var=>cxs)
 (define constraints-empty (constraints set-empty '() (hasheq)))
 (def (constraints-current-set (constraints _ p vc) c) (constraints c p vc))
@@ -191,9 +191,14 @@
     st (da-constraints-absents-set (muk-state-constraints st) absents)))
 (def (da-constrain-absent st (list ground tm))
   (values st tm) = (muk-walk st tm)
-  (cond
-    ((muk-var? tm) (list (list ground tm)))
-    (else (match (muk-split (list tm))
+  (match tm
+    ((? muk-var?) (list (list ground tm)))
+    ((cons h0 t0)
+     (let ((next0 (da-constrain-absent st (list ground h0))))
+       (and next0
+            (let ((next1 (da-constrain-absent st (list ground t0))))
+              (and next1 (append next0 next1))))))
+    (_ (match (muk-split (list tm))
             ((nothing) (if (equal? ground tm) #f '()))
             ((just (list (repr _ components)))
              (forf new = '()
