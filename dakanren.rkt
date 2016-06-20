@@ -37,11 +37,7 @@
   (match tm
     ((? muk-var?) (set tm))
     ((cons h0 t0) (set-union (cx->vars h0) (cx->vars t0)))
-    (_ (match (muk-split (list tm))
-         ((nothing) set-empty)
-         ((just (list (repr _ components)))
-          (foldl set-union set-empty (map cx->vars components))
-          )))))
+    (_ set-empty)))
 (record constraints current pending var=>cxs)
 (define constraints-empty (constraints set-empty '() (hasheq)))
 (def (constraints-current-set (constraints _ p vc) c) (constraints c p vc))
@@ -198,21 +194,13 @@
        (and next0
             (let ((next1 (da-constrain-absent st (list ground t0))))
               (and next1 (append next0 next1))))))
-    (_ (match (muk-split (list tm))
-            ((nothing) (if (eqv? ground tm) #f '()))
-            ((just (list (repr _ components)))
-             (forf new = '()
-                   component <- components
-                   #:break (not new)
-                   next = (da-constrain-absent st (list ground component))
-                   (and next (append next new))))))))
+    (_ (if (eqv? ground tm) #f '()))))
 (define (da-simplify-absent cxs new) new)
 (define (absento ground tm)
-  (match (muk-split (list ground))
-    ((nothing) (muk-constraint 'absento (list ground tm)))
-    ((just _)
-     (error (format "absento only supports absence of ground terms: ~a ~a"
-                    ground tm)))))
+  (if (pair? ground)
+    (error (format "absento only supports absence of ground terms: ~a ~a"
+                   ground tm))
+    (muk-constraint 'absento (list ground tm))))
 
 (define (da-state-constraints-types st)
   (da-constraints-types (muk-state-constraints st)))

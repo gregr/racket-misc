@@ -20,9 +20,7 @@
   muk-goal
   muk-mzero
   muk-pause
-  muk-rebuild
   muk-reify-term
-  muk-split
   muk-state-constraints
   muk-state-constraints-set
   muk-state-empty/constraints
@@ -382,18 +380,6 @@
 
   muk-eval)
 
-(define split-entries
-  (list repr-entry-pair repr-entry-vector repr-entry-struct repr-entry-hash))
-(define (muk-split aggs)
-  (forf components = (nothing)
-        (list found? val->type val->components) <- split-entries
-        #:break (just? components)
-        (if (andmap found? aggs)
-          (just (forl agg <- aggs
-                      (repr (val->type agg) (val->components agg))))
-          components)))
-(define muk-rebuild repr->value)
-
 (define (muk-walk st term)
   (if (muk-var? term) (muk-sub-get st term) (values st term)))
 
@@ -404,14 +390,7 @@
      (lets (values st h0) = (muk-walk st h0)
            (values st t0) = (muk-walk st t0)
            (or (muk-occurs? st v h0) (muk-occurs? st v t0))))
-    (_ (match (muk-split (list tm))
-         ((nothing) #f)
-         ((just (list (repr _ components)))
-          (forf result = #f
-                el <- components
-                #:break result
-                (values st tm) = (muk-walk st el)
-                (or result (muk-occurs? st v tm))))))))
+    (_ #f)))
 (define (sub-add st v tm)
   (if (muk-occurs? st v tm) (nothing)
     (just (muk-sub-add st v tm))))
@@ -420,7 +399,7 @@
   (values st e0) = (muk-walk st e0)
   (values st e1) = (muk-walk st e1)
   (cond
-    ((eq? e0 e1) (just st))
+    ((eqv? e0 e1) (just st))
     ((muk-var? e0) (sub-add st e0 e1))
     ((muk-var? e1) (sub-add st e1 e0))
     (else
@@ -429,16 +408,7 @@
          (match (muk-unify st h0 h1)
            ((nothing) (nothing))
            ((just st) (muk-unify st t0 t1))))
-        ((_ _)
-         (if (equal? e0 e1) (just st)
-           (begin/with-monad maybe-monad
-             reprs <- (muk-split (list e0 e1))
-             components = (map repr-components reprs)
-             (list l0 l1) = (map length components)
-             _ <- (if (= l0 l1) (just (void)) (nothing))
-             (monad-foldl maybe-monad
-                          (fn (st (list e0c e1c)) (muk-unify st e0c e1c)) st
-                          (zip components)))))))))
+        ((_ _) (nothing))))))
 
 (define (muk-add-constraint-default st name args)
   (error (format "unsupported constraint: ~a ~a" name args)))
@@ -446,7 +416,6 @@
   (values st _) = (muk-sub-new-bindings st)
   (list st))
 
-(define (no-split? v) (not (or (vector? v) (struct? v) (hash? v))))
 (def (muk-var->symbol (muk-var name))
   (string->symbol (string-append "_." (symbol->string name))))
 (define (muk-var->symbol-trans mv)
@@ -469,16 +438,7 @@
       ((cons hd tl) (lets (values vtrans rhd) = (loop st hd vtrans)
                           (values vtrans rtl) = (loop st tl vtrans)
                           (values vtrans (cons rhd rtl))))
-      ((? no-split?) (values vtrans term))
-      (_ (match (muk-split (list term))
-          ((nothing) (values vtrans term))
-          ((just (list (repr type components)))
-           (lets (values vtrans rels) =
-                 (forf vtrans = vtrans rels = '()
-                       el <- components
-                       (values vtrans rel) = (loop st el vtrans)
-                       (values vtrans (list* rel rels)))
-                 (values vtrans (muk-rebuild (repr type (reverse rels))))))))))
+      (_ (values vtrans term))))
   result)
 
 (module+ test
@@ -510,11 +470,8 @@
       (list->set (reify-states x (list st0 st1)))
       (list->set '(5 6)))))
 
-  (record thing one two)
-  (for_
-    build <- (list cons vector thing)
-    (let/vars (x y)
-      (check-equal?
-        (reify-states x (muk-take 1 (run (conj (== (build 1 y) x) (== y 2)))))
-        `(,(build 1 2)))))
+  (let/vars (x y)
+    (check-equal?
+      (reify-states x (muk-take 1 (run (conj (== (cons 1 y) x) (== y 2)))))
+      `(,(cons 1 2))))
   )

@@ -19,6 +19,7 @@
   "monad.rkt"
   "record.rkt"
   "repr.rkt"
+  "set.rkt"
   "sugar.rkt"
   racket/dict
   racket/function
@@ -52,9 +53,8 @@
   (match term
     ((muk-var _) (set term))
     ((fof-func-app _ args) (recur args))
-    (_ (match (muk-split (list term))
-         ((nothing) (set))
-         ((just (list rpr)) (recur (repr-components rpr)))))))
+    ((cons h0 t0) (recur (list h0 t0)))
+    (_ set-empty)))
 
 (module+ test
   (lets
@@ -128,11 +128,10 @@
   (match term
     ((muk-var _) (muk-sub-get st term))
     ((fof-func-app _ _) (fof-func-app-normalize st term))
-    (_ (match (muk-split (list term))
-         ((nothing) (values st term))
-         ((just (list (repr type components)))
-          (lets (values st ncomps) = (muk-normalize-get-args st components)
-                (values st (muk-rebuild (repr type ncomps)))))))))
+    ((cons h0 t0)
+     (lets (values st ncomps) = (muk-normalize-get-args st (list h0 t0))
+           (values st (apply cons ncomps))))
+    (_ (values st term))))
 
 (module+ test
   (lets
