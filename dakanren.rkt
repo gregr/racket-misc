@@ -31,46 +31,27 @@
     rackunit
     ))
 
-(define (cx->vars tm)
+(define (cx->var tm)
   (match tm
-    ((? muk-var?) (set tm))
-    ((cons h0 t0) (set-union (cx->vars h0) (cx->vars t0)))
-    (_ set-empty)))
-(record constraints current pending var=>cxs)
-(define constraints-empty (constraints set-empty '() (hasheq)))
-(def (constraints-current-set (constraints _ p vc) c) (constraints c p vc))
-(def (constraints-pending-add (constraints cxs p vc) c)
-  (constraints cxs (cons c p) vc))
-(def (constraints-pending-clear (constraints cxs _ vc))
-  (constraints cxs '() vc))
-(def (constraints-var=>cxs-set (constraints c p _) vc) (constraints c p vc))
-(def (var=>cxs-add var=>cxs vr cx)
-  (hash-set var=>cxs vr (match (hash-get var=>cxs vr)
-                          ((nothing) (set cx))
-                          ((just cxs) (set-add cxs cx)))))
-(def (constraints-new-bindings (constraints current pending var=>cxs) vrs)
-  (values current pending var=>cxs) =
-  (forf current = current pending = pending var=>cxs = var=>cxs
+    ((? muk-var?) tm)
+    ((cons h0 t0) (or (cx->var h0) (cx->var t0)))
+    (_ #f)))
+(record constraints pending var=>cxs)
+(define constraints-empty (constraints '() (hasheq)))
+(def (constraints-pending-add (constraints p vc) c)
+  (constraints (cons c p) vc))
+(def (constraints-pending-clear (constraints _ vc))
+  (constraints '() vc))
+(def (constraints-var=>cxs-set (constraints p _) vc) (constraints p vc))
+(def (constraints-new-bindings (constraints pending var=>cxs) vrs)
+  (values pending var=>cxs) =
+  (forf pending = pending var=>cxs = var=>cxs
         vr <- vrs
         (match (hash-get var=>cxs vr)
-          ((nothing) (values current pending var=>cxs))
-          ((just cxs)
-           (forf current = current pending = pending var=>cxs = var=>cxs
-                 cx <- cxs
-                 (values
-                   (set-remove current cx)
-                   (cons cx pending)
-                   (forf var=>cxs = var=>cxs
-                         peer <- (cx->vars cx)
-                         (match (hash-get var=>cxs peer)
-                           ((nothing) var=>cxs)
-                           ((just cxs)
-                            (lets
-                              cxs = (set-remove cxs cx)
-                              (if (set-empty? cxs)
-                                (hash-remove var=>cxs peer)
-                                (hash-set var=>cxs peer cxs)))))))))))
-  (constraints current pending var=>cxs))
+          ((nothing) (values pending var=>cxs))
+          ((just cxs) (values (append (set->list cxs) pending)
+                              (hash-remove var=>cxs vr)))))
+  (constraints pending var=>cxs))
 (def (constraints-constrain cxs state-constrain simplify vr-new)
   cs = (constraints-new-bindings cxs vr-new)
   new =
@@ -88,12 +69,9 @@
            cxs
            (forf var=>cxs = (constraints-var=>cxs cxs)
                  cx <- new
-                 (forf var=>cxs = var=>cxs
-                       vr <- (cx->vars cx)
-                       (var=>cxs-add var=>cxs vr cx))))
-         cxs = (constraints-pending-clear cxs)
-         current = (set-union (constraints-current cxs) (list->set new))
-         (constraints-current-set cxs current))))
+                 (hash-update var=>cxs (cx->var cx)
+                              (lambda (cxs) (set-add cxs cx)) set-empty)))
+         (constraints-pending-clear cxs))))
 
 (record da-constraints diseqs absents types)
 (define da-constraints-empty
