@@ -34,74 +34,63 @@
 (define diseq-cx->var caar)
 (define absent-cx->var cadr)
 (define type-cx->var cadr)
-(record constraints pending var=>cxs)
-(define constraints-empty (constraints '() (hasheq)))
-(def (constraints-pending-add (constraints p vc) c)
-  (constraints (cons c p) vc))
-(def (constraints-pending-clear (constraints _ vc))
-  (constraints '() vc))
-(def (constraints-var=>cxs-set (constraints p _) vc) (constraints p vc))
-(define (constraints-new-bindings cxs vrs)
-  (if (null? vrs) cxs
-    (lets (constraints pending var=>cxs) = cxs
+
+(record constraints diseqs absents types)
+(define constraints-empty-v (constraints set-empty set-empty set-empty))
+(define constraints-empty-p (constraints '() '() '()))
+(define heq-empty (hasheq))
+
+(record da-constraints pending var=>cxs)
+(define da-constraints-empty (da-constraints constraints-empty-p heq-empty))
+(def (da-constraints-diseqs-pending-add
+       (da-constraints (constraints ds as ts) vs) cx)
+  (da-constraints (constraints (cons cx ds) as ts) vs))
+(def (da-constraints-absents-pending-add
+       (da-constraints (constraints ds as ts) vs) cx)
+  (da-constraints (constraints ds (cons cx as) ts) vs))
+(def (da-constraints-types-pending-add
+       (da-constraints (constraints ds as ts) vs) cx)
+  (da-constraints (constraints ds as (cons cx ts)) vs))
+(def (constraints-pending-add (constraints ds as ts)
+                              (constraints ds0 as0 ts0) vr)
+  ; TODO: use vr to rebuild cxs once they're specialized in a later diff
+  (constraints (append (set->list ds0) ds)
+               (append (set->list as0) as)
+               (append (set->list ts0) ts)))
+(def (da-constraints-pending-clear (da-constraints _ vs))
+  (da-constraints constraints-empty-p vs))
+
+(def (da-constraints-var=>cxs-set (da-constraints p _) vc)
+  (da-constraints p vc))
+(define (da-constraints-new-bindings dats vrs)
+  (if (null? vrs) dats
+    (lets (da-constraints pending var=>cxs) = dats
           (values pending var=>cxs) =
           (forf pending = pending var=>cxs = var=>cxs
                 vr <- vrs
                 (match (hash-get var=>cxs vr)
                   ((nothing) (values pending var=>cxs))
-                  ((just cxs) (values (append (set->list cxs) pending)
+                  ((just cxs) (values (constraints-pending-add pending cxs vr)
                                       (hash-remove var=>cxs vr)))))
-          (constraints pending var=>cxs))))
-(def (constraints-constrain cxs state-constrain simplify cx->var vr-new)
-  cs = (constraints-new-bindings cxs vr-new)
-  pending = (constraints-pending cs)
-  (if (null? pending) cs
-    (lets
-      new = (let loop ((new '()) (pending pending))
-              (match pending
-                ('() new)
-                ((cons cx pending)
-                 (lets cxs = (state-constrain cx)
-                       (and cxs (loop (append cxs new) pending))))))
-      new = (and new (simplify cxs new))
-      (and new
-           (lets
-             cxs =
-             (constraints-var=>cxs-set
-               cxs
-               (forf var=>cxs = (constraints-var=>cxs cxs)
-                     cx <- new
-                     (hash-update var=>cxs (cx->var cx)
-                                  (lambda (cxs) (set-add cxs cx)) set-empty)))
-             (constraints-pending-clear cxs))))))
+          (da-constraints pending var=>cxs))))
 
-(record da-constraints diseqs absents types)
-(define da-constraints-empty
-  (da-constraints constraints-empty constraints-empty constraints-empty))
-(def (da-constraints-diseqs-set (da-constraints _ as ts) ds)
-  (da-constraints ds as ts))
-(def (da-state-constraints-diseqs-pending-add st args)
-  cxs = (muk-state-constraints st)
-  diseqs = (da-constraints-diseqs cxs)
-  (muk-state-constraints-set st
-    (da-constraints-diseqs-set
-      cxs (constraints-pending-add diseqs args))))
-(def (da-constraints-absents-set (da-constraints ds _ ts) as)
-  (da-constraints ds as ts))
-(def (da-state-constraints-absents-pending-add st args)
-  cxs = (muk-state-constraints st)
-  absents = (da-constraints-absents cxs)
-  (muk-state-constraints-set st
-    (da-constraints-absents-set
-      cxs (constraints-pending-add absents args))))
-(def (da-constraints-types-set (da-constraints ds as _) ts)
-  (da-constraints ds as ts))
-(def (da-state-constraints-types-pending-add st args)
-  cxs = (muk-state-constraints st)
-  types = (da-constraints-types cxs)
-  (muk-state-constraints-set st
-    (da-constraints-types-set
-      cxs (constraints-pending-add types args))))
+(define (da-state-constraints-diseqs-pending-add st cx)
+  (muk-state-constraints-set
+    st (da-constraints-diseqs-pending-add (muk-state-constraints st) cx)))
+(define (da-state-constraints-absents-pending-add st cx)
+  (muk-state-constraints-set
+    st (da-constraints-absents-pending-add (muk-state-constraints st) cx)))
+(define (da-state-constraints-types-pending-add st cx)
+  (muk-state-constraints-set
+    st (da-constraints-types-pending-add (muk-state-constraints st) cx)))
+
+(def (constraints-diseqs-add (constraints ds as ts) cx)
+  (constraints (set-add ds cx) as ts))
+(def (constraints-absents-add (constraints ds as ts) cx)
+  (constraints ds (set-add as cx) ts))
+(def (constraints-types-add (constraints ds as ts) cx)
+  (constraints ds as (set-add ts cx)))
+
 (define da-state-empty (muk-state-empty/constraints da-constraints-empty))
 (def (da-add-constraint st name args)
   (match name
@@ -111,39 +100,48 @@
     (_ (error (format "unsupported constraint: ~a ~a" name args)))))
 (def (da-constrain st)
   (values st vr-new) = (muk-sub-new-bindings st)
-  st =
-  (forf st = st
-        (list cxs-get cxs-put cstrain simplify cx->var) <-
-        (list (list da-state-constraints-diseqs
-                    da-state-constraints-diseqs-set
-                    da-constrain-diseq
-                    da-simplify-diseq
-                    diseq-cx->var
-                    )
-              (list da-state-constraints-absents
-                    da-state-constraints-absents-set
-                    da-constrain-absent
-                    da-simplify-absent
-                    absent-cx->var
-                    )
-              (list da-state-constraints-types
-                    da-state-constraints-types-set
-                    da-constrain-type
-                    da-simplify-type
-                    type-cx->var
-                    )
-              )
-        cxs = (and st (constraints-constrain
-                        (cxs-get st) (curry cstrain st)
-                        simplify cx->var vr-new))
-        (and cxs (cxs-put st cxs)))
-  (if st (list st) '()))
+  dats = (da-constraints-new-bindings (muk-state-constraints st) vr-new)
+  pending = (da-constraints-pending dats)
+  dats =
+  (if (null? pending) dats
+    (lets
+      (constraints ds as ts) = pending
+      (forf dats = (da-constraints-pending-clear dats)
+            (list cadd constrain simplify cx->var pending) <-
+            (list (list constraints-diseqs-add
+                        da-constrain-diseq
+                        da-simplify-diseq
+                        diseq-cx->var
+                        ds)
+                  (list constraints-absents-add
+                        da-constrain-absent
+                        da-simplify-absent
+                        absent-cx->var
+                        as)
+                  (list constraints-types-add
+                        da-constrain-type
+                        da-simplify-type
+                        type-cx->var
+                        ts))
+            #:break (not dats)
+            new = (let loop ((new '()) (pending pending))
+                    (match pending
+                      ('() new)
+                      ((cons cx pending)
+                       (lets cxs = (constrain st cx)
+                             (and cxs (loop (append cxs new) pending))))))
+            new = (and new (simplify (void) new))
+            (and new
+                 (da-constraints-var=>cxs-set dats
+                   (forf var=>cxs = (da-constraints-var=>cxs dats)
+                         cx <- new
+                         (hash-update
+                           var=>cxs
+                           (cx->var cx)
+                           (lambda (cxs) (cadd cxs cx))
+                           constraints-empty-v)))))))
+  (or (and dats (list (muk-state-constraints-set st dats))) '()))
 
-(define (da-state-constraints-diseqs st)
-  (da-constraints-diseqs (muk-state-constraints st)))
-(def (da-state-constraints-diseqs-set st diseqs)
-  (muk-state-constraints-set
-    st (da-constraints-diseqs-set (muk-state-constraints st) diseqs)))
 (define (da-constrain-diseq st or-diseqs)
   (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
   (def (total< e0 e1)
@@ -165,11 +163,6 @@
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))
 
-(define (da-state-constraints-absents st)
-  (da-constraints-absents (muk-state-constraints st)))
-(def (da-state-constraints-absents-set st absents)
-  (muk-state-constraints-set
-    st (da-constraints-absents-set (muk-state-constraints st) absents)))
 (def (da-constrain-absent st (list ground tm))
   (values st tm) = (muk-walk st tm)
   (match tm
@@ -187,11 +180,6 @@
                    ground tm))
     (muk-constraint 'absento (list ground tm))))
 
-(define (da-state-constraints-types st)
-  (da-constraints-types (muk-state-constraints st)))
-(def (da-state-constraints-types-set st types)
-  (muk-state-constraints-set
-    st (da-constraints-types-set (muk-state-constraints st) types)))
 (def (da-constrain-type st (list tag tm))
   (values st tm) = (muk-walk st tm)
   (cond
@@ -200,7 +188,7 @@
          (and (number? tm) (eq? tag 'num))) '())
     (else #f)))
 (define (da-simplify-type cxs new)
-  (and (forf vr=>tag = (hasheq)
+  (and (forf vr=>tag = heq-empty
              (list tag vr) <- new
              #:break (not vr=>tag)
              (match (hash-get vr=>tag vr)
