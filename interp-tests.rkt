@@ -16,8 +16,6 @@
 
 (define (eval-expo expr env val)
   (conde
-    ((prim-expo expr env val))  ; trying this first greatly improves performance
-
     ((== `(quote ,val) expr)
      (absento 'closure val)
      (absento 'prim val)
@@ -26,6 +24,8 @@
     ((numbero expr) (== expr val))
 
     ((symbolo expr) (lookupo expr env val))
+
+    ((prim-expo expr env val))  ; trying this early greatly improves performance
 
     ((exist (x body)
        (== `(lambda ,x ,body) expr)
@@ -464,14 +464,14 @@
 
   (check-equal?
     (run-da-dls 10 () (e v) (evalo e v))
-    '((#t #t)
-      (#f #f)
-      (_.0 _.0)
+    '((_.0 _.0)
       (list (closure (lambda x x) ()))
       (not (prim . not))
       (equal? (prim . equal?))
+      (#t #t)
+      (#f #f)
       ((list) ())
-      ((list #t) (#t))
-      ((list #t _.0) (#t _.0))
-      ((list #t _.0 _.1) (#t _.0 _.1))))
+      ((list _.0) (_.0))
+      ((list _.0 _.1) (_.0 _.1))
+      ((list _.0 _.1 _.2) (_.0 _.1 _.2))))
   )
