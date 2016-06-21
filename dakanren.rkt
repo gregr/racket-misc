@@ -31,11 +31,9 @@
     rackunit
     ))
 
-(define (cx->var tm)
-  (match tm
-    ((? muk-var?) tm)
-    ((cons h0 t0) (or (cx->var h0) (cx->var t0)))
-    (_ #f)))
+(define diseq-cx->var caar)
+(define absent-cx->var cadr)
+(define type-cx->var cadr)
 (record constraints pending var=>cxs)
 (define constraints-empty (constraints '() (hasheq)))
 (def (constraints-pending-add (constraints p vc) c)
@@ -54,7 +52,7 @@
                   ((just cxs) (values (append (set->list cxs) pending)
                                       (hash-remove var=>cxs vr)))))
           (constraints pending var=>cxs))))
-(def (constraints-constrain cxs state-constrain simplify vr-new)
+(def (constraints-constrain cxs state-constrain simplify cx->var vr-new)
   cs = (constraints-new-bindings cxs vr-new)
   pending = (constraints-pending cs)
   (if (null? pending) cs
@@ -115,22 +113,29 @@
   (values st vr-new) = (muk-sub-new-bindings st)
   st =
   (forf st = st
-        (list cxs-get cxs-put cstrain simplify) <-
+        (list cxs-get cxs-put cstrain simplify cx->var) <-
         (list (list da-state-constraints-diseqs
                     da-state-constraints-diseqs-set
                     da-constrain-diseq
-                    da-simplify-diseq)
+                    da-simplify-diseq
+                    diseq-cx->var
+                    )
               (list da-state-constraints-absents
                     da-state-constraints-absents-set
                     da-constrain-absent
-                    da-simplify-absent)
+                    da-simplify-absent
+                    absent-cx->var
+                    )
               (list da-state-constraints-types
                     da-state-constraints-types-set
                     da-constrain-type
-                    da-simplify-type)
+                    da-simplify-type
+                    type-cx->var
+                    )
               )
         cxs = (and st (constraints-constrain
-                        (cxs-get st) (curry cstrain st) simplify vr-new))
+                        (cxs-get st) (curry cstrain st)
+                        simplify cx->var vr-new))
         (and cxs (cxs-put st cxs)))
   (if st (list st) '()))
 
