@@ -474,4 +474,18 @@
       ((list _.0) (_.0))
       ((list _.0 _.1) (_.0 _.1))
       ((list _.0 _.1 _.2) (_.0 _.1 _.2))))
+
+  (check-equal?
+    (run-da-dls 1 (18) q
+                (evalo
+                  `(begin
+                     (define append
+                       (lambda (l s)
+                         (if (null? l)
+                           s
+                           (cons (car l)
+                                 (append (cdr l) s)))))
+                     (append '() '()))
+                  '()))
+    '(_.0))
   )
