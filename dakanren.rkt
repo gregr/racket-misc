@@ -43,35 +43,39 @@
 (def (constraints-pending-clear (constraints _ vc))
   (constraints '() vc))
 (def (constraints-var=>cxs-set (constraints p _) vc) (constraints p vc))
-(def (constraints-new-bindings (constraints pending var=>cxs) vrs)
-  (values pending var=>cxs) =
-  (forf pending = pending var=>cxs = var=>cxs
-        vr <- vrs
-        (match (hash-get var=>cxs vr)
-          ((nothing) (values pending var=>cxs))
-          ((just cxs) (values (append (set->list cxs) pending)
-                              (hash-remove var=>cxs vr)))))
-  (constraints pending var=>cxs))
+(define (constraints-new-bindings cxs vrs)
+  (if (null? vrs) cxs
+    (lets (constraints pending var=>cxs) = cxs
+          (values pending var=>cxs) =
+          (forf pending = pending var=>cxs = var=>cxs
+                vr <- vrs
+                (match (hash-get var=>cxs vr)
+                  ((nothing) (values pending var=>cxs))
+                  ((just cxs) (values (append (set->list cxs) pending)
+                                      (hash-remove var=>cxs vr)))))
+          (constraints pending var=>cxs))))
 (def (constraints-constrain cxs state-constrain simplify vr-new)
   cs = (constraints-new-bindings cxs vr-new)
-  new =
-  (let loop ((new '()) (pending (constraints-pending cs)))
-    (match pending
-      ('() new)
-      ((cons cx pending)
-       (lets cxs = (state-constrain cx)
-             (and cxs (loop (append cxs new) pending))))))
-  new = (and new (simplify cxs new))
-  (and new
-       (lets
-         cxs =
-         (constraints-var=>cxs-set
-           cxs
-           (forf var=>cxs = (constraints-var=>cxs cxs)
-                 cx <- new
-                 (hash-update var=>cxs (cx->var cx)
-                              (lambda (cxs) (set-add cxs cx)) set-empty)))
-         (constraints-pending-clear cxs))))
+  pending = (constraints-pending cs)
+  (if (null? pending) cs
+    (lets
+      new = (let loop ((new '()) (pending pending))
+              (match pending
+                ('() new)
+                ((cons cx pending)
+                 (lets cxs = (state-constrain cx)
+                       (and cxs (loop (append cxs new) pending))))))
+      new = (and new (simplify cxs new))
+      (and new
+           (lets
+             cxs =
+             (constraints-var=>cxs-set
+               cxs
+               (forf var=>cxs = (constraints-var=>cxs cxs)
+                     cx <- new
+                     (hash-update var=>cxs (cx->var cx)
+                                  (lambda (cxs) (set-add cxs cx)) set-empty)))
+             (constraints-pending-clear cxs))))))
 
 (record da-constraints diseqs absents types)
 (define da-constraints-empty
