@@ -16,7 +16,6 @@
   "maybe.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
-  "monad.rkt"
   "record.rkt"
   "repr.rkt"
   "set.rkt"
@@ -157,7 +156,7 @@
 
 (def (fof-func-app-update st term-old)
   (values st term-new) = (fof-func-app-normalize st term-old)
-  (if (equal? term-old term-new) (just st)
+  (if (equal? term-old term-new) st
     (lets
       (values st expected-old) = (muk-sub-get-term st term-old)
       constraints = (muk-state-constraints st)
@@ -181,10 +180,11 @@
     (lets
       fterms = (foldl set-union (set)
                       (forl vr <- new (hash-ref func-deps vr (set))))
-      (match (monad-foldl maybe-monad fof-func-app-update st
-                          (set->list fterms))
-        ((nothing) '())
-        ((just st-new) (muk-fof-constrain st-new))))))
+      (let ((st-new (forf st = st
+                          tm <- (set->list fterms)
+                          #:break (not st)
+                          (fof-func-app-update st tm))))
+        (if st-new (muk-fof-constrain st-new) '())))))
 
 ; TODO: use constraint-adding in fof-apply?
 (define fof-eval
@@ -229,19 +229,19 @@
   (def (total< e0 e1)
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (list< (list k0 v0) (list k1 v1)) (muk-var< k0 k1))
-  (match (monad-foldl maybe-monad
-          (fn (st (list e0 e1)) (muk-unify st e0 e1))
-          muk-fof-state-empty or-diseqs)
-    ((nothing) #t)
-    ((just st-new)
-     (lets
-       (values st-new vr-new) = (muk-sub-new-bindings st-new)
-       or-diseqs = (forl
-                     vr <- vr-new
-                     (values _ val) = (muk-sub-get st-new vr)
-                     (sort (list vr val) total<))
-       or-diseqs = (sort or-diseqs list<)
-       (if (null? or-diseqs) #f (fof-func-app '=/= or-diseqs))))))
+  (let ((st-new (forf st = muk-fof-state-empty
+                      (list e0 e1) <- or-diseqs
+                      #:break (not st)
+                      (muk-unify st e0 e1))))
+    (if st-new
+      (lets (values st-new vr-new) = (muk-sub-new-bindings st-new)
+            or-diseqs = (forl
+                          vr <- vr-new
+                          (values _ val) = (muk-sub-get st-new vr)
+                          (sort (list vr val) total<))
+            or-diseqs = (sort or-diseqs list<)
+            (if (null? or-diseqs) #f (fof-func-app '=/= or-diseqs)))
+      #t)))
 
 (define ((interp-numeric-op name op) a b)
   (if (or (muk-term? a) (muk-term? b)) (fof-func-app name (list a b))

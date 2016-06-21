@@ -18,7 +18,6 @@
   "maybe.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
-  "monad.rkt"
   "record.rkt"
   "set.rkt"
   "sugar.rkt"
@@ -163,18 +162,18 @@
   (def (total< e0 e1)
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (cons< (cons k0 v0) (cons k1 v1)) (muk-var< k0 k1))
-  (match (monad-foldl maybe-monad
-           (fn (st (cons e0 e1)) (muk-unify st e0 e1))
-           st or-diseqs)
-    ((nothing) '())
-    ((just st)
-     (lets (values st vr-new) = (muk-sub-new-bindings st)
-           or-diseqs = (forl vr <- vr-new
-                             (values _ val) = (muk-sub-get st vr)
-                             (apply cons (sort (list vr val) total<)))
-           or-diseqs = (sort or-diseqs cons<)
-
-           (and (pair? or-diseqs) (list or-diseqs))))))
+  (let ((st (forf st = st
+                  (cons e0 e1) <- or-diseqs
+                  #:break (not st)
+                  (muk-unify st e0 e1))))
+    (if st
+      (lets (values st vr-new) = (muk-sub-new-bindings st)
+            or-diseqs = (forl vr <- vr-new
+                              (values _ val) = (muk-sub-get st vr)
+                              (apply cons (sort (list vr val) total<)))
+            or-diseqs = (sort or-diseqs cons<)
+            (and (pair? or-diseqs) (list or-diseqs)))
+      '())))
 (define (da-simplify-diseq cxs new) new)
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))

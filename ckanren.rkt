@@ -29,7 +29,6 @@
 (require
   "dict.rkt"
   "integer-set.rkt"
-  "maybe.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
   "num.rkt"
@@ -202,9 +201,7 @@
     (((singleton single) dom) (and (fd-domain-satisfy dom single) lhs))
     ((_ _) (fd-domain-meet rhs lhs))))
 
-(define (unify st e0 e1) (match (muk-unify st e0 e1)
-                           ((nothing) #f)
-                           ((just st) st)))
+(define unify muk-unify)
 
 (define (fd-domain-update st obj dom-rhs)
   (and st
