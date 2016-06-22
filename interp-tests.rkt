@@ -51,8 +51,8 @@
        (symbolo x)
        (== `((,x . (val . ,a*)) . ,env^) res)
        (eval-expo rator env `(closure (lambda ,x ,body) ,env^))
-       (eval-expo body res val)
-       (eval-listo rands env a*)))
+       (eval-listo rands env a*)
+       (eval-expo body res val)))
 
     ((exist (rator x* rands body env^ a* res)
        (== `(,rator . ,rands) expr)
