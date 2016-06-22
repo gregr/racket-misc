@@ -284,18 +284,18 @@
             (match results
               ('() (if (and (unbox incomplete?!) n)
                      (shift-at ptag k (muk-incomplete k (void) (void)))
-                    muk-mzero))
+                     muk-mzero))
               ((? procedure?)
-              (let loop2 ((results (reset-at ptag (results))))
-                (match results
-                  ((muk-incomplete k _ _)
+               (let loop2 ((results (reset-at ptag (results))))
+                 (match results
+                   ((muk-incomplete k _ _)
                     (set-box! incomplete?! #t)
                     (if n (loop2 (k muk-mzero))
                       (loop2 (shift-at ptag k
-                                      (muk-incomplete k (void) (void))))))
-                  (_ (loop1 n results)))))
+                                       (muk-incomplete k (void) (void))))))
+                   (_ (loop1 n results)))))
               ((cons (list st _) rs)
-              (list* st (loop1 (and n (- n 1)) rs)))))))
+               (list* st (loop1 (and n (- n 1)) rs)))))))
         ((muk-incomplete k _ _)
          (lets depth = (depth-inc depth)
                (if (and depth-max (> depth depth-max))
