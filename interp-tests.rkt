@@ -476,7 +476,7 @@
       ((list _.0 _.1 _.2) (_.0 _.1 _.2))))
 
   (check-equal?
-    (run-da-dls 1 (18) q
+    (run-da-dls 1 () q
                 (evalo
                   `(begin
                      (define append
