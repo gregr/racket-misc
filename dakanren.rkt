@@ -33,7 +33,6 @@
 
 (define heq-empty (hasheq))
 (define seteqv-empty (seteqv))
-(define diseq-cx->var caar)
 
 (record constraints diseqs absents type)
 (define constraints-empty-v (constraints set-empty seteqv-empty #f))
@@ -108,46 +107,41 @@
       (values st var=>cxs) =
       (da-constrain-types st (da-constraints-var=>cxs dats) ts)
       (and var=>cxs
-           (lets
-             (values st var=>cxs) = (da-constrain-absents st var=>cxs as)
-             (and var=>cxs
-                  (lets new = (let loop ((new '()) (pending ds))
-                                (match pending
-                                  ('() new)
-                                  ((cons cx pending)
-                                   (lets cxs = (da-constrain-diseq st cx)
-                                         (and cxs (loop (append cxs new)
-                                                        pending))))))
-                        (and new
+           (lets (values st var=>cxs) = (da-constrain-absents st var=>cxs as)
+                 (and var=>cxs
+                      (let ((var=>cxs (da-constrain-diseqs st var=>cxs ds)))
+                        (and var=>cxs
                              (da-constraints-var=>cxs-set
                                (da-constraints-pending-clear dats)
-                               (forf var=>cxs = var=>cxs
-                                     cx <- new
-                                     (hash-update
-                                       var=>cxs
-                                       (diseq-cx->var cx)
-                                       (lambda (cxs)
-                                         (constraints-diseqs-add cxs cx))
-                                       constraints-empty-v))))))))))
+                               var=>cxs))))))))
   (or (and dats (list (muk-state-constraints-set st dats))) '()))
 
-(define (da-constrain-diseq st or-diseqs)
+(define (da-constrain-diseqs st var=>cxs ds)
   (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
   (def (total< e0 e1)
     (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
   (def (cons< (cons k0 v0) (cons k1 v1)) (muk-var< k0 k1))
-  (let ((st (forf st = st
-                  (cons e0 e1) <- or-diseqs
-                  #:break (not st)
-                  (muk-unify st e0 e1))))
-    (if st
-      (lets (values st vr-new) = (muk-sub-new-bindings st)
-            or-diseqs = (forl vr <- vr-new
-                              (values _ val) = (muk-sub-get st vr)
-                              (apply cons (sort (list vr val) total<)))
-            or-diseqs = (sort or-diseqs cons<)
-            (and (pair? or-diseqs) (list or-diseqs)))
-      '())))
+  (forf var=>cxs = var=>cxs
+        or-diseqs <- ds
+        #:break (not var=>cxs)
+        st-hyp = (forf st-hyp = st
+                   (cons e0 e1) <- or-diseqs
+                   #:break (not st-hyp)
+                   (muk-unify st-hyp e0 e1))
+        (if st-hyp
+          (lets
+            (values st-hyp vr-new) = (muk-sub-new-bindings st-hyp)
+            (and (pair? vr-new)
+                 (lets or-diseqs =
+                       (sort (forl vr <- vr-new
+                                   (values _ val) = (muk-sub-get st-hyp vr)
+                                   (apply cons (sort (list vr val) total<)))
+                             cons<)
+                       (hash-update
+                         var=>cxs (caar or-diseqs)
+                         (lambda (cxs) (constraints-diseqs-add cxs or-diseqs))
+                         constraints-empty-v))))
+          var=>cxs)))
 (define (=/=* or-diseqs) (muk-constraint '=/=* or-diseqs))
 (define (=/= e0 e1) (=/=* `((,e0 . ,e1))))
 
