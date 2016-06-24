@@ -25,8 +25,6 @@
 
     ((symbolo expr) (lookupo expr env val))
 
-    ((prim-expo expr env val))  ; trying this early greatly improves performance
-
     ((exist (x body)
        (== `(lambda ,x ,body) expr)
        (== `(closure (lambda ,x ,body) ,env) val)
@@ -51,8 +49,8 @@
        (symbolo x)
        (== `((,x . (val . ,a*)) . ,env^) res)
        (eval-expo rator env `(closure (lambda ,x ,body) ,env^))
-       (eval-listo rands env a*)
-       (eval-expo body res val)))
+       (eval-expo body res val)
+       (eval-listo rands env a*)))
 
     ((exist (rator x* rands body env^ a* res)
        (== `(,rator . ,rands) expr)
@@ -84,7 +82,8 @@
        (eval-expo letrec-body
                   `((,p-name . (rec . (lambda ,x ,body))) . ,env)
                   val)))
-    ))
+
+    ((prim-expo expr env val))))
 
 (define empty-env '())
 
@@ -468,15 +467,15 @@
       (list (closure (lambda x x) ()))
       (not (prim . not))
       (equal? (prim . equal?))
-      (#t #t)
-      (#f #f)
       ((list) ())
       ((list _.0) (_.0))
+      ((list list) ((closure (lambda x x) ())))
+      (#t #t)
       ((list _.0 _.1) (_.0 _.1))
-      ((list _.0 _.1 _.2) (_.0 _.1 _.2))))
+      (#f #f)))
 
   (check-equal?
-    (run-da-dls 1 () q
+    (run-da-dls 1 (10000) q
                 (evalo
                   `(begin
                      (define append
