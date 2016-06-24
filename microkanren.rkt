@@ -243,21 +243,22 @@
 
   (define (muk-step-depth st comp depth)
     (define next-depth (- depth 1))
-    (if (= depth 0) (raise-incomplete st comp)
-      (match comp
-        ((muk-failure _) muk-mzero)
-        ((muk-success _) (muk-goal st comp))
-        ((muk-conj-conc cost c0 c1)
-         (muk-bind-depth/incomplete
-           depth (thunk (muk-step-depth st c0 depth)) c1))
-        ((muk-conj-seq cost c0 c1)
-         (muk-bind-depth/incomplete
-           depth (thunk (muk-step-depth st c0 depth)) c1))
-        ((muk-disj c0 c1)
-         (muk-mplus (muk-step st c0 depth) (thunk (muk-step st c1 depth))))
-        ((muk-pause paused) (muk-goal st paused))
-        ((muk-Zzz thunk) (muk-step-depth st (thunk) next-depth))
-        (_ (comp st)))))
+    (match comp
+      ((muk-failure _) muk-mzero)
+      ((muk-success _) (muk-goal st comp))
+      ((muk-conj-conc cost c0 c1)
+        (muk-bind-depth/incomplete
+          depth (thunk (muk-step-depth st c0 depth)) c1))
+      ((muk-conj-seq cost c0 c1)
+        (muk-bind-depth/incomplete
+          depth (thunk (muk-step-depth st c0 depth)) c1))
+      ((muk-disj c0 c1)
+        (muk-mplus (muk-step st c0 depth) (thunk (muk-step st c1 depth))))
+      ((muk-pause paused) (muk-goal st paused))
+      ((muk-Zzz thunk)
+        (if (<= next-depth 0) (raise-incomplete st comp)
+          (muk-step-depth st (thunk) next-depth)))
+      (_ (comp st))))
 
   (define (muk-step-results cont arg results)
     (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
