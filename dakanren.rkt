@@ -109,32 +109,25 @@
       (da-constrain-types st (da-constraints-var=>cxs dats) ts)
       (and var=>cxs
            (lets
-             (values st var=>cxs) =
-             (da-constrain-absents st var=>cxs as)
+             (values st var=>cxs) = (da-constrain-absents st var=>cxs as)
              (and var=>cxs
-                  (forf dats = (da-constraints-var=>cxs-set
-                                 (da-constraints-pending-clear dats) var=>cxs)
-                        (list cadd constrain cx->var pending) <-
-                        (list (list constraints-diseqs-add
-                                    da-constrain-diseq
-                                    diseq-cx->var
-                                    ds))
-                        #:break (not dats)
-                        new = (let loop ((new '()) (pending pending))
+                  (lets new = (let loop ((new '()) (pending ds))
                                 (match pending
                                   ('() new)
                                   ((cons cx pending)
-                                   (lets cxs = (constrain st cx)
-                                         (and cxs (loop (append cxs new) pending))))))
+                                   (lets cxs = (da-constrain-diseq st cx)
+                                         (and cxs (loop (append cxs new)
+                                                        pending))))))
                         (and new
                              (da-constraints-var=>cxs-set
-                               dats
-                               (forf var=>cxs = (da-constraints-var=>cxs dats)
+                               (da-constraints-pending-clear dats)
+                               (forf var=>cxs = var=>cxs
                                      cx <- new
                                      (hash-update
                                        var=>cxs
-                                       (cx->var cx)
-                                       (lambda (cxs) (cadd cxs cx))
+                                       (diseq-cx->var cx)
+                                       (lambda (cxs)
+                                         (constraints-diseqs-add cxs cx))
                                        constraints-empty-v))))))))))
   (or (and dats (list (muk-state-constraints-set st dats))) '()))
 
