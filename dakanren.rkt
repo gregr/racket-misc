@@ -35,7 +35,7 @@
 (define seteqv-empty (seteqv))
 
 (record constraints diseqs absents type)
-(define constraints-empty-v (constraints set-empty seteqv-empty #f))
+(define constraints-empty-v (constraints '() seteqv-empty #f))
 (define constraints-empty-p (constraints '() '() '()))
 
 (record da-constraints pending var=>cxs)
@@ -51,8 +51,7 @@
   (da-constraints (constraints ds as (cons cx ts)) vs))
 (def (constraints-pending-add (constraints ds as ts)
                               (constraints ds0 as0 type) vr)
-  ; TODO: use vr to rebuild cxs once they're specialized in a later diff
-  (constraints (append (set->list ds0) ds)
+  (constraints (append ds0 ds)
                (append (set-map as0 (lambda (ground) (list ground vr))) as)
                (if type (cons (list type vr) ts) ts)))
 (def (da-constraints-pending-clear (da-constraints _ vs))
@@ -83,7 +82,7 @@
     st (da-constraints-types-pending-add (muk-state-constraints st) cx)))
 
 (def (constraints-diseqs-add (constraints ds as ts) cx)
-  (constraints (set-add ds cx) as ts))
+  (constraints (cons cx ds) as ts))
 (def (constraints-absents-add (constraints ds as ts) ground)
   (constraints ds (set-add as ground) ts))
 (def (constraints-type-set (constraints ds as _) type)
