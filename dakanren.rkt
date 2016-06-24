@@ -116,10 +116,6 @@
   (or (and dats (list (muk-state-constraints-set st dats))) '()))
 
 (define (da-constrain-diseqs st var=>cxs ds)
-  (def (muk-var< (muk-var n0) (muk-var n1)) (symbol<? n0 n1))
-  (def (total< e0 e1)
-    (or (not (muk-var? e1)) (and (muk-var? e0) (muk-var< e0 e1))))
-  (def (cons< (cons k0 v0) (cons k1 v1)) (muk-var< k0 k1))
   (forf var=>cxs = var=>cxs
         or-diseqs <- ds
         #:break (not var=>cxs)
@@ -132,10 +128,9 @@
             (values st-hyp vr-new) = (muk-sub-new-bindings st-hyp)
             (and (pair? vr-new)
                  (lets or-diseqs =
-                       (sort (forl vr <- vr-new
-                                   (values _ val) = (muk-sub-get st-hyp vr)
-                                   (apply cons (sort (list vr val) total<)))
-                             cons<)
+                       (forl vr <- vr-new
+                             (values _ val) = (muk-sub-get st-hyp vr)
+                             (cons vr val))
                        (hash-update
                          var=>cxs (caar or-diseqs)
                          (lambda (cxs) (constraints-diseqs-add cxs or-diseqs))
