@@ -31,12 +31,13 @@
     rackunit
     ))
 
+(define heq-empty (hasheq))
+(define seteqv-empty (seteqv))
 (define diseq-cx->var caar)
 
 (record constraints diseqs absents type)
-(define constraints-empty-v (constraints set-empty set-empty #f))
+(define constraints-empty-v (constraints set-empty seteqv-empty #f))
 (define constraints-empty-p (constraints '() '() '()))
-(define heq-empty (hasheq))
 
 (record da-constraints pending var=>cxs)
 (define da-constraints-empty (da-constraints constraints-empty-p heq-empty))
