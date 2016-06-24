@@ -487,4 +487,91 @@
                      (append '() '()))
                   '()))
     '(_.0))
+
+  (check-equal?
+    (run*-da-dls (100)
+      (l1 l2)
+      (evalo `(letrec ((append (lambda (l s)
+                                 (if (null? l)
+                                   s
+                                   (cons (car l)
+                                         (append (cdr l) s))))))
+                (append ',l1 ',l2))
+             '(1 2 3 4 5)))
+    '((() (1 2 3 4 5))
+      ((1) (2 3 4 5))
+      ((1 2) (3 4 5))
+      ((1 2 3) (4 5))
+      ((1 2 3 4) (5))
+      ((1 2 3 4 5) ())))
+
+  (check-equal?
+    (run-da-dls 1 (100) q
+      (evalo `(letrec ((append (lambda (l s)
+                                 (if (null? l)
+                                   s
+                                   (cons ,q
+                                         (append (cdr l) s))))))
+                (append '(1 2 3) '(4 5)))
+             '(1 2 3 4 5)))
+    '((car l)))
+
+  (check-equal?
+    (run-da-dls 1 (39) q
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               (append (cdr ,q) s))))))
+                    (append '(1 2 3) '(4 5)))
+                 '(1 2 3 4 5)))
+    '(l))
+
+  (check-equal?
+    (run-da-dls 1 (39) q
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               (append (,q l) s))))))
+                    (append '(1 2 3) '(4 5)))
+                 '(1 2 3 4 5)))
+    '(cdr))
+
+  ;; harder: takes about 9.5s
+  ;(check-equal?
+    ;(run-da-dls 1 (100) (q r)
+      ;(evalo `(letrec ((append (lambda (l s)
+                                     ;(if (null? l)
+                                         ;s
+                                         ;(cons (car l)
+                                               ;(append (,q ,r) s))))))
+                    ;(append '(1 2 3) '(4 5)))
+                 ;'(1 2 3 4 5)))
+    ;'(()))
+
+  ;; even harder: runs out of memory at 3m45s
+  ;(check-equal?
+    ;(run-da-dls 1 (39) q
+      ;(evalo `(letrec ((append (lambda (l s)
+                                     ;(if (null? l)
+                                         ;s
+                                         ;(cons (car l)
+                                               ;(append ,q s))))))
+                    ;(append '(1 2 3) '(4 5)))
+                 ;'(1 2 3 4 5))
+      ;)
+    ;'(()))
+
+  (define quinec
+  '((lambda (_.0)
+      (list _.0 (list (quote quote) _.0)))
+    (quote
+      (lambda (_.0)
+        (list _.0 (list (quote quote) _.0))))))
+
+  ;; runs out of memory at 4m30s
+  ;(check-equal?
+    ;(run-da-dls 4 (18) q (evalo q q))
+    ;'())
   )
