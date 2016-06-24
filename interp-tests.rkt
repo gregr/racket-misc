@@ -548,7 +548,7 @@
                                                ;(append (,q ,r) s))))))
                     ;(append '(1 2 3) '(4 5)))
                  ;'(1 2 3 4 5)))
-    ;'(()))
+    ;'((cdr l)))
 
   ;; even harder: runs out of memory at 3m45s
   ;(check-equal?
