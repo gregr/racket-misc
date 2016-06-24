@@ -60,7 +60,7 @@
 (def (da-constraints-var=>cxs-set (da-constraints p _) vc)
   (da-constraints p vc))
 (define (da-constraints-new-bindings dats vrs)
-  (if (null? vrs) dats
+  (if (or (= 0 (hash-count (da-constraints-var=>cxs dats))) (null? vrs)) dats
     (lets (da-constraints pending var=>cxs) = dats
           (values pending var=>cxs) =
           (forf pending = pending var=>cxs = var=>cxs
@@ -99,12 +99,12 @@
   (values st vr-new) = (muk-sub-new-bindings st)
   dats = (da-constraints-new-bindings (muk-state-constraints st) vr-new)
   pending = (da-constraints-pending dats)
-  dats =
-  (if (null? pending) dats
+  (if (null? pending) (list st)
     (lets
       (constraints ds as ts) = pending
       (values st var=>cxs) =
       (da-constrain-types st (da-constraints-var=>cxs dats) ts)
+      dats =
       (and var=>cxs
            (lets (values st var=>cxs) = (da-constrain-absents st var=>cxs as)
                  (and var=>cxs
@@ -112,8 +112,8 @@
                         (and var=>cxs
                              (da-constraints-var=>cxs-set
                                (da-constraints-pending-clear dats)
-                               var=>cxs))))))))
-  (or (and dats (list (muk-state-constraints-set st dats))) '()))
+                               var=>cxs))))))
+      (or (and dats (list (muk-state-constraints-set st dats))) '()))))
 
 (define (da-constrain-diseqs st var=>cxs ds)
   (forf var=>cxs = var=>cxs
