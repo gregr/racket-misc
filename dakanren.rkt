@@ -65,10 +65,10 @@
           (values pending var=>cxs) =
           (forf pending = pending var=>cxs = var=>cxs
                 vr <- vrs
-                (match (hash-get var=>cxs vr)
-                  ((nothing) (values pending var=>cxs))
-                  ((just cxs) (values (constraints-pending-add pending cxs vr)
-                                      (hash-remove var=>cxs vr)))))
+                cxs = (hash-ref var=>cxs vr #f)
+                (if cxs (values (constraints-pending-add pending cxs vr)
+                                (hash-remove var=>cxs vr))
+                  (values pending var=>cxs)))
           (da-constraints pending var=>cxs))))
 
 (define (da-state-constraints-diseqs-pending-add st cx)
