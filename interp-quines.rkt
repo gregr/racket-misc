@@ -64,11 +64,11 @@
          (proper-listo d env v-d))))))
 
 (define quinec
-  '((lambda (x)
-      (list x (list (quote quote) x)))
+  '((lambda (_.0)
+      (list _.0 (list (quote quote) _.0)))
     (quote
-      (lambda (x)
-        (list x (list (quote quote) x))))))
+      (lambda (_.0)
+        (list _.0 (list (quote quote) _.0))))))
 
 (module+ test
   (check-equal?
@@ -115,11 +115,7 @@
                   ))
     '(((lambda (_.0)  (list x _.0))  (list (quote quote) x))))
 
-  ;(check-equal?
-    ;(run-da 1 q (eval-expo q '() q))
-    ;'())
-
-  ;(check-equal?
-    ;(run-da-dls 1 (5) q (eval-expo q '() q))
-    ;'())
+  (check-equal?
+    (run-da-dls 1 (10) q (eval-expo q '() q))
+    `(,quinec))
   )

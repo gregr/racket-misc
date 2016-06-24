@@ -215,7 +215,7 @@
   (define (muk-mplus ss1 ss2)
     (match ss1
       ('() ss2)
-      ((? procedure?) (thunk (muk-mplus (ss1) ss2)))
+      ((? procedure?) (thunk (muk-mplus ss2 (ss1))))
       ((cons result ss) (list* result (muk-mplus ss ss2)))))
   (define (muk-bind-depth depth ss comp)
     (match ss

@@ -445,7 +445,7 @@
   ;((0 1 1) (0 1) (0 0 0 0 0 1))
   ;((1 1 1) (0 1) (1 1 0 0 1)))
 
-  ; depth=20 gives these 9 answers in 15.061s
+  ; depth=20 gives these 9 answers in 4.25s
   (check-equal? (list->set (run-dls 9 (1 (lambda (d) (+ 10 d)) #f)
                                     (b q r) (logo '(0 0 1 0 0 0 1) b q r) (>1o q)))
                 (list->set
