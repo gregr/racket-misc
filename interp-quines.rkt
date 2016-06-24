@@ -74,6 +74,12 @@
     '(lambda (_.0) (list 'quote (list _.0 (list 'quote _.0))))))
 (define twine0 (list 'quote twine1))
 
+(define thrine2
+  '((lambda (_.0) (list 'quote (list 'quote (list _.0 (list 'quote _.0)))))
+    '(lambda (_.0) (list 'quote (list 'quote (list _.0 (list 'quote _.0)))))))
+(define thrine1 (list 'quote thrine2))
+(define thrine0 (list 'quote thrine1))
+
 (module+ test
   (check-equal?
     (run-da 1 q (eval-expo '(quote 5) '() q))
@@ -127,4 +133,10 @@
     (run-da-dls 1 (13) (p q)
                 (=/= p q) (eval-expo p '() q) (eval-expo q '() p))
     `((,twine0 ,twine1)))
+
+  (check-equal?
+    (run-da-dls 1 (16) (p q r)
+                (=/= p q) (=/= q r) (=/= r p)
+                (eval-expo p '() q) (eval-expo q '() r) (eval-expo r '() p))
+    `((,thrine0 ,thrine1 ,thrine2)))
   )
