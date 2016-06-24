@@ -23,17 +23,16 @@
          (absento 'closure a*)
          (proper-listo a* env val)))
       ((symbolo exp) (lookupo exp env val))
-      ((exist (x body)
-         (== `(lambda (,x) ,body) exp)
-         (symbolo x)
-         (not-in-envo 'lambda env)
-         (== `(closure ,x ,body ,env) val)))
       ((exist (rator rand x body env^ a)
          (== `(,rator ,rand) exp)
          (eval-expo rator env `(closure ,x ,body ,env^))
          (eval-expo rand env a)
          (eval-expo body `((,x . ,a) . ,env^) val)))
-      )))
+      ((exist (x body)
+         (== `(lambda (,x) ,body) exp)
+         (symbolo x)
+         (not-in-envo 'lambda env)
+         (== `(closure ,x ,body ,env) val))))))
 
 (define lookupo
   (lambda (x env t)
@@ -69,6 +68,11 @@
     (quote
       (lambda (_.0)
         (list _.0 (list (quote quote) _.0))))))
+
+(define twine1
+  '((lambda (_.0) (list 'quote (list _.0 (list 'quote _.0))))
+    '(lambda (_.0) (list 'quote (list _.0 (list 'quote _.0))))))
+(define twine0 (list 'quote twine1))
 
 (module+ test
   (check-equal?
@@ -118,4 +122,9 @@
   (check-equal?
     (run-da-dls 1 (10) q (eval-expo q '() q))
     `(,quinec))
+
+  (check-equal?
+    (run-da-dls 1 (13) (p q)
+                (=/= p q) (eval-expo p '() q) (eval-expo q '() p))
+    `((,twine0 ,twine1)))
   )
