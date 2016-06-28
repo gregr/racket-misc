@@ -33,9 +33,7 @@
        ;; Multi-argument
        (eval-expo rator env `(closure (lambda ,x* ,body) ,env^))
        (ext-env*o x* a* env^ res)
-       (eval-expo body res val)
-       (eval-listo rands env a*)
-       ))
+       (eval-application rands env a* (eval-expo body res val))))
 
     ((exist (rator x rands body env^ a* res)
        (== `(,rator . ,rands) expr)
@@ -169,6 +167,26 @@
               ;(eval-expo a env v-a)
               ;(eval-listo d env v-d))))))))
   ;(muk-goal st goal))
+
+(def ((eval-application rands aenv a* body-goal) st)
+  (values st rrands rands-suffix) = (list-split-ground st rands)
+  (values st ggoals vgoals args-suffix) =
+  (forf st = st ggoals = (muk-succeed) vgoals = (muk-succeed) args = a*
+        rand <- (reverse rrands)
+        (values st rand) = (muk-walk st rand)
+        (let/vars (args-rest)
+          (let ((goal (exist (arg)
+                        (== `(,arg . ,args-rest) args)
+                        (eval-expo rand aenv arg))))
+            (if (muk-var? rand)
+              (values st ggoals (conj vgoals goal) args-rest)
+              (values st (conj ggoals goal) vgoals args-rest)))))
+  (values st a*) = (muk-walk st a*)
+  (muk-goal st (conj* ggoals    ; try ground argument goals first
+                      body-goal ; then try the body
+                      vgoals    ; then fill in the unbound arguments
+                      ; any unbound final segment of arguments
+                      (eval-listo rands-suffix aenv args-suffix))))
 
 ;; need to make sure lambdas are well formed.
 ;; grammar constraints would be useful here!!!
@@ -557,18 +575,19 @@
       ((1 2 3 4) (5))
       ((1 2 3 4 5) ())))
 
-  ;; flipping rand/body eval order makes this one too hard!
-  ;(check-equal?
-    ;(run-da-dls 1 (100) q
-;;                (== q '(car l))
-      ;(evalo `(letrec ((append (lambda (l s)
-                                 ;(if (null? l)
-                                   ;s
-                                   ;(cons ,q
-                                         ;(append (cdr l) s))))))
-                ;(append '(1 2 3) '(4 5)))
-             ;'(1 2 3 4 5)))
-    ;'((car l)))
+  ;; flipping rand/body eval order makes this one too hard,
+  ;; but dynamic ordering via eval-application fixes it!
+  (check-equal?
+    (run-da-dls 1 (100) q
+;                (== q '(car l))
+      (evalo `(letrec ((append (lambda (l s)
+                                 (if (null? l)
+                                   s
+                                   (cons ,q
+                                         (append (cdr l) s))))))
+                (append '(1 2 3) '(4 5)))
+             '(1 2 3 4 5)))
+    '((car l)))
 
   (check-equal?
     (run-da-dls 1 (100) q
