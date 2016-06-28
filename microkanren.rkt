@@ -258,7 +258,8 @@
       ((muk-Zzz thunk)
         (if (<= next-depth 0) (raise-incomplete st comp)
           (muk-step-depth st (thunk) next-depth)))
-      (_ (comp st))))
+      (_ (if (<= next-depth 0) (raise-incomplete st comp)
+           (muk-step-results muk-step next-depth (comp st))))))
 
   (define (muk-step-results cont arg results)
     (append* (forl (list st comp) <- (in-list results) (cont st comp arg))))
