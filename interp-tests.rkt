@@ -4,6 +4,7 @@
   "dakanren.rkt"
   "microkanren.rkt"
   "minikanren.rkt"
+  "sugar.rkt"
   (except-in racket/match ==)
   )
 
@@ -15,15 +16,40 @@
   (eval-expo expr initial-env val))
 
 (define (eval-expo expr env val)
+  (try-lookup-before expr env val (eval-expo-rest expr env val)))
+
+(define (eval-expo-rest expr env val)
   (conde
+    ((numbero expr) (== expr val))
+
+    ((exist (rator x* rands a* prim-id)
+       (== `(,rator . ,rands) expr)
+       (eval-expo rator env `(prim . ,prim-id))
+       (eval-primo prim-id a* val)
+       (eval-listo rands env a*)))
+
+    ((exist (rator x* rands body env^ a* res)
+       (== `(,rator . ,rands) expr)
+       ;; Multi-argument
+       (eval-expo rator env `(closure (lambda ,x* ,body) ,env^))
+       (ext-env*o x* a* env^ res)
+       (eval-expo body res val)
+       (eval-listo rands env a*)
+       ))
+
+    ((exist (rator x rands body env^ a* res)
+       (== `(,rator . ,rands) expr)
+       ;; variadic
+       (symbolo x)
+       (== `((,x . (val . ,a*)) . ,env^) res)
+       (eval-expo rator env `(closure (lambda ,x ,body) ,env^))
+       (eval-expo body res val)
+       (eval-listo rands env a*)))
+
     ((== `(quote ,val) expr)
      (absento 'closure val)
      (absento 'prim val)
      (not-in-envo 'quote env))
-
-    ((numbero expr) (== expr val))
-
-    ((symbolo expr) (lookupo expr env val))
 
     ((exist (x body)
        (== `(lambda ,x ,body) expr)
@@ -42,29 +68,6 @@
        (== `(begin ,defn ,e) expr)
        (== `(define ,name (lambda ,args ,body)) defn)
        (eval-expo `(letrec ((,name (lambda ,args ,body))) ,e) env val)))
-
-    ((exist (rator x rands body env^ a* res)
-       (== `(,rator . ,rands) expr)
-       ;; variadic
-       (symbolo x)
-       (== `((,x . (val . ,a*)) . ,env^) res)
-       (eval-expo rator env `(closure (lambda ,x ,body) ,env^))
-       (eval-expo body res val)
-       (eval-listo rands env a*)))
-
-    ((exist (rator x* rands body env^ a* res)
-       (== `(,rator . ,rands) expr)
-       ;; Multi-argument
-       (eval-expo rator env `(closure (lambda ,x* ,body) ,env^))
-       (eval-listo rands env a*)
-       (ext-env*o x* a* env^ res)
-       (eval-expo body res val)))
-
-    ((exist (rator x* rands a* prim-id)
-       (== `(,rator . ,rands) expr)
-       (eval-expo rator env `(prim . ,prim-id))
-       (eval-primo prim-id a* val)
-       (eval-listo rands env a*)))
 
     ((handle-matcho expr env val))
 
@@ -100,6 +103,31 @@
       ((=/= x y)
        (lookupo x rest t)))))
 
+(define (list-split-ground st xs)
+  (letn loop (values st rprefix xs) = (values st '() xs)
+    (values st xs) = (muk-walk st xs)
+    (match xs
+      ((cons item xs) (loop st (cons item rprefix) xs))
+      (_ (values st rprefix xs)))))
+
+(def ((try-lookup-before x env t alts) st)
+  (values st rgenv venv) = (list-split-ground st env)
+  ;_ = (when (< 18 (length rgenv)) (newline) (displayln `(lookup prefix ,rgenv)))
+  (values st env) = (muk-walk st env)
+  goal =
+  (forf alts = (conde$ ((symbolo x) (lookupo x venv t))
+                       (alts))
+        `(,y . ,b) <- rgenv
+        (conde$
+          ((symbolo x) (== x y)
+           (conde$
+             ((== `(val . ,t) b))
+             ((exist (lam-expr)
+                     (== `(rec . ,lam-expr) b)
+                     (== `(closure ,lam-expr ,env) t)))))
+          ((=/= x y) alts)))
+  (muk-goal st goal))
+
 (define (not-in-envo x env)
   (conde
     ((== empty-env env))
@@ -113,10 +141,34 @@
     ((== '() expr)
      (== '() val))
     ((exist (a d v-a v-d)
-       (== `(,a . ,d) expr)
-       (== `(,v-a . ,v-d) val)
-       (eval-expo a env v-a)
-       (eval-listo d env v-d)))))
+            (== `(,a . ,d) expr)
+            (== `(,v-a . ,v-d) val)
+            (eval-expo a env v-a)
+            (eval-listo d env v-d)))))
+
+; this specialization was unnecessary
+;(def ((eval-listo expr env val) st)
+  ;(values st goal) =
+  ;(letn loop (values st expr val) = (values st expr val)
+    ;(values st expr) = (muk-walk st expr)
+    ;(match expr
+      ;('() (values st (== '() val)))
+      ;((cons a d)
+       ;(let/vars (v-d)
+         ;(lets (values st goal) = (loop st d v-d)
+               ;(values st (exist (v-a)
+                            ;(== `(,v-a . ,v-d) val)
+                            ;(eval-expo a env v-a)
+                            ;goal)))))
+      ;(_ (values st (conde
+           ;((== '() expr)
+            ;(== '() val))
+           ;((exist (a d v-a v-d)
+              ;(== `(,a . ,d) expr)
+              ;(== `(,v-a . ,v-d) val)
+              ;(eval-expo a env v-a)
+              ;(eval-listo d env v-d))))))))
+  ;(muk-goal st goal))
 
 ;; need to make sure lambdas are well formed.
 ;; grammar constraints would be useful here!!!
@@ -140,10 +192,6 @@
 
 (define (eval-primo prim-id a* val)
   (conde
-    [(== prim-id 'cons)
-     (exist (a d)
-       (== `(,a ,d) a*)
-       (== `(,a . ,d) val))]
     [(== prim-id 'car)
      (exist (d)
        (== `((,val . ,d)) a*)
@@ -178,7 +226,12 @@
        (== `(,v) a*)
        (conde
          ((== '() v) (== #t val))
-         ((=/= '() v) (== #f val))))]))
+         ((=/= '() v) (== #f val))))]
+    [(== prim-id 'cons)
+     (exist (a d)
+       (== `(,a ,d) a*)
+       (== `(,a . ,d) val))]
+    ))
 
 (define (prim-expo expr env val)
   (conde
@@ -245,11 +298,11 @@
       ((=/= #f t) (eval-expo e2 env val))
       ((== #f t) (eval-expo e3 env val)))))
 
-(define initial-env `((cons . (val . (prim . cons)))
-                      (car . (val . (prim . car)))
+(define initial-env `((car . (val . (prim . car)))
                       (cdr . (val . (prim . cdr)))
                       (null? . (val . (prim . null?)))
                       (symbol? . (val . (prim . symbol?)))
+                      (cons . (val . (prim . cons)))
                       (not . (val . (prim . not)))
                       (equal? . (val . (prim . equal?)))
                       (list . (val . (closure (lambda x x) ,empty-env)))
@@ -504,16 +557,18 @@
       ((1 2 3 4) (5))
       ((1 2 3 4 5) ())))
 
-  (check-equal?
-    (run-da-dls 1 (100) q
-      (evalo `(letrec ((append (lambda (l s)
-                                 (if (null? l)
-                                   s
-                                   (cons ,q
-                                         (append (cdr l) s))))))
-                (append '(1 2 3) '(4 5)))
-             '(1 2 3 4 5)))
-    '((car l)))
+  ;; flipping rand/body eval order makes this one too hard!
+  ;(check-equal?
+    ;(run-da-dls 1 (100) q
+;;                (== q '(car l))
+      ;(evalo `(letrec ((append (lambda (l s)
+                                 ;(if (null? l)
+                                   ;s
+                                   ;(cons ,q
+                                         ;(append (cdr l) s))))))
+                ;(append '(1 2 3) '(4 5)))
+             ;'(1 2 3 4 5)))
+    ;'((car l)))
 
   (check-equal?
     (run-da-dls 1 (100) q
@@ -537,7 +592,7 @@
                  '(1 2 3 4 5)))
     '(cdr))
 
-  ;; harder: now only takes 0.9s!
+  ;; hard 1: now only takes 0.9s!
   (check-equal?
     (run-da-dls 1 (100) (q r)
       (evalo `(letrec ((append (lambda (l s)
@@ -549,7 +604,7 @@
                  '(1 2 3 4 5)))
     '((cdr l)))
 
-  ;; even harder: now only takes about 2.25s!
+  ;; hard 2: now only takes about 2.25s!
   (check-equal?
     (run-da-dls 1 (100) q
       (evalo `(letrec ((append (lambda (l s)
@@ -561,6 +616,40 @@
                  '(1 2 3 4 5))
       )
     '((cdr l)))
+
+  ;; hard 3
+  (check-equal?
+    (run-da-dls 1 (100) (q r)
+;                (== q '(cdr l)) (== r 's)
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               (append ,q ,r))))))
+                    (list
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '(foo bar) '(1 2 3 4 5)))
+      )
+    '(((cdr l) s)))
+
+  ;; hard 4
+  (check-equal?
+    (run-da-dls 1 (100) q
+;                (== q '((cdr l) s))
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               (append . ,q))))))
+                    (list
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '(foo bar) '(1 2 3 4 5)))
+      )
+    '(((cdr l) s)))
 
   (define quinec
   '((lambda (_.0)

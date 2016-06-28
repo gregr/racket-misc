@@ -2,6 +2,7 @@
 (provide
   ==
   conde
+  conde$
   conj*
   conj-seq*
   disj*
@@ -62,6 +63,9 @@
 (define-syntax conde
   (syntax-rules ()
     ((_ (gs ...) ...) (disj+-Zzz (conj* gs ...) ...))))
+(define-syntax conde$
+  (syntax-rules ()
+    ((_ (gs ...) ...) (disj* (conj* gs ...) ...))))
 
 (define-syntax exist
   (syntax-rules ()

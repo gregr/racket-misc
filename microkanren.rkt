@@ -279,7 +279,8 @@
       ((cons (list st _) rs) (list* st (muk-strip rs)))))
   (define (muk-eval st comp n (depth-min 1) (depth-inc add1) (depth-max #f))
     (let loop0 ((depth depth-min))
-      (set-box! incomplete?! #f)
+      (displayln `(depth ,depth))
+      (set-box! incomplete?! #t)
       (match (reset-at ptag
         (let loop1 ((n n) (results (thunk (muk-step st comp depth))))
           (if (equal? n 0) '()
