@@ -670,6 +670,108 @@
       )
     '(((cdr l) s)))
 
+  ;; hard 5
+  (check-equal?
+    (run-da-dls 1 (100) (q r)
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons ,q
+                                               (append . ,r))))))
+                    (list
+                      (append '() '())
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '() '(foo bar) '(1 2 3 4 5)))
+      )
+    '(((car l) ((cdr l) s))))
+
+  ;; hard 6
+  (check-equal?
+    (run-da-dls 1 (100) q
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               ,q)))))
+                    (list
+                      (append '() '())
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '() '(foo bar) '(1 2 3 4 5)))
+      )
+    '((append (cdr l) s)))
+
+  ;; hard 7
+  (check-equal?
+    (run-da-dls 1 (100) (q r)
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons ,q
+                                               ,r)))))
+                    (list
+                      (append '() '())
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '() '(foo bar) '(1 2 3 4 5)))
+      )
+    '(((car l) (append (cdr l) s))))
+
+  ;; hard 8: takes ~12s
+  ;(check-equal?
+    ;(run-da-dls 1 (100) q
+      ;(evalo `(letrec ((append (lambda (l s)
+                                     ;(if (null? l)
+                                         ;s
+                                         ;,q))))
+                    ;(list
+                      ;(append '() '())
+                      ;(append '(foo) '(bar))
+                      ;(append '(1 2 3) '(4 5)))
+                    ;)
+                 ;(list '() '(foo bar) '(1 2 3 4 5)))
+      ;)
+    ;'((cons (car l)  (append (cdr l) s))))
+
+  ;; hard 9: takes ~33s
+  ;(check-equal?
+    ;(run-da-dls 1 (100) (q r)
+      ;(evalo `(letrec ((append (lambda (l s)
+                                     ;(if (null? l)
+                                         ;,q
+                                         ;,r))))
+                    ;(list
+                      ;(append '() '())
+                      ;(append '(foo) '(bar))
+                      ;(append '(1 2 3) '(4 5)))
+                    ;)
+                 ;(list '() '(foo bar) '(1 2 3 4 5)))
+      ;)
+    ;'((s (cons (car l) (append (cdr l) s)))))
+
+  ;; hard 10 (need better test examples)
+  ; this starts producing nonsense results that game the test examples
+  ; example of its "cleverness":
+  ; (s (match s ((quasiquote ()) s)
+  ;             ((quasiquote (bar)) (quote (foo bar)))
+  ;             (_.0 (quote (1 2 3 4 5))) . _.1) _.2)
+  ;(check-equal?
+    ;(run-da-dls 1 (100) (q r s)
+      ;(evalo `(letrec ((append (lambda (l s)
+                                     ;(if ,q ,r ,s))))
+                    ;(list
+                      ;(append '() '())
+                      ;(append '(foo) '(bar))
+                      ;(append '(1 2 3) '(4 5)))
+                    ;)
+                 ;(list '() '(foo bar) '(1 2 3 4 5)))
+      ;)
+    ;'())
+
   (define quinec
   '((lambda (_.0)
       (list _.0 (list (quote quote) _.0)))
