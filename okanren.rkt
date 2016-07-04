@@ -82,4 +82,20 @@
 ;;     void, nil, bool, sym, num
 ;;     eq? non-vector aggs
 
-;; constraint lattice that subsumes variable binding
+;; states
+;;   known value OR (domain-info, attributed constraints)
+;;   constraints
+;;     initially
+;;       disequality
+;;       absence
+;;     eventually
+;;       finite domain operations
+;;   domain info
+;;     initially, just possible type vs. known value
+;;     eventually, lattice that subsumes variable binding
+;;       unknown, optional not-types, optional not-values
+;;       finite domain, set of values across types
+;;       finite domain, any value of a particular type
+;;       finite domain, set of values within one type
+;;       numeric intervals
+;;       known value
