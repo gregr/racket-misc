@@ -1,10 +1,8 @@
 #lang racket/base
 (provide
-
   )
 
 (require
-
   )
 
 (module+ test
@@ -12,6 +10,12 @@
     rackunit
     ))
 
+;; References
+;;   Determinism analysis in the Mercury compiler
+;;   Fergus Henderson, Zoltan Somogyi and Thomas Conway.
+;;   Proceedings of the Australian Computer Science Conference, Melbourne, Australia, January 1996, pages 337-346.
+;;   http://www.mercurylang.org/documentation/papers/acsc96.ps.gz
+;;   longer version: http://www.mercurylang.org/documentation/papers/detism.ps.gz
 
 ;; TODO
 
@@ -45,6 +49,7 @@
 ;;   instantiation/shape information is recursive for pairs
 ;; switches: mutually-exclusive disjunctions
 ;;   'switchable?' flags/priorities for relation arguments
+;;     priorities for attempting best indexing first
 ;; simplified unifications
 ;;   simple tests
 ;;   assignments
