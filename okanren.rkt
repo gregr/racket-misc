@@ -41,44 +41,11 @@
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
 
-;; shape and instantiation states for vars
-;;   unbound
-;;   bound but unknown shape
-;;   bound to shape from a finite set
-;;   bound to a particular shape
-;;   instantiation/shape information is recursive for pairs
 ;; switches: mutually-exclusive disjunctions
 ;;   'switchable?' flags/priorities for relation arguments
 ;;     priorities for attempting best indexing first
-;; simplified unifications
-;;   simple tests
-;;   assignments
-;;   constructions
-;;   deconstructions
-;;   recursively apply simplifications
-;; analogous simplifications for general constraints?
-;; split complex operations (like unification)
-;;   e.g. minimize/share lookups/derefs
-;; commits for eliminating redundant answers
 
 ;; staged scheme for metaprogramming
-;; optional static det/type checking
-
-;; low-level optimization
-;;   fact support (regular, large disjunctions)
-;;     exo-compilation
-;;     limited forward-chaining
-;;     embedding fact tables in substitutions
-;;       delay splitting states (disjunctions normally split)
-;;       avoids mostly-redundant state exploration
-;;   region-based garbage collection
-;;   path compression
-;;   mutation of locally-scoped (non-split) vars
-;;   substitution vectors (registerization?) for faster lookup
-;;     only for guaranteed use
-
-;; relation tagging for dynamic recursion/termination analysis?
-;; step quota to preempt expensive deterministic processes (ackerman)
 
 ;; terms
 ;;   logic vars
@@ -104,3 +71,43 @@
 ;;       finite domain, set of values within one type
 ;;       numeric intervals
 ;;       known value
+
+;; TODO later
+
+;; simplified unifications
+;;   simple tests
+;;   assignments
+;;   constructions
+;;   deconstructions
+;;   recursively apply simplifications
+;; analogous simplifications for general constraints?
+;; split complex operations (like unification)
+;;   e.g. minimize/share lookups/derefs
+;; commits for eliminating redundant answers
+
+;; low-level optimization
+;;   fact support (regular, large disjunctions)
+;;     exo-compilation
+;;     limited forward-chaining
+;;     embedding fact tables in substitutions
+;;       delay splitting states (disjunctions normally split)
+;;       avoids mostly-redundant state exploration
+;;   region-based garbage collection
+;;   path compression
+;;   mutation of locally-scoped (non-split) vars
+;;   substitution vectors (registerization?) for faster lookup
+;;     only for guaranteed use
+
+;; optional static det/type checking
+
+;; relation tagging for dynamic recursion/termination analysis?
+;; step quota to preempt expensive deterministic processes (ackerman)
+
+;; abstract interpretation
+;;   shape and instantiation states for vars
+;;     unknown boundness
+;;     unbound
+;;     bound but unknown shape
+;;     bound to shape from a finite set
+;;     bound to a particular shape
+;;     instantiation/shape information is recursive for pairs
