@@ -19,12 +19,13 @@
 
 ;; TODO
 
-;; grammar
+;; definition grammar
 ;;   query: (run count (qvars) goal ...)
 ;;   procedure-definition group
 ;;     (procedure-definitions procedure-definition ...)
 ;;   procedure-definition
 ;;     (define proc-name (lambda (svname ...) goal ...))
+;;       ; defined procedures may be transformed by optimizer
 ;;   goal
 ;;     high-level
 ;;       (fresh (lvname ...) goal ...)
@@ -35,26 +36,42 @@
 ;;       (symbolo goal-expr)
 ;;       (absento goal-expr goal-expr)
 ;;       (proc-name goal-expr ...)
-;;     low-level
+;;     lower-level
+;;       (fragment goal-fragment ...)
+;;         ; produced by optimizer
+;;         ; this sequence must be order-insensitive relative to other goals
 ;;       conj, disj, disj^, zzz
 ;;   goal-expr
 ;;     scheme-var
+;;       ; typical, lambda bound variables
 ;;     atom
 ;;     `(,goal-expr . ,goal-expr)
 ;;   value
-;;     logic-var
+;;     var
+;;       ; logical
 ;;     atom
 ;;     `(,value . ,value)
 ;;   atom
 ;;     '(), #t, #f, {symbol}, {number}
-;;   goal-fragment (low-level, sensitive to ordering, unlike goals)
-;;     goal
-;;     (state-current-put goal-fragment-expr)
-;;       ; maybe replace this with a (lambda (st) ...)
-;;     (begin goal-fragment ...)
-;;     (let ((svname goal-fragment-expr) ...) goal-fragment)
+
+;; optimization grammar
+;;   fragment-procedure
+;;     (lambda (svname ...) goal-fragment ...)
+;;       ; produced by optimizer
+;;       ; may be order-sensitive, unlike full procedures
+;;   goal-fragment (low-level, semidet, sensitive to ordering, unlike goals)
+;;     (goal goal)
+;;       ; forces application of goal in sequence with fragments
+;;       ; must be guaranteed to produce at most one answer
+;;       ; can we avoid using this by gutting/sharing full procedure internals?
+;;     (update update:goal-fragment-expr)
+;;       ; update is (lambda (old-state:svname) new-state:goal-fragment-expr)
+;;     (let ((svname goal-fragment-expr) ...) goal-fragment ...)
 ;;     (switch goal-expr (mutually-exclusive-pattern goal-fragment ...) ...)
 ;;     (commit)
+;;       ; immediately causes current and all sibling disjuncts to succeed
+;;       ; only valid if all disjunct answers are guaranteed to be redundant
+;;     (fragment-proc-name goal-fragment-expr ...)
 ;;   goal-fragment-expr
 ;;     goal-expr
 ;;     (let ((svname goal-fragment-expr) ...) goal-fragment-expr)
@@ -64,7 +81,6 @@
 ;;     car, cdr
 ;;     (var-new name:{symbol} state:goal-fragment-expr)
 ;;     state-empty
-;;     (state-current-get)
 ;;     (state-put
 ;;       state:goal-fragment-expr
 ;;       key:goal-fragment-expr
@@ -83,6 +99,7 @@
 ;;       ; returns new state, new bindings
 ;;     (constrain state:goal-fragment-expr constraint:goal-fragment-expr)
 ;;       ; pre-defined but specializable operations for each constraint type
+
 ;; staged scheme unquoting for metaprogramming
 
 ;; determinism annotations for goals
