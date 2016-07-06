@@ -41,18 +41,52 @@
 ;;     scheme-var
 ;;     atom
 ;;     `(,goal-expr . ,goal-expr)
-;;   goal-fragment (low-level, sensitive to ordering, unlike goals)
-;;     TODO
-;;   goal-fragment-expr
-;;     TODO
 ;;   value
 ;;     logic-var
 ;;     atom
 ;;     `(,value . ,value)
 ;;   atom
 ;;     '(), #t, #f, {symbol}, {number}
-
+;;   goal-fragment (low-level, sensitive to ordering, unlike goals)
+;;     goal
+;;     (state-current-put goal-fragment-expr)
+;;       ; maybe replace this with a (lambda (st) ...)
+;;     (begin goal-fragment ...)
+;;     (let ((svname goal-fragment-expr) ...) goal-fragment)
+;;     (switch goal-expr (mutually-exclusive-pattern goal-fragment ...) ...)
+;;     (commit)
+;;   goal-fragment-expr
+;;     goal-expr
+;;     (let ((svname goal-fragment-expr) ...) goal-fragment-expr)
+;;     (cond (goal-fragment-expr goal-fragment-expr) ...)
+;;     (app goal-fragment-expr goal-fragment-expr ...)
+;;     var?, var=?, eqv?, null?, pair?, number?, symbol?
+;;     car, cdr
+;;     (var-new name:{symbol} state:goal-fragment-expr)
+;;     state-empty
+;;     (state-current-get)
+;;     (state-put
+;;       state:goal-fragment-expr
+;;       key:goal-fragment-expr
+;;       val:goal-fragment-expr)
+;;     (state-get
+;;       state:goal-fragment-expr
+;;       key:goal-fragment-expr)
+;;     (state-get-default
+;;       state:goal-fragment-expr
+;;       key:goal-fragment-expr
+;;       default:goal-fragment-expr)
+;;     (unify state:goal-fragment-expr goal-fragment-expr goal-fragment-expr)
+;;       ; returns new state, new bindings, and affected constraints
+;;     (unify-and-constrain
+;;       state:goal-fragment-expr goal-fragment-expr goal-fragment-expr)
+;;       ; returns new state, new bindings
+;;     (constrain state:goal-fragment-expr constraint:goal-fragment-expr)
+;;       ; pre-defined but specializable operations for each constraint type
 ;; staged scheme unquoting for metaprogramming
+
+;; determinism annotations for goals
+;;   TODO
 
 ;; biased, nested disjunctions
 ;; fairness-seeking flattening disjunctions
