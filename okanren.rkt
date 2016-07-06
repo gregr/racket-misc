@@ -19,6 +19,41 @@
 
 ;; TODO
 
+;; grammar
+;;   query: (run count (qvars) goal ...)
+;;   procedure-definition group
+;;     (procedure-definitions procedure-definition ...)
+;;   procedure-definition
+;;     (define proc-name (lambda (svname ...) goal ...))
+;;   goal
+;;     high-level
+;;       (fresh (lvname ...) goal ...)
+;;       (conde (goal ...) ...)
+;;       (== goal-expr goal-expr)
+;;       (=/=* `((,goal-expr . ,goal-expr) ...))
+;;       (numbero goal-expr)
+;;       (symbolo goal-expr)
+;;       (absento goal-expr goal-expr)
+;;       (proc-name goal-expr ...)
+;;     low-level
+;;       conj, disj, disj^, zzz
+;;   goal-expr
+;;     scheme-var
+;;     atom
+;;     `(,goal-expr . ,goal-expr)
+;;   goal-fragment (low-level, sensitive to ordering, unlike goals)
+;;     TODO
+;;   goal-fragment-expr
+;;     TODO
+;;   value
+;;     logic-var
+;;     atom
+;;     `(,value . ,value)
+;;   atom
+;;     '(), #t, #f, {symbol}, {number}
+
+;; staged scheme unquoting for metaprogramming
+
 ;; biased, nested disjunctions
 ;; fairness-seeking flattening disjunctions
 ;; dynamically re-orderable conjuntions
@@ -44,15 +79,6 @@
 ;; switches: mutually-exclusive disjunctions
 ;;   'switchable?' flags/priorities for relation arguments
 ;;     priorities for attempting best indexing first
-
-;; staged scheme for metaprogramming
-
-;; terms
-;;   logic vars
-;;   pairs
-;;   eqv?-relatable atoms
-;;     void, nil, bool, sym, num
-;;     eq? non-vector aggs
 
 ;; states
 ;;   known value OR (domain-info, attributed constraints)
