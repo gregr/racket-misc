@@ -138,7 +138,7 @@
 ;;   at-most : nat or #f (default 0)
 ;;   at-least=1, at-most=0 corresponds to an error that aborts
 
-;; dynamically re-orderable conjuntions
+;; dynamically reorderable conjuntions
 ;;   toggle-able for performance tests, to determine its utility
 ;;   prefer low branching factors (and seek failure, not just determinism)
 ;;     least 0, most 0
@@ -148,6 +148,13 @@
 ;;     ...
 ;;     least 0, most #f
 ;;     least 1, most #f, etc.
+;;   priority
+;;     tests (including switches)
+;;       unification, inexpensive constraints
+;;     assignment
+;;     expensive constraints
+;;     recursion
+;;     branching
 
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
