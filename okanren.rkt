@@ -112,6 +112,14 @@
 ;;     (unify-and-constrain
 ;;       state:goal-fragment-expr goal-fragment-expr goal-fragment-expr)
 ;;       ; returns new state, new bindings
+;;     constraint-attrs?
+;;     constraint-attrs-empty
+;;     (constraint-attrs-domain goal-fragment-expr)
+;;     (constraint-attrs-domain-set goal-fragment-expr goal-fragment-expr)
+;;     (constraint-attrs-absents goal-fragment-expr)
+;;     (constraint-attrs-absents-add goal-fragment-expr goal-fragment-expr)
+;;     (constraint-attrs-diseqs goal-fragment-expr)
+;;     (constraint-attrs-diseqs-add goal-fragment-expr goal-fragment-expr)
 ;;     (constrain state:goal-fragment-expr constraint:goal-fragment-expr)
 ;;       ; pre-defined but specializable operations for each constraint type
 
