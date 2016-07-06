@@ -180,6 +180,42 @@
 ;;   pre-schedule as much as possible before branching, to share effort
 ;;     before imminent branching, could follow a greedier strategy
 
+;; simplified strategy operating on normal goals
+;;   process deterministic
+;;     process all immediately available unifications and constraints
+;;     expand procedure applications
+;;     loop until only disjunctions remain, or until failure (prune)
+;;   prune disjunctions
+;;     for each disjunction
+;;       for each branch
+;;         process immediates, but without expanding procedures
+;;         then prune their disjunctions
+;;           fail if any become empty
+;;           merge singleton branches into parent and process
+;;         replace immediates with residual unifications and constraints
+;;         forget state and return updated branch to parent
+;;       if new determinism available (single branch remains)
+;;         abort pruning and loop from the top
+;;   still only disjunctions remain
+;;     choose a branch and split state
+;;       prefer informative branches (more relevant assignments)
+;;         relevant assignments are for vars that are widely tested
+;;         fresh vars introduced in a branch are not informative
+;;       prefer longer/deeper (yes!) branches
+;;         particularly those with recursive calls (with relevant arguments)
+;;           branches with recursion may be hiding helpful info
+;;         why longer? branches with unhelpful info are useless, shallow or not
+;;           while traversing longer branch, unhelpful info in shallow branches
+;;           may turn helpful, in which case they will be revisited naturally
+;;       otherwise, prefer disjunctions with fewer branches
+;;       remember: when considering two conjuncted disjunctions, it may be
+;;       helpful to traverse some branches in one, then some branches in
+;;       the other before completing the first (no fixed order)
+;;   Note: When pruning subsequent states, would be nice to only consider
+;;   unifications/constraints that may be affected by new information.  It also
+;;   might be helpful to support multiple simultaneous variable lookup.  This
+;;   could start looking like database joining.
+
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
 
