@@ -60,7 +60,7 @@
 ;;   atom
 ;;     '(), #t, #f, {symbol}, {number}
 
-;; optimization grammar
+;; optimization grammar (deal with this later)
 ;;   fragment-definition group
 ;;     (fragments fragment-definition ...)
 ;;   fragment-definition
@@ -130,15 +130,23 @@
 
 ;; optional greedy procedure modes to avoid pre-emption while interleaving
 
-;; determinism annotations for goals
-;;   TODO
-
-;; determinism flags
+;; determinism metrics
 ;;   at-least : nat (default 1)
 ;;   at-most : nat or #f (default 0)
 ;;   at-least=1, at-most=0 corresponds to an error that aborts
 
-;; dynamically reorderable conjuntions
+;; determinism annotations for goals
+;;   conjunctions and fragment sequences
+;;     pre-branch unifiable and constrainable var set
+;;       these contribute tests, assignments, and expensive constraints
+;;   disjunctions
+;;     prioritized, switchable vars with determinism metrics for each
+;;       these contribute tests and expose more goals at low cost
+;;   procedures/zzz
+;;     pre-branch unifiable and constrainable param set
+;;     priotiized, switchable params with determinism metrics for each
+
+;; dynamically reorderable conjunctions
 ;;   toggle-able for performance tests, to determine its utility
 ;;   prefer low branching factors (and seek failure, not just determinism)
 ;;     least 0, most 0
@@ -148,13 +156,17 @@
 ;;     ...
 ;;     least 0, most #f
 ;;     least 1, most #f, etc.
-;;   priority
+;;   scheduling priority
 ;;     tests (including switches)
 ;;       unification, inexpensive constraints
 ;;     assignment
 ;;     expensive constraints
 ;;     recursion
 ;;     branching
+;;   dynamically inspect bindings in state
+;;     to determine which priorities each determinism annotation affects
+;;   pre-schedule as much as possible before branching, to share effort
+;;     before imminent branching, could follow a greedier strategy
 
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
