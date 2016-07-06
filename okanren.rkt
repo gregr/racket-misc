@@ -47,6 +47,8 @@
 ;;       disj ; biased, nested disjunctions
 ;;       disj^ ; fairness-seeking disjunctions that flatten into parent disj
 ;;       zzz ; pause for interleaving
+;;       (let ((svname goal-expr) ...) goal ...)
+;;       ? (switches (goal-expr (mutually-exclusive-pattern goal ...) ...) ...)
 ;;   goal-expr
 ;;     scheme-var
 ;;       ; typical, lambda bound variables
@@ -71,10 +73,9 @@
 ;;       ; produced by optimizer
 ;;       ; may be order-sensitive, unlike full procedures
 ;;   goal-fragment (low-level, semidet, sensitive to ordering, unlike goals)
-;;     (goal goal)
+;;     goal
 ;;       ; in the middle of a fragment sequence
 ;;       ;   goal must be applied before rest of fragments
-;;       ;   must be guaranteed to produce at most one answer
 ;;       ; in tail position of a fragment sequence
 ;;       ;   goal behaves normally
 ;;     (update goal-fragment-expr-proc-name)
@@ -83,7 +84,8 @@
 ;;       ;   new-state:goal-fragment-expr)
 ;;     (let [goal-fragment-proc-name] ((svname goal-fragment-expr) ...)
 ;;       goal-fragment ...)
-;;     (switch goal-expr (mutually-exclusive-pattern goal-fragment ...) ...)
+;;     (switches (goal-fragment-expr
+;;                 (mutually-exclusive-pattern goal-fragment ...) ...) ...)
 ;;     (commit)
 ;;       ; immediately causes current and all sibling disjuncts to succeed
 ;;       ; only valid if all disjunct answers are guaranteed to be redundant
