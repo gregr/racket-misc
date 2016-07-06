@@ -142,6 +142,16 @@
 ;;   disjunctions
 ;;     prioritized, switchable vars with determinism metrics for each
 ;;       these contribute tests and expose more goals at low cost
+;;     annotated branches, up to recursion (pre-analysis for recursive info?)
+;;       need some measure of determinism within non-switchable branches
+;;         decide which of two branching disjunctions will hurt us less
+;;         this is where the test vs. assign vs. etc. priorities really matter
+;;         when comparing non-switch disjunctions
+;;           more tests and expensive constraints are a lot better
+;;           more assignments of known vars is better
+;;           more recursion is worse
+;;           more branching is worse (worse than recursion?)
+;;         do we need scoring heuristics?
 ;;   procedures/zzz
 ;;     pre-branch unifiable and constrainable param set
 ;;     priotiized, switchable params with determinism metrics for each
