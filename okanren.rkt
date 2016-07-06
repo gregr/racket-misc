@@ -43,7 +43,10 @@
 ;;       (fragment goal-fragment ...)
 ;;         ; produced by optimizer
 ;;         ; this sequence must be order-insensitive relative to other goals
-;;       conj, disj, disj^, zzz
+;;       conj
+;;       disj ; biased, nested disjunctions
+;;       disj^ ; fairness-seeking disjunctions that flatten into parent disj
+;;       zzz ; pause for interleaving
 ;;   goal-expr
 ;;     scheme-var
 ;;       ; typical, lambda bound variables
@@ -125,15 +128,19 @@
 
 ;; staged scheme unquoting for metaprogramming
 
+;; optional greedy procedure modes to avoid pre-emption while interleaving
+
 ;; determinism annotations for goals
 ;;   TODO
 
-;; biased, nested disjunctions
-;; fairness-seeking flattening disjunctions
+;; determinism flags
+;;   at-least : nat (default 1)
+;;   at-most : nat or #f (default 0)
+;;   at-least=1, at-most=0 corresponds to an error that aborts
+
 ;; dynamically re-orderable conjuntions
 ;;   toggle-able for performance tests, to determine its utility
-;;   what goal annotations do we need?
-;;   prefer low branching factors (and seek failure!)
+;;   prefer low branching factors (and seek failure, not just determinism)
 ;;     least 0, most 0
 ;;     least 0, most 1
 ;;     least 1, most 1
@@ -141,11 +148,6 @@
 ;;     ...
 ;;     least 0, most #f
 ;;     least 1, most #f, etc.
-
-;; determinism flags
-;;   at-least : nat (default 1)
-;;   at-most : nat or #f (default 0)
-;;   at-least=1, at-most=0 corresponds to an error that aborts
 
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
