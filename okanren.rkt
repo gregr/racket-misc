@@ -21,10 +21,13 @@
 
 ;; definition grammar
 ;;   query: (run count (qvars) goal ...)
-;;   procedure-definition group
-;;     (procedure-definitions procedure-definition ...)
-;;   procedure-definition
-;;     (define proc-name (lambda (svname ...) goal ...))
+;;   definition group
+;;     (kanren definition ...)
+;;     (kanren-define (proc-name svname ...) goal ...)
+;;       ; singleton, when mutual recursion isn't needed
+;;   definition
+;;     (define name goal-expr)
+;;     (define (proc-name svname ...) goal ...)
 ;;       ; defined procedures may be transformed by optimizer
 ;;   goal
 ;;     high-level
@@ -55,30 +58,42 @@
 ;;     '(), #t, #f, {symbol}, {number}
 
 ;; optimization grammar
-;;   fragment-procedure
-;;     (lambda (svname ...) goal-fragment ...)
+;;   fragment-definition group
+;;     (fragments fragment-definition ...)
+;;   fragment-definition
+;;     (define name goal-fragment-expr)
+;;     (define (proc-name svname ...) goal-fragment-expr)
+;;       ; goal-fragment-expr-proc
+;;     (define-goal-fragment (proc-name svname ...) goal-fragment ...)
 ;;       ; produced by optimizer
 ;;       ; may be order-sensitive, unlike full procedures
 ;;   goal-fragment (low-level, semidet, sensitive to ordering, unlike goals)
 ;;     (goal goal)
-;;       ; forces application of goal in sequence with fragments
-;;       ; must be guaranteed to produce at most one answer
-;;       ; can we avoid using this by gutting/sharing full procedure internals?
-;;     (update update:goal-fragment-expr)
-;;       ; update is (lambda (old-state:svname) new-state:goal-fragment-expr)
-;;     (let ((svname goal-fragment-expr) ...) goal-fragment ...)
+;;       ; in the middle of a fragment sequence
+;;       ;   goal must be applied before rest of fragments
+;;       ;   must be guaranteed to produce at most one answer
+;;       ; in tail position of a fragment sequence
+;;       ;   goal behaves normally
+;;     (update goal-fragment-expr-proc-name)
+;;       ; where the update proc has the form
+;;       ; (define (goal-fragment-expr-proc-name old-state:goal-fragment-expr)
+;;       ;   new-state:goal-fragment-expr)
+;;     (let [goal-fragment-proc-name] ((svname goal-fragment-expr) ...)
+;;       goal-fragment ...)
 ;;     (switch goal-expr (mutually-exclusive-pattern goal-fragment ...) ...)
 ;;     (commit)
 ;;       ; immediately causes current and all sibling disjuncts to succeed
 ;;       ; only valid if all disjunct answers are guaranteed to be redundant
-;;     (fragment-proc-name goal-fragment-expr ...)
+;;     (goal-fragment-proc-name goal-fragment-expr ...)
 ;;   goal-fragment-expr
 ;;     goal-expr
-;;     (let ((svname goal-fragment-expr) ...) goal-fragment-expr)
+;;     (let [goal-fragment-expr-proc-name] ((svname goal-fragment-expr) ...)
+;;       goal-fragment-expr)
 ;;     (cond (goal-fragment-expr goal-fragment-expr) ...)
-;;     (app goal-fragment-expr goal-fragment-expr ...)
-;;     var?, var=?, eqv?, null?, pair?, number?, symbol?
-;;     car, cdr
+;;     (goal-fragment-expr-proc-name goal-fragment-expr ...)
+;;     (var=?|eqv? goal-fragment-expr goal-fragment-expr)
+;;     (var?|null?|pair?|number?|symbol? goal-fragment-expr)
+;;     (car|cdr goal-fragment-expr)
 ;;     (var-new name:{symbol} state:goal-fragment-expr)
 ;;     state-empty
 ;;     (state-put
