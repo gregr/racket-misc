@@ -216,6 +216,21 @@
 ;;   might be helpful to support multiple simultaneous variable lookup.  This
 ;;   could start looking like database joining.
 
+;; basic path-sensitive flow analysis
+;;   for each definition not yet processed
+;;     partially evaluate up to procedure calls
+;;       should eliminate unnecessary logic vars and simplify some goals
+;;       possibly extract common sub-expressions and identify switches here
+;;         switch summary information could improve dynamic pruning performance
+;;     enter called definitions
+;;       process that definition independently
+;;       if it turns out the call is (mutually-)recursive, truncate it
+;;         recursion indicated by call to unfinished proc definition
+;;         later, might allow inlining of recursive deterministic prefix
+;;       otherwise, inline the processed result and partially evaluate
+;;   later, may analyze multiple parameter modes for exported definitions
+;;     exports determine entry points, so parameter modes could be anything
+
 ;; lift common sub-exprs out of disjunctions
 ;;   MSG?
 
