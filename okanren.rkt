@@ -185,17 +185,54 @@
 ;;     process all immediately available unifications and constraints
 ;;     expand procedure applications
 ;;     loop until only disjunctions remain, or until failure (prune)
-;;   prune disjunctions
+;;   prune disjuntions with switch indices
+;;     for each such disjunction
+;;       for each indexed variable in priority order
+;;         match current state's binding in index and return sub-disjunction
+;;         if no binding, try next indexed variable
+;;   prune and build switch indices for new disjunctions
 ;;     for each disjunction
+;;       start an empty switch index
 ;;       for each branch
 ;;         process immediates, but without expanding procedures
 ;;         then prune their disjunctions
 ;;           fail if any become empty
 ;;           merge singleton branches into parent and process
+;;           merge entries from sub-indices into current switch index
+;;             each sub-branch appears deterministically embedded in its parent
+;;               e.g.  (disj (conj X=a (disj (conj Y=d P...) (conj Y=e Q...)))
+;;                           (conj X=b (disj (conj Y=e R...) (conj Y=f S...)))
+;;                           (conj X=c Y=e)))
+;;               This disj has an index for X with single entries for a,b,c:
+;;                 X=a: (disj (conj Y=d P...) (conj Y=e Q...))
+;;                 X=b: (disj (conj Y=e R...) (conj Y=f S...))
+;;                 X=c: Y=e
+;;               The first and second branches have sub-indices for Y
+;;                 with d,e and e,f respectively
+;;               Each sub-index is merged into the parent Y index:
+;;                 Y=d: (conj X=a P...)
+;;                 Y=e: (disj (conj X=a Q...) (conj X=b R...) X=c)
+;;                 Y=f: (conj X=b S...)
+;;                 Notice the sub-branches embedded directly in parents
+;;               Note: Although both X and Y discriminate 3 ways
+;;               and Y appears more embedded in X, Y's entries seem more
+;;               deterministic, so we should prioritize it.  Bucket count
+;;               seems an imperfect heuristic.  Maybe not a big deal.  Even
+;;               after switching on X, if Y was also set, it will prune easily
+;;               when processing "new" disjunctions (same in this case, but not
+;;               in general; consider switching on Y instead).
 ;;         replace immediates with residual unifications and constraints
+;;         add to switch index for tested variables
+;;           for each variable tested (not newly-assigned) in any branch
+;;             add this branch to bucket for the value type tested
+;;             or, if it doesn't test it, the non-test bucket
 ;;         forget state and return updated branch to parent
 ;;       if new determinism available (single branch remains)
 ;;         abort pruning and loop from the top
+;;       otherwise, process built switch
+;;         for pair-test buckets with multiple entries
+;;           reduce to component tests; build sub-indices for bucketed branches
+;;         sort variables to prioritize number of buckets (more is better)
 ;;   still only disjunctions remain
 ;;     choose a branch and split state
 ;;       prefer informative branches (more relevant assignments)
