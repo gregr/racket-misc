@@ -233,6 +233,11 @@
 ;;         for pair-test buckets with multiple entries
 ;;           reduce to component tests; build sub-indices for bucketed branches
 ;;         sort variables to prioritize number of buckets (more is better)
+;;         optionally build cross/join indices for simultaneously-assigned vars
+;;           embed these within var with earliest index priority
+;;           just like building a normal index, but per-bucket of embedding var
+;;           could do this for all pairs, all triples, etc. is it worth it?
+;;             devise "worth it" heuristic to avoid spending too much time
 ;;   still only disjunctions remain
 ;;     choose a branch and split state
 ;;       prefer informative branches (more relevant assignments)
