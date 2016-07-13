@@ -44,6 +44,30 @@
 (define (walk bs term)
   (if (var? term) (bindings-get bs term) (values bs term)))
 
+(define (not-occurs? bs vr term)
+  (cond ((var? term) (and (not (var=? vr term)) bs))
+        ((pair? term)
+         (let-values (((bs h0) (walk bs (car term))))
+           (let ((bs (not-occurs? bs vr h0)))
+             (and bs (let-values (((bs t0) (walk bs (cdr term))))
+                       (not-occurs? bs vr t0))))))
+        (else bs)))
+
+(define (checked-add bs0 vr term)
+  (let ((bs1 (not-occurs? bs0 vr term)))
+    (and bs1 (bindings-add bs1 vr term))))
+
+(define (unify bs e0 e1)
+  (let-values (((bs e0) (walk bs e0)))
+    (let-values (((bs e1) (walk bs e1)))
+      (cond
+        ((eqv? e0 e1) bs)
+        ((var? e0) (checked-add bs e0 e1))
+        ((var? e1) (checked-add bs e1 e0))
+        (else (and (pair? e0) (pair? e1)
+                   (let ((bs (unify bs (car e0) (car e1))))
+                     (and bs (unify bs (cdr e0) (cdr e1))))))))))
+
 (define (unit st) st)
 (define (conj g0 g1) (lambda (st) (g1 (g0 st))))
 (define-syntax conj*
@@ -66,6 +90,11 @@
          (state-cxs st)
          (cons app (state-apps st))
          (state-disjs st)))
+
+(define (== e0 e1)
+  (lambda (st)
+    (let ((bs (unify (state-bindings st) e0 e1)))
+      (and bs (state-bindings-set st bs)))))
 
 (record procedure-attrs name active)
 
