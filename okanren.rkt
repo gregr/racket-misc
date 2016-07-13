@@ -31,6 +31,14 @@
     ((_ name (record-entry ...) record-entries ...)
      (begin (record record-entry ...) (records name record-entries ...)))))
 
+(define (unit st) st)
+(define (conj g0 g1) (lambda (st) (g1 (g0 st))))
+(define-syntax conj*
+  (syntax-rules ()
+    ((_) unit)
+    ((_ goal) goal)
+    ((_ goal goals ...) (conj goal (conj* goals ...)))))
+
 ;; TODO
 
 ;; definition grammar
