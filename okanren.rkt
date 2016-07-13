@@ -31,19 +31,18 @@
     ((_ name (record-entry ...) record-entries ...)
      (begin (record record-entry ...) (records name record-entries ...)))))
 
-(record ok-var name)
-(define ok-var=? eq?)
+(record var name)
+(define var=? eq?)
 
-(define (ok-bindings-add bindings vr val)
-  (hash-set bindings vr val))
-(define (ok-bindings-get bindings vr)
-  (let ((r0 (hash-ref bindings vr vr)))
-    (if (or (eq? r0 vr) (not (ok-var? r0))) (values bindings r0)
-      (let-values (((bindings r1) (ok-bindings-get bindings r0)))
-        (if (and (ok-var? r1) (ok-var=? r0 r1)) (values bindings r1)
-          (values (hash-set bindings vr r1) r1))))))
-(define (ok-walk bindings term)
-  (if (ok-var? term) (ok-bindings-get bindings term) (values bindings term)))
+(define (bindings-add bs vr val) (hash-set bs vr val))
+(define (bindings-get bs vr)
+  (let ((r0 (hash-ref bs vr vr)))
+    (if (or (eq? r0 vr) (not (var? r0))) (values bs r0)
+      (let-values (((bs r1) (bindings-get bs r0)))
+        (if (and (var? r1) (var=? r0 r1)) (values bs r1)
+          (values (hash-set bs vr r1) r1))))))
+(define (walk bs term)
+  (if (var? term) (bindings-get bs term) (values bs term)))
 
 (define (unit st) st)
 (define (conj g0 g1) (lambda (st) (g1 (g0 st))))
@@ -55,36 +54,32 @@
 (define-syntax fresh
   (syntax-rules ()
     ((_ () body ...) (conj* body ...))
-    ((_ (lvar lvars ...) body ...) (let ((lvar (ok-var (gensym 'lvar))))
+    ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
                                      (fresh (lvars ...) body ...)))))
 
-(record ok-state bindings cxs apps disjs)
-(define ok-state-empty (ok-state (hash) '() '() '()))
-(define (ok-state-bindings-set st bindings)
-  (ok-state bindings
-            (ok-state-cxs st)
-            (ok-state-apps st)
-            (ok-state-disjs st)))
-(define (ok-state-apps-add st app)
-  (ok-state (ok-state-bindings st)
-            (ok-state-cxs st)
-            (cons app (ok-state-apps st))
-            (ok-state-disjs st)))
+(record state bindings cxs apps disjs)
+(define state-empty (state (hash) '() '() '()))
+(define (state-bindings-set st bs)
+  (state bs (state-cxs st) (state-apps st) (state-disjs st)))
+(define (state-apps-add st app)
+  (state (state-bindings st)
+         (state-cxs st)
+         (cons app (state-apps st))
+         (state-disjs st)))
 
-(record ok-procedure-attrs name active)
+(record procedure-attrs name active)
 
 (define-syntax zzz
   (syntax-rules () ((_ body ...) (lambda () body ...))))
 
 (define-syntax kanren
   (syntax-rules ()
-    ((_ (define (name params ...) body ...)
-        kdefs ...)
+    ((_ (define (name params ...) body ...) kdefs ...)
      (begin (define name
-              (let ((proc-attrs (ok-procedure-attrs 'name #f)))
+              (let ((proc-attrs (procedure-attrs 'name #f)))
                 (lambda (params ...)
                   (lambda (st)
-                    (ok-state-apps-add
+                    (state-apps-add
                       st (cons proc-attrs (zzz (conj* body ...))))))))
             (kanren kdefs ...)))
     ((_ (define name (lambda (params ...) body)) kdefs ...)
