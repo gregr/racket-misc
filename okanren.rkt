@@ -39,6 +39,14 @@
     ((_ goal) goal)
     ((_ goal goals ...) (conj goal (conj* goals ...)))))
 
+(record ok-state bindings cxs apps disjs)
+(define ok-state-empty (ok-state '() '() '() '()))
+(define (ok-state-apps-add st app)
+  (ok-state (ok-state-bindings st)
+            (ok-state-cxs st)
+            (cons app (ok-state-apps st))
+            (ok-state-disjs st)))
+
 ;; TODO
 
 ;; definition grammar
