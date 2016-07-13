@@ -17,6 +17,20 @@
 ;;   http://www.mercurylang.org/documentation/papers/acsc96.ps.gz
 ;;   longer version: http://www.mercurylang.org/documentation/papers/detism.ps.gz
 
+(define-syntax record
+  (syntax-rules ()
+    ((_ name field-names ...) (record-cont name () field-names ...))))
+(define-syntax record-cont
+  (syntax-rules ()
+    ((_ name entries) (struct name entries #:transparent))
+    ((_ name (entries ...) fname fnames ...)
+     (record-cont name (entries ... (fname #:mutable)) fnames ...))))
+(define-syntax records
+  (syntax-rules ()
+    ((_ name) (void))
+    ((_ name (record-entry ...) record-entries ...)
+     (begin (record record-entry ...) (records name record-entries ...)))))
+
 ;; TODO
 
 ;; definition grammar
