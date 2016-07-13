@@ -32,6 +32,18 @@
      (begin (record record-entry ...) (records name record-entries ...)))))
 
 (record ok-var name)
+(define ok-var=? eq?)
+
+(define (ok-bindings-add bindings vr val)
+  (hash-set bindings vr val))
+(define (ok-bindings-get bindings vr)
+  (let ((r0 (hash-ref bindings vr vr)))
+    (if (or (eq? r0 vr) (not (ok-var? r0))) (values bindings r0)
+      (let-values (((bindings r1) (ok-bindings-get bindings r0)))
+        (if (and (ok-var? r1) (ok-var=? r0 r1)) (values bindings r1)
+          (values (hash-set bindings vr r1) r1))))))
+(define (ok-walk bindings term)
+  (if (ok-var? term) (ok-bindings-get bindings term) (values bindings term)))
 
 (define (unit st) st)
 (define (conj g0 g1) (lambda (st) (g1 (g0 st))))
@@ -47,7 +59,12 @@
                                      (fresh (lvars ...) body ...)))))
 
 (record ok-state bindings cxs apps disjs)
-(define ok-state-empty (ok-state '() '() '() '()))
+(define ok-state-empty (ok-state (hash) '() '() '()))
+(define (ok-state-bindings-set st bindings)
+  (ok-state bindings
+            (ok-state-cxs st)
+            (ok-state-apps st)
+            (ok-state-disjs st)))
 (define (ok-state-apps-add st app)
   (ok-state (ok-state-bindings st)
             (ok-state-cxs st)
