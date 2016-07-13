@@ -47,6 +47,30 @@
             (cons app (ok-state-apps st))
             (ok-state-disjs st)))
 
+(record ok-procedure-attrs name active)
+
+(define-syntax zzz
+  (syntax-rules () ((_ body ...) (lambda () body ...))))
+
+(define-syntax kanren
+  (syntax-rules ()
+    ((_ (define (name params ...) body ...)
+        kdefs ...)
+     (begin (define name
+              (let ((proc-attrs (ok-procedure-attrs 'name #f)))
+                (lambda (params ...)
+                  (lambda (st)
+                    (ok-state-apps-add
+                      st (cons proc-attrs (zzz (conj* body ...))))))))
+            (kanren kdefs ...)))
+    ((_ (define name (lambda (params ...) body)) kdefs ...)
+     (kanren (define (name params ...) body) kdefs ...))
+    ((_ (define name body) kdefs ...)
+     (begin (define name body) (kanren kdefs ...)))
+    ((_ rest ...) (begin rest ...))))
+(define-syntax kanren-define
+  (syntax-rules () ((_ kdef ...) (kanren (define kdef ...)))))
+
 ;; TODO
 
 ;; definition grammar
