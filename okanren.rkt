@@ -31,6 +31,8 @@
     ((_ name (record-entry ...) record-entries ...)
      (begin (record record-entry ...) (records name record-entries ...)))))
 
+(record ok-var name)
+
 (define (unit st) st)
 (define (conj g0 g1) (lambda (st) (g1 (g0 st))))
 (define-syntax conj*
@@ -38,6 +40,11 @@
     ((_) unit)
     ((_ goal) goal)
     ((_ goal goals ...) (conj goal (conj* goals ...)))))
+(define-syntax fresh
+  (syntax-rules ()
+    ((_ () body ...) (conj* body ...))
+    ((_ (lvar lvars ...) body ...) (let ((lvar (ok-var (gensym 'lvar))))
+                                     (fresh (lvars ...) body ...)))))
 
 (record ok-state bindings cxs apps disjs)
 (define ok-state-empty (ok-state '() '() '() '()))
