@@ -68,18 +68,6 @@
                    (let ((bs (unify bs (car e0) (car e1))))
                      (and bs (unify bs (cdr e0) (cdr e1))))))))))
 
-(define (unit st) st)
-(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
-(define-syntax conj*
-  (syntax-rules ()
-    ((_) unit)
-    ((_ goal) goal)
-    ((_ goal goals ...) (conj goal (conj* goals ...)))))
-(define-syntax fresh
-  (syntax-rules ()
-    ((_ () body ...) (conj* body ...))
-    ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
-                                     (fresh (lvars ...) body ...)))))
 
 (record state bindings cxs apps disjs)
 (define state-empty (state (hash) '() '() '()))
@@ -150,6 +138,19 @@
   (if st (if (pair? (state-apps st)) (zzz (state-step (state-apps-step st)))
            (state-disjs-step st))
     '()))
+
+(define (unit st) st)
+(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
+(define-syntax conj*
+  (syntax-rules ()
+    ((_) unit)
+    ((_ goal) goal)
+    ((_ goal goals ...) (conj goal (conj* goals ...)))))
+(define-syntax fresh
+  (syntax-rules ()
+    ((_ () body ...) (conj* body ...))
+    ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
+                                     (fresh (lvars ...) body ...)))))
 
 (define-syntax kanren
   (syntax-rules ()
