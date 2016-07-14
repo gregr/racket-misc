@@ -95,11 +95,26 @@
          (state-cxs st)
          '()
          (state-disjs st)))
+(define (state-disjs-add st disj)
+  (state (state-bindings st)
+         (state-cxs st)
+         (state-apps st)
+         (cons disj (state-disjs st))))
+(define (state-disjs-pop st)
+  (let ((disjs (state-disjs st)))
+    (values (state (state-bindings st)
+                   (state-cxs st)
+                   (state-apps st)
+                   (cdr disjs))
+            (car disjs))))
 
 (define (== e0 e1)
   (lambda (st)
     (let ((bs (unify (state-bindings st) e0 e1)))
       (and bs (state-bindings-set st bs)))))
+
+(define-syntax zzz
+  (syntax-rules () ((_ body ...) (lambda () body ...))))
 
 (record procedure-attrs name active?)
 
@@ -115,8 +130,26 @@
     (if (null? apps) st
       (and st (loop (cdr apps) (app-step st (caar apps) (cdar apps)))))))
 
-(define-syntax zzz
-  (syntax-rules () ((_ body ...) (lambda () body ...))))
+(define (disj-split st disj)
+  (let loop ((disj (map (lambda (goal) (zzz (state-step (goal st)))) disj))
+             (unfinished '()))
+    (if (null? disj) (if (null? unfinished)
+                       '() (loop (reverse unfinished) '()))
+      (zzz (let extract-answers ((ss ((car disj))))
+             (cond ((procedure? ss) (loop (cdr disj) (cons ss unfinished)))
+                   ((pair? ss) (cons (car ss)
+                                     (extract-answers (cdr ss))))
+                   (else (loop (cdr disj) unfinished))))))))
+
+(define (state-disjs-step st)
+  (if (null? (state-disjs st)) (list (state-bindings st))
+    (let-values (((st disj) (state-disjs-pop st)))
+      (disj-split st disj))))
+
+(define (state-step st)
+  (if st (if (pair? (state-apps st)) (zzz (state-step (state-apps-step st)))
+           (state-disjs-step st))
+    '()))
 
 (define-syntax kanren
   (syntax-rules ()
