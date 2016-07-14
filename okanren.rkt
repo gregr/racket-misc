@@ -69,7 +69,7 @@
                      (and bs (unify bs (cdr e0) (cdr e1))))))))))
 
 (define (unit st) st)
-(define (conj g0 g1) (lambda (st) (g1 (g0 st))))
+(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
 (define-syntax conj*
   (syntax-rules ()
     ((_) unit)
