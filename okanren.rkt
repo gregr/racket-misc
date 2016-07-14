@@ -164,6 +164,28 @@
 (define-syntax conde
   (syntax-rules () ((_ (goal ...) ...) (disj* (conj* goal ...) ...))))
 
+(define var-initial (var 'initial))
+(define (reify vi)
+  (lambda (bindings)
+    (let-values
+      (((bs ixs rterm)
+        (let loop ((bs bindings) (ixs (hash)) (term vi))
+          (let-values (((bs term) (walk bs term)))
+            (cond ((var? term)
+                   (let ix-loop ((ixs ixs) (ix (hash-ref ixs term #f)))
+                     (if ix
+                       (values bs ixs (string->symbol
+                                        (string-append
+                                          "_." (number->string ix))))
+                       (ix-loop (hash-set ixs term (hash-count ixs))
+                                (hash-count ixs)))))
+                  ((pair? term)
+                    (let-values (((bs ixs rhd) (loop bs ixs (car term))))
+                      (let-values (((bs ixs rtl) (loop bs ixs (cdr term))))
+                        (values bs ixs (cons rhd rtl)))))
+                  (else (values bs ixs term)))))))
+      rterm)))
+
 (define-syntax kanren
   (syntax-rules ()
     ((_ (define (name params ...) body ...) kdefs ...)
