@@ -219,6 +219,33 @@
 (define-syntax kanren-define
   (syntax-rules () ((_ kdef ...) (kanren (define kdef ...)))))
 
+(module+ test
+  (kanren-define (appendo ls rs lsrs)
+    (conde ((== '() ls) (== rs lsrs))
+           ((fresh (l0 ms msrs)
+              (== `(,l0 . ,ms) ls)
+              (== `(,l0 . ,msrs) lsrs)
+              (appendo ms rs msrs)))))
+
+  (check-equal?
+    (run* (q) (appendo '(1 2 3) '(4 5) q))
+    '(((1 2 3 4 5))))
+  (check-equal?
+    (run* (q) (appendo q '(4 5) '(1 2 3 4 5)))
+    '(((1 2 3))))
+  (check-equal?
+    (run* (q) (appendo '(1 2 3) q '(1 2 3 4 5)))
+    '(((4 5))))
+  (check-equal?
+    (run* (q r) (appendo q r '(1 2 3 4 5)))
+    '((() (1 2 3 4 5))
+      ((1) (2 3 4 5))
+      ((1 2) (3 4 5))
+      ((1 2 3) (4 5))
+      ((1 2 3 4) (5))
+      ((1 2 3 4 5) ())))
+  )
+
 ;; TODO
 
 ;; definition grammar
