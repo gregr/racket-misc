@@ -90,13 +90,30 @@
          (state-cxs st)
          (cons app (state-apps st))
          (state-disjs st)))
+(define (state-apps-clear st)
+  (state (state-bindings st)
+         (state-cxs st)
+         '()
+         (state-disjs st)))
 
 (define (== e0 e1)
   (lambda (st)
     (let ((bs (unify (state-bindings st) e0 e1)))
       (and bs (state-bindings-set st bs)))))
 
-(record procedure-attrs name active)
+(record procedure-attrs name active?)
+
+(define (app-step st attrs zproc)
+  (if (procedure-attrs-active? attrs)
+    (state-apps-add st (cons attrs zproc))
+    (begin (set-procedure-attrs-active?! attrs #t)
+           (let ((st ((zproc) st)))
+             (set-procedure-attrs-active?! attrs #f)
+             st))))
+(define (state-apps-step st)
+  (let loop ((apps (state-apps st)) (st (state-apps-clear st)))
+    (if (null? apps) st
+      (and st (loop (cdr apps) (app-step st (caar apps) (cdar apps)))))))
 
 (define-syntax zzz
   (syntax-rules () ((_ body ...) (lambda () body ...))))
@@ -108,8 +125,7 @@
               (let ((proc-attrs (procedure-attrs 'name #f)))
                 (lambda (params ...)
                   (lambda (st)
-                    (state-apps-add
-                      st (cons proc-attrs (zzz (conj* body ...))))))))
+                    (app-step st proc-attrs (zzz (conj* body ...)))))))
             (kanren kdefs ...)))
     ((_ (define name (lambda (params ...) body)) kdefs ...)
      (kanren (define (name params ...) body) kdefs ...))
