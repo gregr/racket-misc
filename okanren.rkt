@@ -32,7 +32,6 @@
      (begin (record record-entry ...) (records name record-entries ...)))))
 
 (record var name)
-(define var=? eq?)
 
 (record constraints type absents diseqs)
 (define constraints-empty (constraints #f '() '()))
@@ -65,7 +64,7 @@
          (r0 (if (constraints? r0) vr r0)))
     (if (or (eq? r0 vr) (not (var? r0))) (values bs r0)
       (let-values (((bs r1) (bindings-get bs r0)))
-        (if (and (var? r1) (var=? r0 r1)) (values bs r1)
+        (if (eq? r0 r1) (values bs r1)
           (values (bindings (hash-set (bindings-actual bs) vr r1)
                             (bindings-hypothetical bs))
                   r1))))))
@@ -73,13 +72,11 @@
   (if (var? term) (bindings-get bs term) (values bs term)))
 
 (define (not-occurs? bs vr term)
-  (cond ((var? term) (and (not (var=? vr term)) bs))
-        ((pair? term)
-         (let-values (((bs h0) (walk bs (car term))))
-           (let ((bs (not-occurs? bs vr h0)))
-             (and bs (let-values (((bs t0) (walk bs (cdr term))))
-                       (not-occurs? bs vr t0))))))
-        (else bs)))
+  (if (pair? term) (let-values (((bs h0) (walk bs (car term))))
+                     (let ((bs (not-occurs? bs vr h0)))
+                       (and bs (let-values (((bs t0) (walk bs (cdr term))))
+                                 (not-occurs? bs vr t0)))))
+    (if (eq? vr term) #f bs)))
 
 (define (checked-assign bs0 vr term)
   (let ((bs1 (not-occurs? bs0 vr term)))
