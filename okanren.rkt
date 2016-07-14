@@ -34,13 +34,41 @@
 (record var name)
 (define var=? eq?)
 
-(define (bindings-add bs vr val) (hash-set bs vr val))
+(record constraints type absents diseqs)
+(define constraints-empty (constraints #f '() '()))
+
+(record hypotheticals assignments constrained)
+(define hypotheticals-empty (hypotheticals '() '()))
+(define (hypotheticals-assign hs vr val)
+  (hypotheticals (cons (cons vr val) (hypotheticals-assignments hs))
+                 (hypotheticals-constrained hs)))
+(define (hypotheticals-constrain hs vr)
+  (hypotheticals (hypotheticals-assignments hs)
+                 (cons vr (hypotheticals-constrained hs))))
+
+(record bindings actual hypothetical)
+(define bindings-empty (bindings (hash) #f))
+(define (bindings->hypothetical bs)
+  (bindings (bindings-actual bs) hypotheticals-empty))
+
+(define (bindings-assign bs vr val)
+  (let* ((hs (bindings-hypothetical bs))
+         (hs (and hs (hypotheticals-assign hs vr val)))
+         (actual (bindings-actual bs))
+         (cxs (hash-ref actual vr #f)))
+    (bindings (hash-set (bindings-actual bs) vr val) hs)
+    ; TODO: apply any displaced cxs
+    ))
+
 (define (bindings-get bs vr)
-  (let ((r0 (hash-ref bs vr vr)))
+  (let* ((r0 (hash-ref (bindings-actual bs) vr vr))
+         (r0 (if (constraints? r0) vr r0)))
     (if (or (eq? r0 vr) (not (var? r0))) (values bs r0)
       (let-values (((bs r1) (bindings-get bs r0)))
         (if (and (var? r1) (var=? r0 r1)) (values bs r1)
-          (values (hash-set bs vr r1) r1))))))
+          (values (bindings (hash-set (bindings-actual bs) vr r1)
+                            (bindings-hypothetical bs))
+                  r1))))))
 (define (walk bs term)
   (if (var? term) (bindings-get bs term) (values bs term)))
 
@@ -53,24 +81,24 @@
                        (not-occurs? bs vr t0))))))
         (else bs)))
 
-(define (checked-add bs0 vr term)
+(define (checked-assign bs0 vr term)
   (let ((bs1 (not-occurs? bs0 vr term)))
-    (and bs1 (bindings-add bs1 vr term))))
+    (and bs1 (bindings-assign bs1 vr term))))
 
 (define (unify bs e0 e1)
   (let-values (((bs e0) (walk bs e0)))
     (let-values (((bs e1) (walk bs e1)))
       (cond
         ((eqv? e0 e1) bs)
-        ((var? e0) (checked-add bs e0 e1))
-        ((var? e1) (checked-add bs e1 e0))
+        ((var? e0) (checked-assign bs e0 e1))
+        ((var? e1) (checked-assign bs e1 e0))
         (else (and (pair? e0) (pair? e1)
                    (let ((bs (unify bs (car e0) (car e1))))
                      (and bs (unify bs (cdr e0) (cdr e1))))))))))
 
 
 (record state bindings cxs apps disjs)
-(define state-empty (state (hash) '() '() '()))
+(define state-empty (state bindings-empty '() '() '()))
 (define (state-bindings-set st bs)
   (state bs (state-cxs st) (state-apps st) (state-disjs st)))
 (define (state-apps-add st app)
@@ -166,10 +194,10 @@
 
 (define var-initial (var 'initial))
 (define (reify vi)
-  (lambda (bindings)
+  (lambda (bs)
     (let-values
       (((bs ixs rterm)
-        (let loop ((bs bindings) (ixs (hash)) (term vi))
+        (let loop ((bs bs) (ixs (hash)) (term vi))
           (let-values (((bs term) (walk bs term)))
             (cond ((var? term)
                    (let ix-loop ((ixs ixs) (ix (hash-ref ixs term #f)))
