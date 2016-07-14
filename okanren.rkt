@@ -186,6 +186,22 @@
                   (else (values bs ixs term)))))))
       rterm)))
 
+(define (force-answer ss) (if (procedure? ss) (force-answer (ss)) ss))
+(define (take n ss)
+  (if (and n (zero? n)) '()
+    (let ((ss (force-answer ss)))
+      (if (null? ss) '()
+        (cons (car ss) (take (and n (- n 1)) (cdr ss)))))))
+
+(define-syntax run
+  (syntax-rules ()
+    ((_ n (qs ...) gs ...)
+     (map (reify var-initial)
+       (take n (state-step
+                 ((fresh (qs ...) (== (list qs ...) var-initial) gs ...)
+                  state-empty)))))))
+(define-syntax run* (syntax-rules () ((_ body ...) (run #f body ...))))
+
 (define-syntax kanren
   (syntax-rules ()
     ((_ (define (name params ...) body ...) kdefs ...)
