@@ -151,6 +151,18 @@
     ((_ () body ...) (conj* body ...))
     ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
                                      (fresh (lvars ...) body ...)))))
+(define-syntax disj-branches
+  (syntax-rules ()
+    ((_) '())
+    ((_ goal goals ...) (cons goal (disj-branches goals ...)))))
+(define-syntax disj*
+  (syntax-rules ()
+    ((_) (lambda (st) #f))
+    ((_ goal) goal)
+    ((_ goals ...) (lambda (st)
+                     (state-disjs-add st (disj-branches goals ...))))))
+(define-syntax conde
+  (syntax-rules () ((_ (goal ...) ...) (disj* (conj* goal ...) ...))))
 
 (define-syntax kanren
   (syntax-rules ()
