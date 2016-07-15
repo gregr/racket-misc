@@ -717,6 +717,313 @@
       ((_ test-name query expected)
         (mk-test-cont test-name #t query expected))))
 
+  (mk-test "=/=-1"
+    (run* (q)
+      (=/= 3 q)
+      (== q 3))
+    '())
+
+  (mk-test "=/=-2"
+    (run* (q)
+      (== q 3)
+      (=/= 3 q))
+    '())
+
+  (mk-test "=/=-3"
+    (run* (q)
+      (fresh (x y)
+        (=/= x y)
+        (== x y)))
+    '())
+
+  (mk-test "=/=-4"
+    (run* (q)
+      (fresh (x y)
+        (== x y)
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-5"
+    (run* (q)
+      (fresh (x y)
+        (=/= x y)
+        (== 3 x)
+        (== 3 y)))
+    '())
+
+  (mk-test "=/=-6"
+    (run* (q)
+      (fresh (x y)
+        (== 3 x)
+        (=/= x y)
+        (== 3 y)))
+    '())
+
+  (mk-test "=/=-7"
+    (run* (q)
+      (fresh (x y)
+        (== 3 x)
+        (== 3 y)
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-8"
+    (run* (q)
+      (fresh (x y)
+        (== 3 x)
+        (== 3 y)
+        (=/= y x)))
+    '())
+
+  (mk-test "=/=-9"
+    (run* (q)
+      (fresh (x y z)
+        (== x y)
+        (== y z)
+        (=/= x 4)
+        (== z (+ 2 2))))
+    '())
+
+  (mk-test "=/=-10"
+    (run* (q)
+      (fresh (x y z)
+        (== x y)
+        (== y z)
+        (== z (+ 2 2))
+        (=/= x 4)))
+    '())
+
+  (mk-test "=/=-11"
+    (run* (q)
+      (fresh (x y z)
+        (=/= x 4)
+        (== y z)
+        (== x y)
+        (== z (+ 2 2))))
+    '())
+
+  (mk-test "=/=-12"
+    (run* (q)
+      (fresh (x y z)
+        (=/= x y)
+        (== x 5)
+        ;(== x `(0 ,z 1))
+        ;(== y `(0 1 1))
+
+        ))
+    '((_.0)))
+
+  (mk-test "=/=-13"
+    (run* (q)
+      (fresh (x y z)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (== z 1)
+        (== `(,x ,y) q)))
+    '())
+
+  (mk-test "=/=-14"
+    (run* (q)
+      (fresh (x y z)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (== z 0)))
+    '((_.0)))
+
+  (mk-test "=/=-15"
+    (run* (q)
+      (fresh (x y z)
+        (== z 0)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '((_.0)))
+
+  (mk-test "=/=-16"
+    (run* (q)
+      (fresh (x y z)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (=/= x y)))
+    '((_.0)))
+
+  (mk-test "=/=-17"
+    (run* (q)
+      (fresh (x y z)
+        (== z 1)
+        (=/= x y)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '())
+
+  (mk-test "=/=-18"
+    (run* (q)
+      (fresh (x y z)
+        (== z 1)
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))
+        (=/= x y)))
+    '())
+
+  (mk-test "=/=-19"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)))
+    '((_.0)))
+
+  (mk-test "=/=-20"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== y 1)))
+    '((_.0)))
+
+  (mk-test "=/=-21"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 1)))
+    '())
+
+  (mk-test "=/=-24"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 9)
+        (== `(,x ,y) q)))
+    '(((2 9))))
+
+  (mk-test "=/=-24b"
+    (run* (q)
+    (fresh (a d)
+      (== `(,a . ,d) q)
+      (=/= q `(5 . 6))
+      (== a 5)
+      (== d 6)))
+    '())
+
+  (mk-test "=/=-25"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x 1) `(2 ,y))
+        (== x 2)
+        (== y 1)
+        (== `(,x ,y) q)))
+    '())
+
+  (mk-test "=/=-26"
+    (run* (q)
+      (fresh (a x z)
+        (=/= a `(,x 1))
+        (== a `(,z 1))
+        (== x z)))
+    '())
+
+  (mk-test "=/=-28"
+    (run* (q)
+      (=/= 3 4))
+    '((_.0)))
+
+  (mk-test "=/=-29"
+    (run* (q)
+      (=/= 3 3))
+    '())
+
+  (mk-test "=/=-30"
+    (run* (q) (=/= 5 q)
+        (=/= 6 q)
+        (== q 5))
+    '())
+
+  (mk-test "=/=-32"
+    (run* (q)
+      (fresh (a)
+        (== 3 a)
+        (=/= a 4)))
+    '((_.0)))
+
+  (mk-test "=/=-35"
+    (let ((foo (lambda (x)
+                (fresh (a)
+                  (=/= x a)))))
+      (run* (q) (fresh (a) (foo a))))
+    '((_.0)))
+
+  (mk-test "=/=-36"
+    (let ((foo (lambda (x)
+                (fresh (a)
+                  (=/= x a)))))
+      (run* (q) (fresh (b) (foo b))))
+    '((_.0)))
+
+  (mk-test "=/=-37c"
+    (run* (q)
+    (fresh (a d)
+      (== `(,a . ,d) q)
+      (=/= q `(5 . 6))
+      (== a 3)))
+    '(((3 . _.0))))
+
+  (mk-test "=/=-47"
+    (run* (x)
+      (fresh (y z)
+        (=/= x `(,y 2))
+        (== x `(,z 2))))
+    '(((_.0 2))))
+
+  (mk-test "=/=-48"
+    (run* (x)
+      (fresh (y z)
+        (=/= x `(,y 2))
+        (== x `((,z) 2))))
+    '((((_.0) 2))))
+
+  (mk-test "=/=-49"
+    (run* (x)
+      (fresh (y z)
+        (=/= x `((,y) 2))
+        (== x `(,z 2))))
+    '(((_.0 2))))
+
+  (define rembero0
+    (lambda (x ls out)
+      (conde
+        ((== '() ls) (== '() out))
+        ((fresh (a d res)
+          (== `(,a . ,d) ls)
+          (rembero0 x d res)
+          (conde
+            ((== a x) (== out res))
+            ((== `(,a . ,res) out))))))))
+
+  (mk-test "=/=-51"
+    (run* (q) (rembero0 'a '(a b a c) q))
+    '(((b c)) ((b a c)) ((a b c)) ((a b a c))))
+
+  (mk-test "=/=-52"
+    (run* (q) (rembero0 'a '(a b c) '(a b c)))
+    '((_.0)))
+
+  (define rembero
+    (lambda (x ls out)
+      (conde
+        ((== '() ls) (== '() out))
+        ((fresh (a d res)
+          (== `(,a . ,d) ls)
+          (rembero x d res)
+          (conde
+            ((== a x) (== out res))
+            ((=/= a x) (== `(,a . ,res) out))))))))
+
+  (mk-test "=/=-54"
+    (run* (q) (rembero 'a '(a b c) '(a b c)))
+    '())
+
   (mk-test "numbero-2"
     (run* (q) (numbero q) (== 5 q))
     '((5)))
@@ -757,6 +1064,14 @@
     (run* (q) (fresh (x) (== q x) (numbero q) (== 'y x)))
     '())
 
+  (mk-test "numbero-24-a"
+    (run* (q)
+      (fresh (w x y z)
+        (=/= `(,w . ,x) `(,y . ,z))
+        (numbero w)
+        (numbero z)))
+    '((_.0)))
+
   (mk-test "symbolo-2"
     (run* (q) (symbolo q) (== 'x q))
     '((x)))
@@ -796,6 +1111,14 @@
   (mk-test "symbolo-15"
     (run* (q) (fresh (x) (== q x) (symbolo q) (== 5 x)))
     '())
+
+  (mk-test "symbolo-24-a"
+    (run* (q)
+      (fresh (w x y z)
+        (=/= `(,w . ,x) `(,y . ,z))
+        (symbolo w)
+        (symbolo z)))
+    '((_.0)))
 
   (mk-test "symbolo-numbero-1"
     (run* (q) (symbolo q) (numbero q))
@@ -867,6 +1190,30 @@
       (symbolo q))
     '())
 
+  (mk-test "symbolo-numbero-32"
+    (run* (q)
+      (fresh (x y)
+        (=/= `(,x ,y) q)
+        (numbero x)
+        (symbolo y)))
+    '((_.0)))
+
+  (mk-test "symbolo-numbero-33"
+    (run* (q)
+      (fresh (x y)
+        (numbero x)
+        (=/= `(,x ,y) q)
+        (symbolo y)))
+    '((_.0)))
+
+  (mk-test "symbolo-numbero-34"
+    (run* (q)
+      (fresh (x y)
+        (numbero x)
+        (symbolo y)
+        (=/= `(,x ,y) q)))
+    '((_.0)))
+
   (mk-test "test 24"
     (run* (q) (== 5 q) (absento 5 q))
     '())
@@ -892,11 +1239,23 @@
         (numbero c)))
     '())
 
+  (mk-test "test 40"
+    (run* (q)
+      (fresh (d a c)
+        (== `(3 . ,d) q)
+        (=/= `(,c . ,a) q)
+        (== '(3 . 4) d)))
+    '(((3 3 . 4))))
+
   (mk-test "test 41"
     (run* (q)
       (fresh (a)
         (== `(,a . ,a) q)))
     '(((_.0 . _.0))))
+
+  (mk-test "test 63"
+    (run* (q) (fresh (a b c) (=/= a b) (=/= b c) (=/= c q) (symbolo a)))
+    '((_.0)))
 
   (mk-test "test 64"
     (run* (q) (symbolo q) (== 'tag q))
@@ -959,4 +1318,4 @@
       (== `(3 (closure x (x x) ((y . 7))) #t) q)
       (absento 'closure q))
     '())
-    )
+  )
