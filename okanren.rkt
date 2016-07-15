@@ -35,12 +35,20 @@
 
 (record constraints type absents diseqs)
 (define constraints-empty (constraints #f '() '()))
+(define (constraints-absents-filter tag atoms)
+  (cond ((not tag) atoms)
+        ((eq? tag 'num) (filter number? atoms))
+        ((eq? tag 'sym) (filter symbol? atoms))))
 (define (constraints-type-set cxs t1)
   (let ((t0 (constraints-type cxs)))
     (if t0 (and (eq? t0 t1) cxs)
-      (constraints t1 (constraints-absents cxs) (constraints-diseqs cxs)))))
+      (if t1 (constraints
+               t1 (constraints-absents-filter t1 (constraints-absents cxs))
+               (constraints-diseqs cxs))
+        cxs))))
 (define (constraints-absents-add cxs atoms)
   (let* ((as0 (constraints-absents cxs))
+         (atoms (constraints-absents-filter (constraints-type cxs) atoms))
          (as1 (foldl (lambda (atom as) (if (memv atom as0) as0 (cons atom as)))
                      as0 atoms)))
     (if (eq? as0 as1) cxs
@@ -2022,18 +2030,17 @@
     (run* (q) (absento 5 q) (absento 6 q))
     '(((_.0) (absento (_.0 6 5)))))
 
-  ; TODO: remove redundant absento constraints
-  ;(mk-test "test 21"
-    ;(run* (q) (absento 5 q) (symbolo q))
-    ;'(((_.0) (sym _.0))))
+  (mk-test "test 21"
+    (run* (q) (absento 5 q) (symbolo q))
+    '(((_.0) (sym _.0))))
 
-  ;(mk-test "test 22"
-    ;(run* (q) (numbero q) (absento 'tag q))
-    ;'(((_.0) (num _.0))))
+  (mk-test "test 22"
+    (run* (q) (numbero q) (absento 'tag q))
+    '(((_.0) (num _.0))))
 
-  ;(mk-test "test 23"
-    ;(run* (q) (absento 'tag q) (numbero q))
-    ;'(((_.0) (num _.0))))
+  (mk-test "test 23"
+    (run* (q) (absento 'tag q) (numbero q))
+    '(((_.0) (num _.0))))
 
   (mk-test "test 24"
     (run* (q) (== 5 q) (absento 5 q))
