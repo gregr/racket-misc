@@ -292,26 +292,66 @@
   (syntax-rules () ((_ (goal ...) ...) (disj* (conj* goal ...) ...))))
 
 (define var-initial (var 'initial))
+(define (reify-var ix) (string->symbol (string-append "_." (number->string ix))))
+(record reifier-cxs nums syms absents diseqs)
+(define reifier-cxs-empty (reifier-cxs '() '() '() '()))
+(define (reifier-cxs-add rcxs ix vr cxs)
+  (let* ((ivar (reify-var ix))
+         (ty-tag (constraints-type cxs))
+         (absents0 (constraints-absents cxs))
+         (diseqs0 (constraints-diseqs cxs))
+         (nums (reifier-cxs-nums rcxs))
+         (syms (reifier-cxs-syms rcxs))
+         (absents (reifier-cxs-absents rcxs))
+         (diseqs (append (map (lambda (deq)
+                                (cons (cons vr (car deq)) (cdr deq))) diseqs0)
+                         (reifier-cxs-diseqs rcxs)))
+         (nums (if (eq? ty-tag 'num) (cons ivar nums) nums))
+         (syms (if (eq? ty-tag 'sym) (cons ivar syms) syms))
+         (absents (if (pair? absents0)
+                    (cons (cons ivar absents0) absents) absents)))
+    (reifier-cxs nums syms absents diseqs)))
+(define (reify-constraints bs rcxs ixs)
+  (let* ((nums (reverse (reifier-cxs-nums rcxs)))
+         (syms (reverse (reifier-cxs-syms rcxs)))
+         (absents (reverse (reifier-cxs-absents rcxs)))
+         (diseqs (reifier-cxs-diseqs rcxs))
+         (rs '())
+         ; TODO: Simplify and remove subsumed disequalities.
+         ;(rs (if (null? diseqs) rs (cons (cons '=/=* diseqs) rs)))
+         (rs (if (null? absents) rs (cons (cons 'absento absents) rs)))
+         (rs (if (null? syms) rs (cons (cons 'sym syms) rs)))
+         (rs (if (null? nums) rs (cons (cons 'num nums) rs))))
+    rs))
 (define (reify vi)
   (lambda (bs)
     (let-values
-      (((bs ixs rterm)
-        (let loop ((bs bs) (ixs (hash)) (term vi))
+      (((bs rcxs ixs rterm)
+        (let loop ((bs bs) (rcxs reifier-cxs-empty) (ixs (hash)) (term vi))
           (let-values (((bs term) (walk bs term)))
-            (cond ((var? term)
-                   (let ix-loop ((ixs ixs) (ix (hash-ref ixs term #f)))
-                     (if ix
-                       (values bs ixs (string->symbol
-                                        (string-append
-                                          "_." (number->string ix))))
-                       (ix-loop (hash-set ixs term (hash-count ixs))
-                                (hash-count ixs)))))
-                  ((pair? term)
-                    (let-values (((bs ixs rhd) (loop bs ixs (car term))))
-                      (let-values (((bs ixs rtl) (loop bs ixs (cdr term))))
-                        (values bs ixs (cons rhd rtl)))))
-                  (else (values bs ixs term)))))))
-      rterm)))
+            (cond
+              ((var? term)
+               (let ix-loop
+                 ((bs bs) (rcxs rcxs) (ixs ixs) (ix (hash-ref ixs term #f)))
+                 (if ix
+                   (values bs rcxs ixs (reify-var ix))
+                   (let* ((ix (hash-count ixs))
+                          (cxs (bindings-actual-ref bs term #f))
+                          (rcxs (if cxs (reifier-cxs-add rcxs ix term cxs)
+                                  rcxs))
+                          (bs (if cxs (bindings-cxs-set
+                                        bs term (constraints-diseqs-clear cxs))
+                                bs)))
+                     (ix-loop bs rcxs
+                              (hash-set ixs term ix) (hash-count ixs))))))
+              ((pair? term)
+               (let-values (((bs rcxs ixs rhd)
+                             (loop bs rcxs ixs (car term))))
+                           (let-values (((bs rcxs ixs rtl)
+                                         (loop bs rcxs ixs (cdr term))))
+                                       (values bs rcxs ixs (cons rhd rtl)))))
+              (else (values bs rcxs ixs term)))))))
+      (cons rterm (reify-constraints bs rcxs ixs)))))
 
 (define (force-answer ss) (if (procedure? ss) (force-answer (ss)) ss))
 (define (take n ss)
@@ -356,21 +396,21 @@
 
   (check-equal?
     (run* (q) (appendo '(1 2 3) '(4 5) q))
-    '(((1 2 3 4 5))))
+    '((((1 2 3 4 5)))))
   (check-equal?
     (run* (q) (appendo q '(4 5) '(1 2 3 4 5)))
-    '(((1 2 3))))
+    '((((1 2 3)))))
   (check-equal?
     (run* (q) (appendo '(1 2 3) q '(1 2 3 4 5)))
-    '(((4 5))))
+    '((((4 5)))))
   (check-equal?
     (run* (q r) (appendo q r '(1 2 3 4 5)))
-    '((() (1 2 3 4 5))
-      ((1) (2 3 4 5))
-      ((1 2) (3 4 5))
-      ((1 2 3) (4 5))
-      ((1 2 3 4) (5))
-      ((1 2 3 4 5) ())))
+    '(((() (1 2 3 4 5)))
+      (((1) (2 3 4 5)))
+      (((1 2) (3 4 5)))
+      (((1 2 3) (4 5)))
+      (((1 2 3 4) (5)))
+      (((1 2 3 4 5) ()))))
   )
 
 ;; TODO
@@ -805,12 +845,9 @@
     (run* (q)
       (fresh (x y z)
         (=/= x y)
-        (== x 5)
-        ;(== x `(0 ,z 1))
-        ;(== y `(0 1 1))
-
-        ))
-    '((_.0)))
+        (== x `(0 ,z 1))
+        (== y `(0 1 1))))
+    '(((_.0))))
 
   (mk-test "=/=-13"
     (run* (q)
@@ -829,7 +866,7 @@
         (== x `(0 ,z 1))
         (== y `(0 1 1))
         (== z 0)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-15"
     (run* (q)
@@ -838,7 +875,7 @@
         (=/= x y)
         (== x `(0 ,z 1))
         (== y `(0 1 1))))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-16"
     (run* (q)
@@ -846,7 +883,7 @@
         (== x `(0 ,z 1))
         (== y `(0 1 1))
         (=/= x y)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-17"
     (run* (q)
@@ -871,14 +908,14 @@
       (fresh (x y)
         (=/= `(,x 1) `(2 ,y))
         (== x 2)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-20"
     (run* (q)
       (fresh (x y)
         (=/= `(,x 1) `(2 ,y))
         (== y 1)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-21"
     (run* (q)
@@ -895,7 +932,7 @@
         (== x 2)
         (== y 9)
         (== `(,x ,y) q)))
-    '(((2 9))))
+    '((((2 9)))))
 
   (mk-test "=/=-24b"
     (run* (q)
@@ -926,7 +963,7 @@
   (mk-test "=/=-28"
     (run* (q)
       (=/= 3 4))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-29"
     (run* (q)
@@ -944,21 +981,21 @@
       (fresh (a)
         (== 3 a)
         (=/= a 4)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-35"
     (let ((foo (lambda (x)
                 (fresh (a)
                   (=/= x a)))))
       (run* (q) (fresh (a) (foo a))))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-36"
     (let ((foo (lambda (x)
                 (fresh (a)
                   (=/= x a)))))
       (run* (q) (fresh (b) (foo b))))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "=/=-37c"
     (run* (q)
@@ -966,28 +1003,28 @@
       (== `(,a . ,d) q)
       (=/= q `(5 . 6))
       (== a 3)))
-    '(((3 . _.0))))
+    '((((3 . _.0)))))
 
   (mk-test "=/=-47"
     (run* (x)
       (fresh (y z)
         (=/= x `(,y 2))
         (== x `(,z 2))))
-    '(((_.0 2))))
+    '((((_.0 2)))))
 
   (mk-test "=/=-48"
     (run* (x)
       (fresh (y z)
         (=/= x `(,y 2))
         (== x `((,z) 2))))
-    '((((_.0) 2))))
+    '(((((_.0) 2)))))
 
   (mk-test "=/=-49"
     (run* (x)
       (fresh (y z)
         (=/= x `((,y) 2))
         (== x `(,z 2))))
-    '(((_.0 2))))
+    '((((_.0 2)))))
 
   (define rembero0
     (lambda (x ls out)
@@ -1002,11 +1039,11 @@
 
   (mk-test "=/=-51"
     (run* (q) (rembero0 'a '(a b a c) q))
-    '(((b c)) ((b a c)) ((a b c)) ((a b a c))))
+    '((((b c))) (((b a c))) (((a b c))) (((a b a c)))))
 
   (mk-test "=/=-52"
     (run* (q) (rembero0 'a '(a b c) '(a b c)))
-    '((_.0)))
+    '(((_.0))))
 
   (define rembero
     (lambda (x ls out)
@@ -1019,17 +1056,21 @@
             ((== a x) (== out res))
             ((=/= a x) (== `(,a . ,res) out))))))))
 
+  (mk-test "=/=-53"
+    (run* (q) (rembero 'a '(a b a c) q))
+    '((((b c)))))
+
   (mk-test "=/=-54"
     (run* (q) (rembero 'a '(a b c) '(a b c)))
     '())
 
   (mk-test "numbero-2"
     (run* (q) (numbero q) (== 5 q))
-    '((5)))
+    '(((5))))
 
   (mk-test "numbero-3"
     (run* (q) (== 5 q) (numbero q))
-    '((5)))
+    '(((5))))
 
   (mk-test "numbero-4"
     (run* (q) (== 'x q) (numbero q))
@@ -1049,15 +1090,15 @@
 
   (mk-test "numbero-8"
     (run* (q) (fresh (x) (numbero x)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "numbero-9"
     (run* (q) (fresh (x) (numbero x)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "numbero-14-b"
     (run* (q) (fresh (x) (numbero q) (== 5 x) (== x q)))
-    '((5)))
+    '(((5))))
 
   (mk-test "numbero-15"
     (run* (q) (fresh (x) (== q x) (numbero q) (== 'y x)))
@@ -1069,15 +1110,15 @@
         (=/= `(,w . ,x) `(,y . ,z))
         (numbero w)
         (numbero z)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-2"
     (run* (q) (symbolo q) (== 'x q))
-    '((x)))
+    '(((x))))
 
   (mk-test "symbolo-3"
     (run* (q) (== 'x q) (symbolo q))
-    '((x)))
+    '(((x))))
 
   (mk-test "symbolo-4"
     (run* (q) (== 5 q) (symbolo q))
@@ -1097,15 +1138,15 @@
 
   (mk-test "symbolo-8"
     (run* (q) (fresh (x) (symbolo x)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-9"
     (run* (q) (fresh (x) (symbolo x)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-14-b"
     (run* (q) (fresh (x) (symbolo q) (== 'y x) (== x q)))
-    '((y)))
+    '(((y))))
 
   (mk-test "symbolo-15"
     (run* (q) (fresh (x) (== q x) (symbolo q) (== 5 x)))
@@ -1117,7 +1158,7 @@
         (=/= `(,w . ,x) `(,y . ,z))
         (symbolo w)
         (symbolo z)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-numbero-1"
     (run* (q) (symbolo q) (numbero q))
@@ -1195,7 +1236,7 @@
         (=/= `(,x ,y) q)
         (numbero x)
         (symbolo y)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-numbero-33"
     (run* (q)
@@ -1203,7 +1244,7 @@
         (numbero x)
         (=/= `(,x ,y) q)
         (symbolo y)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "symbolo-numbero-34"
     (run* (q)
@@ -1211,7 +1252,7 @@
         (numbero x)
         (symbolo y)
         (=/= `(,x ,y) q)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "test 24"
     (run* (q) (== 5 q) (absento 5 q))
@@ -1244,25 +1285,25 @@
         (== `(3 . ,d) q)
         (=/= `(,c . ,a) q)
         (== '(3 . 4) d)))
-    '(((3 3 . 4))))
+    '((((3 3 . 4)))))
 
   (mk-test "test 41"
     (run* (q)
       (fresh (a)
         (== `(,a . ,a) q)))
-    '(((_.0 . _.0))))
+    '((((_.0 . _.0)))))
 
   (mk-test "test 63"
     (run* (q) (fresh (a b c) (=/= a b) (=/= b c) (=/= c q) (symbolo a)))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "test 64"
     (run* (q) (symbolo q) (== 'tag q))
-    '((tag)))
+    '(((tag))))
 
   (mk-test "test 66"
     (run* (q) (absento 6 5))
-    '((_.0)))
+    '(((_.0))))
 
   (mk-test "absento 'closure-1a"
     (run* (q) (absento 'closure q) (== q 'closure))
