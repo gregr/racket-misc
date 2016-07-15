@@ -60,7 +60,9 @@
                              (cdr absents)))))))))
 
 (define (constrain-value-type tag val)
-  (or (and (number? val) (eq? tag 'num)) (and (symbol? val) (eq? tag 'sym))))
+  (or (not tag)
+      (and (number? val) (eq? tag 'num))
+      (and (symbol? val) (eq? tag 'sym))))
 (define (constrain-type bs tag tm)
   (let-values (((bs tm) (walk bs tm)))
     (if (var? tm)
@@ -106,7 +108,6 @@
          (cxs (bindings-actual-ref bs vr #f))
          (bs (bindings (hash-set (bindings-actual bs) vr val) hs)))
     (if cxs (constraints-apply bs cxs val) bs)))
-
 (define (bindings-get bs vr)
   (let* ((r0 (bindings-actual-ref bs vr vr)) (r0 (if (constraints? r0) vr r0)))
     (if (or (eq? r0 vr) (not (var? r0))) (values bs r0)
@@ -124,11 +125,9 @@
                        (and bs (let-values (((bs t0) (walk bs (cdr term))))
                                  (not-occurs? bs vr t0)))))
     (if (eq? vr term) #f bs)))
-
 (define (checked-assign bs0 vr term)
   (let ((bs1 (not-occurs? bs0 vr term)))
     (and bs1 (bindings-assign bs1 vr term))))
-
 (define (unify bs e0 e1)
   (let-values (((bs e0) (walk bs e0)))
     (let-values (((bs e1) (walk bs e1)))
