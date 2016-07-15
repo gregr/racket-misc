@@ -621,3 +621,195 @@
 ;;     bound to shape from a finite set
 ;;     bound to a particular shape
 ;;     instantiation/shape information is recursive for pairs
+
+(module+ test
+  (require racket/set)
+
+  (define-syntax mk-test-cont
+    (syntax-rules ()
+      ((_ test-name exact? query expected)
+       (let* ((result-set (list->set query))
+              (expected-set (list->set expected))
+              (overlap (set-intersect result-set expected-set)))
+         (if exact?
+           (begin
+             (when (not (equal? result-set expected-set))
+               (displayln (format "failed test: ~a" test-name)))
+             ;(check-equal? (set-subtract expected-set result-set) (set))
+             ;(check-equal? (set-subtract result-set expected-set) (set))
+             (check-equal? result-set expected-set))
+           (check-equal? overlap expected-set))))))
+  (define-syntax mk-test
+    (syntax-rules ()
+      ((_ test-name query expected)
+        (mk-test-cont test-name #t query expected))))
+
+  (mk-test "numbero-2"
+    (run* (q) (numbero q) (== 5 q))
+    '((5)))
+
+  (mk-test "numbero-3"
+    (run* (q) (== 5 q) (numbero q))
+    '((5)))
+
+  (mk-test "numbero-4"
+    (run* (q) (== 'x q) (numbero q))
+    '())
+
+  (mk-test "numbero-5"
+    (run* (q) (numbero q) (== 'x q))
+    '())
+
+  (mk-test "numbero-6"
+    (run* (q) (numbero q) (== `(1 . 2) q))
+    '())
+
+  (mk-test "numbero-7"
+    (run* (q) (== `(1 . 2) q) (numbero q))
+    '())
+
+  (mk-test "numbero-8"
+    (run* (q) (fresh (x) (numbero x)))
+    '((_.0)))
+
+  (mk-test "numbero-9"
+    (run* (q) (fresh (x) (numbero x)))
+    '((_.0)))
+
+  (mk-test "numbero-14-b"
+    (run* (q) (fresh (x) (numbero q) (== 5 x) (== x q)))
+    '((5)))
+
+  (mk-test "numbero-15"
+    (run* (q) (fresh (x) (== q x) (numbero q) (== 'y x)))
+    '())
+
+  (mk-test "symbolo-2"
+    (run* (q) (symbolo q) (== 'x q))
+    '((x)))
+
+  (mk-test "symbolo-3"
+    (run* (q) (== 'x q) (symbolo q))
+    '((x)))
+
+  (mk-test "symbolo-4"
+    (run* (q) (== 5 q) (symbolo q))
+    '())
+
+  (mk-test "symbolo-5"
+    (run* (q) (symbolo q) (== 5 q))
+    '())
+
+  (mk-test "symbolo-6"
+    (run* (q) (symbolo q) (== `(1 . 2) q))
+    '())
+
+  (mk-test "symbolo-7"
+    (run* (q) (== `(1 . 2) q) (symbolo q))
+    '())
+
+  (mk-test "symbolo-8"
+    (run* (q) (fresh (x) (symbolo x)))
+    '((_.0)))
+
+  (mk-test "symbolo-9"
+    (run* (q) (fresh (x) (symbolo x)))
+    '((_.0)))
+
+  (mk-test "symbolo-14-b"
+    (run* (q) (fresh (x) (symbolo q) (== 'y x) (== x q)))
+    '((y)))
+
+  (mk-test "symbolo-15"
+    (run* (q) (fresh (x) (== q x) (symbolo q) (== 5 x)))
+    '())
+
+  (mk-test "symbolo-numbero-1"
+    (run* (q) (symbolo q) (numbero q))
+    '())
+
+  (mk-test "symbolo-numbero-2"
+    (run* (q) (numbero q) (symbolo q))
+    '())
+
+  (mk-test "symbolo-numbero-3"
+    (run* (q)
+      (fresh (x)
+        (numbero x)
+        (symbolo x)))
+    '())
+
+  (mk-test "symbolo-numbero-4"
+    (run* (q)
+      (fresh (x)
+        (symbolo x)
+        (numbero x)))
+    '())
+
+  (mk-test "symbolo-numbero-5"
+    (run* (q)
+      (numbero q)
+      (fresh (x)
+        (symbolo x)
+        (== x q)))
+    '())
+
+  (mk-test "symbolo-numbero-6"
+    (run* (q)
+      (symbolo q)
+      (fresh (x)
+        (numbero x)
+        (== x q)))
+    '())
+
+  (mk-test "symbolo-numbero-7"
+    (run* (q)
+      (fresh (x)
+        (numbero x)
+        (== x q))
+      (symbolo q))
+    '())
+
+  (mk-test "symbolo-numbero-7"
+    (run* (q)
+      (fresh (x)
+        (symbolo x)
+        (== x q))
+      (numbero q))
+    '())
+
+  (mk-test "symbolo-numbero-8"
+    (run* (q)
+      (fresh (x)
+        (== x q)
+        (symbolo x))
+      (numbero q))
+    '())
+
+  (mk-test "symbolo-numbero-9"
+    (run* (q)
+      (fresh (x)
+        (== x q)
+        (numbero x))
+      (symbolo q))
+    '())
+
+  (mk-test "test 33"
+    (run* (q)
+      (fresh (a b c)
+        (== `(,a ,b) c)
+        (== `(,c ,c) q)
+        (symbolo b)
+        (numbero c)))
+    '())
+
+  (mk-test "test 41"
+    (run* (q)
+      (fresh (a)
+        (== `(,a . ,a) q)))
+    '(((_.0 . _.0))))
+
+  (mk-test "test 64"
+    (run* (q) (symbolo q) (== 'tag q))
+    '((tag)))
+    )
