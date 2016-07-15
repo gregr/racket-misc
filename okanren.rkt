@@ -821,6 +821,22 @@
       (symbolo q))
     '())
 
+  (mk-test "test 24"
+    (run* (q) (== 5 q) (absento 5 q))
+    '())
+
+  (mk-test "test 25"
+    (run* (q) (== q `(5 6)) (absento 5 q))
+    '())
+
+  (mk-test "test 25b"
+    (run* (q) (absento 5 q) (== q `(5 6)))
+    '())
+
+  (mk-test "test 26"
+    (run* (q) (absento 5 q) (== 5 q))
+    '())
+
   (mk-test "test 33"
     (run* (q)
       (fresh (a b c)
@@ -839,4 +855,62 @@
   (mk-test "test 64"
     (run* (q) (symbolo q) (== 'tag q))
     '((tag)))
+
+  (mk-test "test 66"
+    (run* (q) (absento 6 5))
+    '((_.0)))
+
+  (mk-test "absento 'closure-1a"
+    (run* (q) (absento 'closure q) (== q 'closure))
+    '())
+
+  (mk-test "absento 'closure-1b"
+    (run* (q) (== q 'closure) (absento 'closure q))
+    '())
+
+  (mk-test "absento 'closure-2a"
+    (run* (q) (fresh (a d) (== q 'closure) (absento 'closure q)))
+    '())
+
+  (mk-test "absento 'closure-2b"
+    (run* (q) (fresh (a d) (absento 'closure q) (== q 'closure)))
+    '())
+
+  (mk-test "absento 'closure-4a"
+    (run* (q) (fresh (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure a)))
+    '())
+
+  (mk-test "absento 'closure-4b"
+    (run* (q) (fresh (a d) (absento 'closure q) (== 'closure a) (== `(,a . ,d) q)))
+    '())
+
+  (mk-test "absento 'closure-4c"
+    (run* (q) (fresh (a d) (== 'closure a) (absento 'closure q) (== `(,a . ,d) q)))
+    '())
+
+  (mk-test "absento 'closure-4d"
+    (run* (q) (fresh (a d) (== 'closure a) (== `(,a . ,d) q) (absento 'closure q)))
+    '())
+
+  (mk-test "absento 'closure-5a"
+    (run* (q) (fresh (a d) (absento 'closure q) (== `(,a . ,d) q) (== 'closure d)))
+    '())
+
+  (mk-test "absento 'closure-5b"
+    (run* (q) (fresh (a d) (absento 'closure q) (== 'closure d) (== `(,a . ,d) q)))
+    '())
+
+  (mk-test "absento 'closure-5c"
+    (run* (q) (fresh (a d) (== 'closure d) (absento 'closure q) (== `(,a . ,d) q)))
+    '())
+
+  (mk-test "absento 'closure-5d"
+    (run* (q) (fresh (a d) (== 'closure d) (== `(,a . ,d) q) (absento 'closure q)))
+    '())
+
+  (mk-test "absento 'closure-6"
+    (run* (q)
+      (== `(3 (closure x (x x) ((y . 7))) #t) q)
+      (absento 'closure q))
+    '())
     )
