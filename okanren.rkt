@@ -1,8 +1,16 @@
 #lang racket/base
 (provide
-  )
-
-(require
+  ==
+  =/=
+  absento
+  conde
+  fresh
+  kanren
+  kanren-define
+  numbero
+  run
+  run*
+  symbolo
   )
 
 (module+ test
