@@ -373,19 +373,19 @@
       (((1) (_.0 _.1 . _.2) (1 1 0 0 0 0 1)))
       (((0 1) (0 1 1) (0 0 1)))))
 
-  ;(mk-test-time "logo 9 answers"
-    ;(run 9 (b q r)
-      ;(logo '(0 0 1 0 0 0 1) b q r)
-      ;(>1o q))
-    ;'(((() (_.0 _.1 . _.2) (0 0 1 0 0 0 1)))
-      ;(((1) (_.0 _.1 . _.2) (1 1 0 0 0 0 1)))
-      ;(((0 1) (0 1 1) (0 0 1)))
-      ;(((1 1) (1 1) (1 0 0 1 0 1)))
-      ;(((0 0 1) (1 1) (0 0 1)))
-      ;(((0 0 0 1) (0 1) (0 0 1)))
-      ;(((1 0 1) (0 1) (1 1 0 1 0 1)))
-      ;(((0 1 1) (0 1) (0 0 0 0 0 1)))
-      ;(((1 1 1) (0 1) (1 1 0 0 1)))))
+  (mk-test-time "logo 9 answers"
+    (run 9 (b q r)
+      (logo '(0 0 1 0 0 0 1) b q r)
+      (>1o q))
+    '(((() (_.0 _.1 . _.2) (0 0 1 0 0 0 1)))
+      (((1) (_.0 _.1 . _.2) (1 1 0 0 0 0 1)))
+      (((0 1) (0 1 1) (0 0 1)))
+      (((1 1) (1 1) (1 0 0 1 0 1)))
+      (((0 0 1) (1 1) (0 0 1)))
+      (((0 0 0 1) (0 1) (0 0 1)))
+      (((1 0 1) (0 1) (1 1 0 1 0 1)))
+      (((0 1 1) (0 1) (0 0 0 0 0 1)))
+      (((1 1 1) (0 1) (1 1 0 0 1)))))
   )
 
 (kanren
@@ -493,15 +493,15 @@
     (run 1 (q) (eval-expo q '() q))
     `(((,quinec) (sym _.0) (absento (_.0 closure)) (=/=* ((_.0 . quote)) ((_.0 . list))))))
 
-  ; aim for less than a second
-  ;(mk-test-time "twine"
-    ;(run 1 (p q) (=/= p q) (eval-expo p '() q) (eval-expo q '() p))
-    ;`(((,twine0 ,twine1)
-       ;(sym _.0) (absento (_.0 closure)) (=/=* ((_.0 . quote)) ((_.0 . list))))))
+  (mk-test-time "twine"
+    (run 1 (p q) (=/= p q) (eval-expo p '() q) (eval-expo q '() p))
+    `(((,twine0 ,twine1)
+       (sym _.0) (absento (_.0 closure)) (=/=* ((_.0 . quote)) ((_.0 . list))))))
 
   ; aim for 3 seconds
-  ;(mk-test-time "thrine"
-    ;(run 1 (p q r) (=/= p q) (=/= q r) (=/= r p)
-      ;(eval-expo p '() q) (eval-expo q '() r) (eval-expo r '() p))
-    ;`((,thrine0 ,thrine1 ,thrine2)))
+  (mk-test-time "thrine"
+    (run 1 (p q r) (=/= p q) (=/= q r) (=/= r p)
+      (eval-expo p '() q) (eval-expo q '() r) (eval-expo r '() p))
+    `(((,thrine0 ,thrine1 ,thrine2)
+       (sym _.0) (absento (_.0 closure)) (=/=* ((_.0 . quote)) ((_.0 . list))))))
   )
