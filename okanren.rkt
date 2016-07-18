@@ -11,6 +11,16 @@
   run
   run*
   symbolo
+
+  ; ideally, these would be private
+  conj
+  conj*
+  state-bindings
+  state-bindings-set
+  unit
+  var
+  var?
+  walk
   )
 
 (module+ test
