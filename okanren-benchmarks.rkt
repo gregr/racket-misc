@@ -28,6 +28,12 @@
     (syntax-rules ()
       ((_ test-name query expected)
         (mk-test-cont test-name #f query expected))))
+  (define-syntax mk-test-time
+    (syntax-rules ()
+      ((_ test-name query expected)
+        (begin
+          (displayln test-name)
+          (time (mk-test-cont test-name #t query expected))))))
   )
 
 (define build-num
@@ -359,7 +365,7 @@
       ((((0 1 1) (0 0 1) (0 0 0 1 1))))
       ((((0 0 1 1) (0 1) (0 0 0 1 1))))))
 
-  (mk-test "logo 3 answers"
+  (mk-test-time "logo 3 answers"
     (run 3 (b q r)
       (logo '(0 0 1 0 0 0 1) b q r)
       (>1o q))
@@ -367,7 +373,7 @@
       (((1) (_.0 _.1 . _.2) (1 1 0 0 0 0 1)))
       (((0 1) (0 1 1) (0 0 1)))))
 
-  ;(mk-test "logo 9 answers"
+  ;(mk-test-time "logo 9 answers"
     ;(run 9 (b q r)
       ;(logo '(0 0 1 0 0 0 1) b q r)
       ;(>1o q))
