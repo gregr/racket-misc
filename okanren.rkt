@@ -197,9 +197,18 @@
                    (let ((bs (unify bs (car e0) (car e1))))
                      (and bs (unify bs (cdr e0) (cdr e1))))))))))
 
+(record disjunctions new pending)
+(define disjunctions-empty (disjunctions '() '()))
+(define (disjunctions-empty? ds)
+  (and (null? (disjunctions-new ds)) (null? (disjunctions-pending ds))))
+(define (disjunctions-add ds disj)
+  (disjunctions (cons disj (disjunctions-new ds)) (disjunctions-pending ds)))
+(define (disjunctions-pop ds)
+  (let ((disjs (append (reverse (disjunctions-new ds)) (disjunctions-pending ds))))
+    (values (disjunctions '() (cdr disjs)) (car disjs))))
 
 (record state bindings apps disjs)
-(define state-empty (state bindings-empty '() '()))
+(define state-empty (state bindings-empty '() disjunctions-empty))
 (define (state-bindings-set st bs)
   (state bs (state-apps st) (state-disjs st)))
 (define (state-apps-add st app)
@@ -207,11 +216,13 @@
 (define (state-apps-clear st)
   (state (state-bindings st) '() (state-disjs st)))
 (define (state-disjs-add st disj)
-  (state (state-bindings st) (state-apps st) (cons disj (state-disjs st))))
+  (state (state-bindings st) (state-apps st) (disjunctions-add
+                                               (state-disjs st) disj)))
 (define (state-disjs-pop st)
-  (let ((disjs (state-disjs st)))
-    (values (state (state-bindings st) (state-apps st) (cdr disjs))
-            (car disjs))))
+  (let-values (((ds disj) (disjunctions-pop (state-disjs st))))
+    (values (state (state-bindings st) (state-apps st) ds) disj)))
+(define (state-disjs-set st disjs)
+  (state (state-bindings st) (state-apps st) disjs))
 
 (define (== e0 e1)
   (lambda (st)
@@ -259,15 +270,14 @@
                    ((pair? ss) (cons (car ss)
                                      (extract-answers (cdr ss))))
                    (else (loop (cdr disj) unfinished))))))))
-
-(define (state-disjs-step st)
-  (if (null? (state-disjs st)) (list (state-bindings st))
+(define (state-disjs-split st)
+  (if (disjunctions-empty? (state-disjs st)) (list (state-bindings st))
     (let-values (((st disj) (state-disjs-pop st)))
       (disj-split st disj))))
 
 (define (state-step st)
   (if st (if (pair? (state-apps st)) (zzz (state-step (state-apps-step st)))
-           (state-disjs-step st))
+           (state-disjs-split st))
     '()))
 
 (define (unit st) st)
@@ -315,6 +325,7 @@
          (absents (if (pair? absents0)
                     (cons (cons ivar absents0) absents) absents)))
     (reifier-cxs nums syms absents diseqs)))
+
 (define (var<? v0 v1) (symbol<? (var-name v0) (var-name v1)))
 (define (var-binding<? vb0 vb1) (var<? (car vb0) (car vb1)))
 (define (diseq-binding-sort db)
@@ -370,6 +381,7 @@
       (let-values (((bs-new rd) (diseq-reify bs ixs (car ds))))
         (if bs-new (loop bs-new (cdr ds) (cons rd rds))
           (loop bs (cdr ds) rds))))))
+
 (define (reify-constraints bs rcxs ixs)
   (let* ((nums (reverse (reifier-cxs-nums rcxs)))
          (syms (reverse (reifier-cxs-syms rcxs)))
