@@ -23,6 +23,10 @@
   walk
   )
 
+(require
+  (except-in racket/match ==)
+  )
+
 (module+ test
   (require
     rackunit
@@ -48,6 +52,203 @@
     ((_ name) (void))
     ((_ name (record-entry ...) record-entries ...)
      (begin (record record-entry ...) (records name record-entries ...)))))
+
+(records goal-term
+  (gt-success)
+  (gt-failure)
+  (gt-conj g0 g1)
+  (gt-disj g0 g1)
+  (gt-app proc args)
+  (gt-== e0 e1)
+  (gt-type tag e)
+  (gt-absent atom e)
+  (gt-=/= e0 e1))
+
+(record goal-procedure name active? lam)
+(define (goal-procedure-new name lam) (goal-procedure name #f lam))
+
+(define (fail st) #f)
+(define (unit st) st)
+(define (mplus ss zss)
+  (match ss
+    (#f zss)
+    ('() zss)
+    ((? procedure?) (zzz (mplus (zss) ss)))
+    ((? state?) (cons ss zss))
+    ((cons result ss) (cons result (mplus ss zss)))))
+(define (bind ss goal)
+  (match ss
+    (#f '())  ; TODO: have take expect #f instead of '()
+    ('() '())
+    ((? procedure?) (zzz (bind (ss) goal)))
+    ((? state?) (goal ss))
+    ((cons st ss) (mplus (goal st) (zzz (bind ss goal))))))
+
+(define (goal-term-eval gterm)
+  (match gterm
+    ((gt-success) unit)
+    ((gt-failure) fail)
+    ((gt-conj g0 g1) (lambda (st) (bind (g0 st) g1)))
+    ((gt-disj g0 g1) (lambda (st) (mplus (g0 st) (zzz (g1 st)))))
+    ((gt-app proc args) (apply (goal-procedure-lam proc) args))
+    ((gt-== e0 e1) (== e0 e1))
+    ((gt-type tag e) (typeo tag e))
+    ((gt-absent atom e) (absento atom e))
+    ((gt-=/= e0 e1) (=/= e0 e1))))
+
+(define (var<? v0 v1) (symbol<? (var-name v0) (var-name v1)))
+(define (kv<? kv0 kv1) (var<? (car kv0) (car kv1)))
+(define (bindings->list bs)
+  (sort (let loop ((kvs (hash->list (bindings-actual bs))))
+    (if (null? kvs) '()
+      (let ((rest (cons (car kvs) (loop (cdr kvs)))))
+        (if (var? (cdar kvs)) (cons (cons (cdar kvs) (caar kvs)) rest)
+          rest))))
+        kv<?))
+
+
+; what's the best way to replace triggered deterministic apps with their untriggered child apps?
+;   generate symbols, each term either a literal app or symbol pointing to a sequence of (child) terms
+;     update symbol mapping when determinism triggers
+
+; statically locate seams between deterministic and non-deterministic computations
+;   cluster multiple calls based on their indexed/partitioned parameters to limit number of checks
+;     a cluster should also be aware of member dependencies
+;       if two procs are partially deterministic on v0, but only p0 will cause
+;       v1 to be bound, which will make p1 fully deterministic, call p0 first
+;         and no additional check should be needed after p0 before calling p1
+;   when calling a proc in a deterministic mode, newly revealed calls may not determinism-ready
+;     but these should already come in a cluster, too, for a single check across all
+
+; how do we avoid redundantly disjuncting after a decision procedure of that disj has already fired?
+; how do we optimally employ determinism information for (mutually-)recursive procedure applications?
+;   computing fixed points for this can be tedious
+
+; partitioning predicates
+;   if a branch falls into more than one bucket, predicate is invalid
+;   if all branches fall into the same bucket, predicate is useless
+
+; disj modes per var
+;   unknown, unbound, bound (with cases), alias w/ other var
+
+; dependency analysis
+;   * if all branches bind a variable, its mode is bound
+;   * if a variable v0 is bound in all branches of one side of a partition on
+;     another variable v1, and unbound in at least one branch on the other
+;     side, then v0's mode is dependent on v1: v1 => v0
+;   * if such a dependency itself depends on the partition of another var v2,
+;     then: v2 => v1 => v0
+;   the following stuff isn't really important?
+;     what about v1 determining the exact binding of v0? (functional dependency: v1 -> v0)
+;     what about v1 and v0 mutually determining each other's exact bindings?
+;       is this special?  seems to just mean v0 and v1 are independently unique
+;     individual vars unique, pairs of vars unique, etc.
+;
+; a => b means that binding a can make b partitionable
+;
+; how much of this info should transmit through procedure apps?
+;   relationships between parameters
+;   fixed points
+;
+; do not activate/commit-to a partition unless a single branch is the result?
+;   or you may throw away better top-level partitioning information
+;   can reach into a partition to grab available simple constraints without committing
+; or, just compute multi-partitions for all permutations to cover all possible binding discovery paths
+;   can the static analysis predict chain reactions to avoid dynamic dependency resolution?
+;     triggering one var's partitions binds another var, triggering its partitions...
+;     but what about infinite chain reactions?
+;
+; can/should we store partition/index info in substitution itself?
+;
+; abstract interpretation or supercompilation of splitting disjunctions, for branch-path-sensitive analysis
+;   at this point we're going really far to avoid allocating partition/index information
+
+; aliasing
+; k=v in one branch means it's possible that k => v or v => k
+;   depending on bindings of v and k in other branches
+
+; Indices mapping to multiple branches are useless unless shared subconstrains
+; can be extracted from those branches, or if sub-indices can eventually map to
+; single branches.
+;
+; Try single keys before multi-key indices.  That is, avoid the sub-index case when it would be redundant (second key can stand on its own).
+; Two forms of sub-index?  How should we deal with the doubly-nested kind?
+
+; TODO: handle partial indices with vars
+; Simply merging k=var branches with the newly-assigned case can invalidate
+; that case's sub-indices by making them incomplete...
+; But dynamic index building will be too slow?
+; Maybe only consider vars on the rhs in si-diseq switches.
+; And what about the diseq of a particular pair?  Maybe also limit to si-diseq.
+(records switch-partition
+  (si-val-eq val)
+  (si-atom-eq atom)
+  (si-absent atom)
+  (si-number)
+  (si-symbol)
+  (si-pair))
+
+; k-way comparison for joining branches on like-var-bindings
+;   constraints can be more difficult to assess likeness/exclusiveness
+;     consider them first, as they represent larger domains
+;     non-singleton diseqs simplified to singletons (during recursive joining/splitting) before index consideration
+
+;(define (goal-term-compile params gterm )
+  ;(define (compile st gterm)
+    ;(let-values
+      ;(((st serious)
+        ;(let loop ((gterm gterm) (st st) (serious '()))
+          ;(match gterm
+            ;((gt-success) (values st serious))
+            ;((gt-failure) (values #f #f))
+            ;((gt-conj g0 g1) (let-values (((st serious) (loop g0 st serious)))
+                               ;(loop g1 st serious)))
+            ;((gt-disj g0 g1) (values st (cons gterm serious)))
+            ;((gt-app proc args)
+             ;(goal-procedure-compile proc)
+             ;(values st (cons gterm serious)))
+            ;((gt-== e0 e1) (values ((== e0 e1) st) serious))
+            ;((gt-type tag e) (values ((typeo tag e) st) serious))
+            ;((gt-absent atom e) (values ((absento atom e) st) serious))
+            ;((gt-=/= e0 e1) (values ((=/= e0 e1) st) serious))))))
+
+    ;; should params be extended?  what should be done before entering serious goals?
+
+;; TODO: recurse into serious, extract common, index, generate simplified constraints
+;; index on param structures, atom|pair, car/cdr
+;;   only complete indices are valid (param must be unified in each branch)
+;;     can dynamically resolve aliasing
+;;       e.g. index param0 where one branch has param0 == param1
+;;       complete the index (recursively) when param1 is finally known
+;;   recursively
+;;   combine branches that bind param to the same structure
+;; inlining is crucial
+;; run[*] needs to do a simple compilation/eval
+;;   so not all procedures have to live in a 'kanren' block
+;;     but doing so should speed up run[*]'s compilation/eval
+;; the only vars that matter are those reachable via params, and those used as args to un-analyzed procedures
+;;   and in the latter case, only when bound?
+;;   unbound vars essentially mean "don't care" in this case
+;;     solutions that only differ over "don't care" vars could be de-duped
+;; semi-det procedure modes
+;;   all minimal-bound parameter combinations that yield semi-determinism
+;;     also indicate which unbound parameters become bound this way
+
+    ;))
+
+  ;(compile gterm state-empty)
+
+  ;)
+
+;(define (goal-procedure-compile proc)
+  ;(let ((lam (goal-procedure-lam proc)))
+    ;(when (not (or (procedure? lam) (goal-procedure-active? proc)))
+      ;(set-goal-procedure-active?! proc #t)
+      ;(let* ((params (map var (car lam)))
+             ;(body (apply (cdr lam) params))
+             ;(lam (goal-term-compile params body)))
+        ;(set-goal-procedure-lam! proc lam)
+        ;(set-goal-procedure-active?! proc #f)))))
 
 (record var name)
 
@@ -289,7 +490,6 @@
            (state-disjs-split st))
     '()))
 
-(define (unit st) st)
 (define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
 (define-syntax conj*
   (syntax-rules ()
@@ -307,7 +507,7 @@
     ((_ goal goals ...) (cons goal (disj-branches goals ...)))))
 (define-syntax disj*
   (syntax-rules ()
-    ((_) (lambda (st) #f))
+    ((_) fail)
     ((_ goal) goal)
     ((_ goals ...) (lambda (st)
                      (state-disjs-add st (disj-branches goals ...))))))
@@ -335,7 +535,6 @@
                     (cons (cons ivar absents0) absents) absents)))
     (reifier-cxs nums syms absents diseqs)))
 
-(define (var<? v0 v1) (symbol<? (var-name v0) (var-name v1)))
 (define (var-binding<? vb0 vb1) (var<? (car vb0) (car vb1)))
 (define (diseq-binding-sort db)
   (let ((lhs (car db)) (rhs (cdr db)))
