@@ -54,10 +54,9 @@
      (begin (record record-entry ...) (records name record-entries ...)))))
 
 (records goal-term
-  (gt-success)
-  (gt-failure)
-  (gt-conj g0 g1)
-  (gt-disj g0 g1)
+  (gt-zzz suspended)
+  (gt-conj gs)
+  (gt-disj gs)
   (gt-app proc args)
   (gt-== e0 e1)
   (gt-type tag e)
@@ -86,15 +85,20 @@
 
 (define (goal-term-eval gterm)
   (match gterm
-    ((gt-success) unit)
-    ((gt-failure) fail)
-    ((gt-conj g0 g1) (lambda (st) (bind (g0 st) g1)))
-    ((gt-disj g0 g1) (lambda (st) (mplus (g0 st) (zzz (g1 st)))))
-    ((gt-app proc args) (apply (goal-procedure-lam proc) args))
+    ((gt-zzz suspended) (goal-term-eval (suspended)))
+    ((gt-conj gs) (foldr (lambda (g0 g1)
+                           (lambda (st) (bind ((goal-term-eval g0) st) g1)))
+                         unit gs))
+    ((gt-disj gs) (foldr (lambda (g0 g1)
+                           (lambda (st)
+                             (mplus ((goal-term-eval g0) st) (zzz (g1 st)))))
+                         fail gs))
+    ((gt-app proc args) (goal-term-eval (apply (goal-procedure-lam proc) args)))
     ((gt-== e0 e1) (eval-== e0 e1))
     ((gt-type tag e) (eval-typeo tag e))
     ((gt-absent atom e) (eval-absento atom e))
-    ((gt-=/= e0 e1) (eval-=/= e0 e1))))
+    ((gt-=/= e0 e1) (eval-=/= e0 e1))
+    (_ gterm)))
 
 (define (var<? v0 v1) (symbol<? (var-name v0) (var-name v1)))
 (define (kv<? kv0 kv1) (var<? (car kv0) (car kv1)))
@@ -105,7 +109,6 @@
         (if (var? (cdar kvs)) (cons (cons (cdar kvs) (caar kvs)) rest)
           rest))))
         kv<?))
-
 
 ; what's the best way to replace triggered deterministic apps with their untriggered child apps?
 ;   generate symbols, each term either a literal app or symbol pointing to a sequence of (child) terms
