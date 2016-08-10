@@ -13,7 +13,7 @@
   symbolo
 
   ; ideally, these would be private
-  conj
+  ;conj
   conj*
   state-bindings
   state-bindings-set
@@ -498,29 +498,31 @@
            (state-disjs-split st))
     '()))
 
-(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
+;(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
 (define-syntax conj*
   (syntax-rules ()
     ((_) unit)
     ((_ goal) goal)
-    ((_ goal goals ...) (conj goal (conj* goals ...)))))
+    ((_ goal goals ...) (gt-conj (list goal goals ...)))))
 (define-syntax fresh
   (syntax-rules ()
     ((_ () body ...) (conj* body ...))
     ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
                                      (fresh (lvars ...) body ...)))))
-(define-syntax disj-branches
-  (syntax-rules ()
-    ((_) '())
-    ((_ goal goals ...) (cons goal (disj-branches goals ...)))))
+;(define-syntax disj-branches
+  ;(syntax-rules ()
+    ;((_) '())
+    ;((_ goal goals ...) (cons goal (disj-branches goals ...)))))
 (define-syntax disj*
   (syntax-rules ()
     ((_) fail)
     ((_ goal) goal)
-    ((_ goals ...) (lambda (st)
-                     (state-disjs-add st (disj-branches goals ...))))))
+    ((_ goals ...) (gt-disj (list goals ...))
+     ;(lambda (st) (state-disjs-add st (disj-branches goals ...)))
+
+                   )))
 (define-syntax conde
-  (syntax-rules () ((_ (goal ...) ...) (disj* (conj* goal ...) ...))))
+  (syntax-rules () ((_ (goal ...) ...) (gt-zzz (zzz (disj* (conj* goal ...) ...))))))
 
 (define var-initial (var 'initial))
 (define (reify-var ix) (string->symbol (string-append "_." (number->string ix))))
@@ -614,7 +616,7 @@
   (lambda (bs)
     (let-values
       (((bs rcxs ixs rterm)
-        (let loop ((bs bs) (rcxs reifier-cxs-empty) (ixs (hash)) (term vi))
+        (let loop ((bs (state-bindings bs)) (rcxs reifier-cxs-empty) (ixs (hash)) (term vi))
           (let-values (((bs term) (walk bs term)))
             (cond
               ((var? term)
@@ -644,26 +646,37 @@
 (define (take n ss)
   (if (and n (zero? n)) '()
     (let ((ss (force-answer ss)))
-      (if (null? ss) '()
-        (cons (car ss) (take (and n (- n 1)) (cdr ss)))))))
+      (if ss
+        (if (null? ss) '()
+          (if (pair? ss)
+            (cons (car ss) (take (and n (- n 1)) (cdr ss)))
+            (list ss)))
+        '()))))
 
 (define-syntax run
   (syntax-rules ()
     ((_ n (qs ...) gs ...)
      (map (reify var-initial)
-       (take n (state-step
-                 ((fresh (qs ...) (== (list qs ...) var-initial) gs ...)
-                  state-empty)))))))
+       (take n ((goal-term-eval
+                  (fresh (qs ...) (== (list qs ...) var-initial) gs ...))
+                state-empty))))))
 (define-syntax run* (syntax-rules () ((_ body ...) (run #f body ...))))
 
 (define-syntax kanren
   (syntax-rules ()
     ((_ (define (name params ...) body ...) kdefs ...)
      (begin (define name
-              (let ((proc-attrs (procedure-attrs 'name #f)))
-                (lambda (params ...)
-                  (lambda (st)
-                    (app-step st proc-attrs (zzz (conj* body ...)))))))
+              (let ((goal-proc (goal-procedure-new
+                                 'name (lambda (params ...) body ...))))
+                (lambda (params ...) (gt-app goal-proc (list params ...))))
+              ;(let ;((proc-attrs (procedure-attrs 'name #f)))
+                ;(lambda (params ...)
+                  ;(lambda (st)
+                    ;(app-step st proc-attrs (zzz (conj* body ...)))))
+
+                ;)
+
+              )
             (kanren kdefs ...)))
     ((_ (define name (lambda (params ...) body)) kdefs ...)
      (kanren (define (name params ...) body) kdefs ...))
