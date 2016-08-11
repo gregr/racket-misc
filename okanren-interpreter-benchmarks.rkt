@@ -158,7 +158,7 @@
                      (== `(rec . ,lam-expr) b)
                      (== `(closure ,lam-expr ,env) t)))))
           ((=/= x y) alts)))
-  (goal st))
+  ((goal-term-eval goal) st))
 
 (kanren
   (define (not-in-envo x env)
@@ -182,8 +182,8 @@
   (values st rrands rands-suffix) = (list-split-ground st rands)
   (values st ggoals vgoals args-suffix) =
   (forf st = st
-        ggoals = unit
-        vgoals = unit
+        ggoals = gt-success
+        vgoals = gt-success
         args = a*
         rand <- (reverse rrands)
         (values st rand) = (state-walk st rand)
@@ -200,7 +200,7 @@
                 vgoals    ; then fill in the unbound arguments
                 ; any unbound final segment of arguments
                 (eval-listo rands-suffix aenv args-suffix))
-  (goal st))
+  ((goal-term-eval goal) st))
 
 (kanren
   ;; need to make sure lambdas are well formed.
@@ -332,11 +332,11 @@
       ((=/= #f t) (eval-expo e2 env val))
       ((== #f t) (eval-expo e3 env val)))))
 
-(define initial-env `((car . (val . (prim . car)))
+(define initial-env `((cons . (val . (prim . cons)))
+                      (car . (val . (prim . car)))
                       (cdr . (val . (prim . cdr)))
                       (null? . (val . (prim . null?)))
                       (symbol? . (val . (prim . symbol?)))
-                      (cons . (val . (prim . cons)))
                       (not . (val . (prim . not)))
                       (equal? . (val . (prim . equal?)))
                       (list . (val . (closure (lambda x x) ,empty-env)))
@@ -650,68 +650,109 @@
       )
     '((((car l) ((cdr l) s)))))
 
-  ; runs out of memory
-  ;(mk-test-time "append recursive-entire"
-    ;(run 1 (q)
-      ;(evalo `(letrec ((append (lambda (l s)
-                                     ;(if (null? l)
-                                         ;s
-                                         ;(cons (car l)
-                                               ;,q)))))
-                    ;(list
-                      ;(append '() '())
-                      ;(append '(foo) '(bar))
-                      ;(append '(1 2 3) '(4 5)))
-                    ;)
-                 ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
-    ;'(((((append (cdr l) s))))))
+  (mk-test-time "append recursive-entire"
+    (run 1 (q)
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons (car l)
+                                               ,q)))))
+                    (list
+                      (append '() '())
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '() '(foo bar) '(1 2 3 4 5)))
+      )
+    '((((append (cdr l) s)))))
 
-  ;(mk-test-time "append cons-both-args"
-    ;(run 1 (q r)
-      ;(evalo `(letrec ((append (lambda (l s)
-                                     ;(if (null? l)
-                                         ;s
-                                         ;(cons ,q
-                                               ;,r)))))
-                    ;(list
-                      ;(append '() '())
-                      ;(append '(foo) '(bar))
-                      ;(append '(1 2 3) '(4 5)))
-                    ;)
-                 ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
-    ;'((((car l) (append (cdr l) s)))))
+  (mk-test-time "append cons-both-args"
+    (run 1 (q r)
+      (evalo `(letrec ((append (lambda (l s)
+                                     (if (null? l)
+                                         s
+                                         (cons ,q
+                                               ,r)))))
+                    (list
+                      (append '() '())
+                      (append '(foo) '(bar))
+                      (append '(1 2 3) '(4 5)))
+                    )
+                 (list '() '(foo bar) '(1 2 3 4 5)))
+      )
+    '((((car l) (append (cdr l) s)))))
 
-  ;(mk-test-time "append cons-entire"
-    ;(run 1 (q)
-      ;(evalo `(letrec ((append (lambda (l s)
-                                     ;(if (null? l)
-                                         ;s
-                                         ;,q))))
-                    ;(list
-                      ;(append '() '())
-                      ;(append '(foo) '(bar))
-                      ;(append '(1 2 3) '(4 5)))
-                    ;)
-                 ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
-    ;'((cons (car l)  (append (cdr l) s))))
+  (mk-test-time "append cons-entire"
+   (run 1 (defn)
+     (let ((g1 (gensym "g1"))
+           (g2 (gensym "g2"))
+           (g3 (gensym "g3"))
+           (g4 (gensym "g4"))
+           (g5 (gensym "g5"))
+           (g6 (gensym "g6"))
+           (g7 (gensym "g7")))
+       (fresh ()
+         (absento g1 defn)
+         (absento g2 defn)
+         (absento g3 defn)
+         (absento g4 defn)
+         (absento g5 defn)
+         (absento g6 defn)
+         (absento g7 defn)
+         (fresh (q)
+           (== `(define append
+                  (lambda (l s)
+                    (if (null? l)
+                        s
+                        ,q)))
+               defn)
+           (evalo `(begin
+                     ,defn
+                     (list
+                      (append '() '())
+                      (append '(,g1) '(,g2))
+                      (append '(,g3 ,g4 ,g5) '(,g6 ,g7))))
+                  (list '() `(,g1 ,g2) `(,g3 ,g4 ,g5 ,g6 ,g7)))))))
+   '((((define append
+         (lambda (l s)
+           (if (null? l) s
+             (cons (car l) (append (cdr l) s)))))))))
 
-  ;(mk-test-time "append if-both-branches"
-    ;(run 1 (q r)
-      ;(evalo `(letrec ((append (lambda (l s)
-                                     ;(if (null? l)
-                                         ;,q
-                                         ;,r))))
-                    ;(list
-                      ;(append '() '())
-                      ;(append '(foo) '(bar))
-                      ;(append '(1 2 3) '(4 5)))
-                    ;)
-                 ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
-    ;'((s (cons (car l) (append (cdr l) s)))))
+  (mk-test-time "append if-both-branches"
+   (run 1 (defn)
+     (let ((g1 (gensym "g1"))
+           (g2 (gensym "g2"))
+           (g3 (gensym "g3"))
+           (g4 (gensym "g4"))
+           (g5 (gensym "g5"))
+           (g6 (gensym "g6"))
+           (g7 (gensym "g7")))
+       (fresh ()
+         (absento g1 defn)
+         (absento g2 defn)
+         (absento g3 defn)
+         (absento g4 defn)
+         (absento g5 defn)
+         (absento g6 defn)
+         (absento g7 defn)
+         (fresh (q r)
+           (== `(define append
+                  (lambda (l s)
+                    (if (null? l)
+                        ,q
+                        ,r)))
+               defn)
+           (evalo `(begin
+                     ,defn
+                     (list
+                      (append '() '())
+                      (append '(,g1) '(,g2))
+                      (append '(,g3 ,g4 ,g5) '(,g6 ,g7))))
+                  (list '() `(,g1 ,g2) `(,g3 ,g4 ,g5 ,g6 ,g7)))))))
+   '((((define append
+         (lambda (l s)
+           (if (null? l) s
+             (cons (car l) (append (cdr l) s)))))))))
 
   ; this starts producing nonsense results that game the test examples
   ; example of its "cleverness":
