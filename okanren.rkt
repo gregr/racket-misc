@@ -13,7 +13,9 @@
   symbolo
 
   ; ideally, these would be private
-  ;conj
+  gt-success
+  goal-term-eval
+  conj
   conj*
   state-bindings
   state-bindings-set
@@ -63,22 +65,31 @@
   (gt-absent atom e)
   (gt-=/= e0 e1))
 
+(define gt-success (gt-conj '()))
+
 (record goal-procedure name active? lam)
 (define (goal-procedure-new name lam) (goal-procedure name #f lam))
+
+;(define (conj g0 g1) (gt-conj (list g0 g1)))
+(define (conj g0 g1)
+  (match* (g0 g1)
+    (((gt-conj '()) _) g1)
+    ((_ (gt-conj '())) g0)
+    (((gt-conj gs0) (gt-conj gs1)) (gt-conj (append gs0 gs1)))
+    ((_ (gt-conj gs1)) (gt-conj (cons g0 gs1)))
+    ((_ _) (gt-conj (list g0 g1)))))
 
 (define (fail st) #f)
 (define (unit st) st)
 (define (mplus ss zss)
   (match ss
     (#f zss)
-    ('() zss)
     ((? procedure?) (zzz (mplus (zss) ss)))
     ((? state?) (cons ss zss))
     ((cons result ss) (cons result (mplus ss zss)))))
 (define (bind ss goal)
   (match ss
-    (#f '())  ; TODO: have take expect #f instead of '()
-    ('() '())
+    (#f #f)
     ((? procedure?) (zzz (bind (ss) goal)))
     ((? state?) (goal ss))
     ((cons st ss) (mplus (goal st) (zzz (bind ss goal))))))
@@ -465,40 +476,6 @@
 (define-syntax zzz
   (syntax-rules () ((_ body ...) (lambda () body ...))))
 
-(record procedure-attrs name active?)
-
-(define (app-step st attrs zproc)
-  (if (procedure-attrs-active? attrs)
-    (state-apps-add st (cons attrs zproc))
-    (begin (set-procedure-attrs-active?! attrs #t)
-           (let ((st ((zproc) st)))
-             (set-procedure-attrs-active?! attrs #f)
-             st))))
-(define (state-apps-step st)
-  (let loop ((apps (state-apps st)) (st (state-apps-clear st)))
-    (if (null? apps) st
-      (and st (loop (cdr apps) (app-step st (caar apps) (cdar apps)))))))
-
-(define (disj-split st disj)
-  (if (null? disj) '()
-    (let loop ((current (state-step ((car disj) st)))
-               (pending (zzz (disj-split st (cdr disj)))))
-      (let extract-answers ((ss current))
-        (cond ((procedure? ss) (zzz (loop (pending) ss)))
-              ((pair? ss) (cons (car ss) (extract-answers (cdr ss))))
-              (else pending))))))
-
-(define (state-disjs-split st)
-  (if (disjunctions-empty? (state-disjs st)) (list (state-bindings st))
-    (let-values (((st disj) (state-disjs-pop st)))
-      (disj-split st disj))))
-
-(define (state-step st)
-  (if st (if (pair? (state-apps st)) (zzz (state-step (state-apps-step st)))
-           (state-disjs-split st))
-    '()))
-
-;(define (conj g0 g1) (lambda (st) (let ((st1 (g0 st))) (and st1 (g1 st1)))))
 (define-syntax conj*
   (syntax-rules ()
     ((_) unit)
@@ -509,18 +486,11 @@
     ((_ () body ...) (conj* body ...))
     ((_ (lvar lvars ...) body ...) (let ((lvar (var (gensym 'lvar))))
                                      (fresh (lvars ...) body ...)))))
-;(define-syntax disj-branches
-  ;(syntax-rules ()
-    ;((_) '())
-    ;((_ goal goals ...) (cons goal (disj-branches goals ...)))))
 (define-syntax disj*
   (syntax-rules ()
     ((_) fail)
     ((_ goal) goal)
-    ((_ goals ...) (gt-disj (list goals ...))
-     ;(lambda (st) (state-disjs-add st (disj-branches goals ...)))
-
-                   )))
+    ((_ goals ...) (gt-disj (list goals ...)))))
 (define-syntax conde
   (syntax-rules () ((_ (goal ...) ...) (gt-zzz (zzz (disj* (conj* goal ...) ...))))))
 
@@ -647,10 +617,9 @@
   (if (and n (zero? n)) '()
     (let ((ss (force-answer ss)))
       (if ss
-        (if (null? ss) '()
-          (if (pair? ss)
-            (cons (car ss) (take (and n (- n 1)) (cdr ss)))
-            (list ss)))
+        (if (pair? ss)
+          (cons (car ss) (take (and n (- n 1)) (cdr ss)))
+          (list ss))
         '()))))
 
 (define-syntax run
@@ -668,15 +637,7 @@
      (begin (define name
               (let ((goal-proc (goal-procedure-new
                                  'name (lambda (params ...) body ...))))
-                (lambda (params ...) (gt-app goal-proc (list params ...))))
-              ;(let ;((proc-attrs (procedure-attrs 'name #f)))
-                ;(lambda (params ...)
-                  ;(lambda (st)
-                    ;(app-step st proc-attrs (zzz (conj* body ...)))))
-
-                ;)
-
-              )
+                (lambda (params ...) (gt-app goal-proc (list params ...)))))
             (kanren kdefs ...)))
     ((_ (define name (lambda (params ...) body)) kdefs ...)
      (kanren (define (name params ...) body) kdefs ...))
