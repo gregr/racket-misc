@@ -316,11 +316,11 @@
       ((=/= #f t) (eval-expo e2 env val))
       ((== #f t) (eval-expo e3 env val)))))
 
-(define initial-env `((car . (val . (prim . car)))
+(define initial-env `((cons . (val . (prim . cons)))
+                      (car . (val . (prim . car)))
                       (cdr . (val . (prim . cdr)))
                       (null? . (val . (prim . null?)))
                       (symbol? . (val . (prim . symbol?)))
-                      (cons . (val . (prim . cons)))
                       (not . (val . (prim . not)))
                       (equal? . (val . (prim . equal?)))
                       (list . (val . (closure (lambda x x) ,empty-env)))
@@ -706,7 +706,7 @@
 
   ;; hard 7
   (check-equal?
-    (run-da-dls 1 (100) (q r)
+    (time (run-da-dls 1 (100) (q r)
       (evalo `(letrec ((append (lambda (l s)
                                      (if (null? l)
                                          s
@@ -718,12 +718,78 @@
                       (append '(1 2 3) '(4 5)))
                     )
                  (list '() '(foo bar) '(1 2 3 4 5)))
-      )
+      ))
     '(((car l) (append (cdr l) s))))
+
+  (check-equal?
+   (time (run-da-dls 1 (100) (defn)
+     (let ((g1 (gensym "g1"))
+           (g2 (gensym "g2"))
+           (g3 (gensym "g3"))
+           (g4 (gensym "g4"))
+           (g5 (gensym "g5"))
+           (g6 (gensym "g6"))
+           (g7 (gensym "g7")))
+       (exist ()
+         (absento g1 defn)
+         (absento g2 defn)
+         (absento g3 defn)
+         (absento g4 defn)
+         (absento g5 defn)
+         (absento g6 defn)
+         (absento g7 defn)
+         (exist (q)
+           (== `(define append
+                  (lambda (l s)
+                    (if (null? l)
+                        s
+                        ,q)))
+               defn)
+           (evalo `(begin
+                     ,defn
+                     (list
+                      (append '() '())
+                      (append '(,g1) '(,g2))
+                      (append '(,g3 ,g4 ,g5) '(,g6 ,g7))))
+                  (list '() `(,g1 ,g2) `(,g3 ,g4 ,g5 ,g6 ,g7))))))))
+   '(((define append (lambda (l s) (if (null? l) s (cons (car l) (append (cdr l) s))))))))
+
+  (check-equal?
+   (time (run-da-dls 1 (100) (defn)
+     (let ((g1 (gensym "g1"))
+           (g2 (gensym "g2"))
+           (g3 (gensym "g3"))
+           (g4 (gensym "g4"))
+           (g5 (gensym "g5"))
+           (g6 (gensym "g6"))
+           (g7 (gensym "g7")))
+       (exist ()
+         (absento g1 defn)
+         (absento g2 defn)
+         (absento g3 defn)
+         (absento g4 defn)
+         (absento g5 defn)
+         (absento g6 defn)
+         (absento g7 defn)
+         (exist (q r)
+           (== `(define append
+                  (lambda (l s)
+                    (if (null? l)
+                        ,q
+                        ,r)))
+               defn)
+           (evalo `(begin
+                     ,defn
+                     (list
+                      (append '() '())
+                      (append '(,g1) '(,g2))
+                      (append '(,g3 ,g4 ,g5) '(,g6 ,g7))))
+                  (list '() `(,g1 ,g2) `(,g3 ,g4 ,g5 ,g6 ,g7))))))))
+   '(((define append (lambda (l s) (if (null? l) s (cons (car l) (append (cdr l) s))))))))
 
   ;; hard 8: takes ~12s
   ;(check-equal?
-    ;(run-da-dls 1 (100) q
+    ;(time (run-da-dls 1 (100) q
       ;(evalo `(letrec ((append (lambda (l s)
                                      ;(if (null? l)
                                          ;s
@@ -734,12 +800,12 @@
                       ;(append '(1 2 3) '(4 5)))
                     ;)
                  ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
+      ;))
     ;'((cons (car l)  (append (cdr l) s))))
 
-  ;; hard 9: takes ~33s
+  ;;; hard 9: takes ~33s
   ;(check-equal?
-    ;(run-da-dls 1 (100) (q r)
+    ;(time (run-da-dls 1 (100) (q r)
       ;(evalo `(letrec ((append (lambda (l s)
                                      ;(if (null? l)
                                          ;,q
@@ -750,7 +816,7 @@
                       ;(append '(1 2 3) '(4 5)))
                     ;)
                  ;(list '() '(foo bar) '(1 2 3 4 5)))
-      ;)
+      ;))
     ;'((s (cons (car l) (append (cdr l) s)))))
 
   ;; hard 10 (need better test examples)
