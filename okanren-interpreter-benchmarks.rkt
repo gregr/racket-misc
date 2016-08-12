@@ -182,8 +182,8 @@
   (values st rrands rands-suffix) = (list-split-ground st rands)
   (values st ggoals vgoals args-suffix) =
   (forf st = st
-        ggoals = gt-success
-        vgoals = gt-success
+        ggoals = success
+        vgoals = success
         args = a*
         rand <- (reverse rrands)
         (values st rand) = (state-walk st rand)

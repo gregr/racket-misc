@@ -13,10 +13,12 @@
   symbolo
 
   ; ideally, these would be private
-  gt-success
+  success
   goal-term-eval
   conj
   conj*
+  disj
+  disj*
   state-bindings
   state-bindings-set
   unit
@@ -56,8 +58,10 @@
      (begin (record record-entry ...) (records name record-entries ...)))))
 
 (records goal-term
+  (gt-success)
+  (gt-failure)
   (gt-zzz suspended)
-  (gt-conj gs)
+  (gt-conj g0 g1)
   (gt-disj gs)
   (gt-app proc args)
   (gt-== e0 e1)
@@ -65,19 +69,23 @@
   (gt-absent atom e)
   (gt-=/= e0 e1))
 
-(define gt-success (gt-conj '()))
+(define success (gt-success))
+(define failure (gt-failure))
 
 (record goal-procedure name active? lam)
 (define (goal-procedure-new name lam) (goal-procedure name #f lam))
 
-;(define (conj g0 g1) (gt-conj (list g0 g1)))
 (define (conj g0 g1)
   (match* (g0 g1)
-    (((gt-conj '()) _) g1)
-    ((_ (gt-conj '())) g0)
-    (((gt-conj gs0) (gt-conj gs1)) (gt-conj (append gs0 gs1)))
-    ((_ (gt-conj gs1)) (gt-conj (cons g0 gs1)))
-    ((_ _) (gt-conj (list g0 g1)))))
+    (((gt-success) _) g1)
+    ((_ (gt-success)) g0)
+    ((_ _) (gt-conj g0 g1))))
+(define (disj g0 g1)
+  (match* (g0 g1)
+    (((gt-failure) _) g1)
+    ((_ (gt-failure)) g0)
+    ((_ (gt-disj gs1)) (gt-disj (cons g0 gs1)))
+    ((_ _) (gt-disj (list g0 g1)))))
 
 (define (fail st) #f)
 (define (unit st) st)
@@ -97,9 +105,8 @@
 (define (goal-term-eval gterm)
   (match gterm
     ((gt-zzz suspended) (goal-term-eval (suspended)))
-    ((gt-conj gs) (foldr (lambda (g0 g1)
-                           (lambda (st) (bind ((goal-term-eval g0) st) g1)))
-                         unit gs))
+    ((gt-conj g0 g1) (lambda (st) (bind ((goal-term-eval g0) st)
+                                        (goal-term-eval g1))))
     ((gt-disj gs) (foldr (lambda (g0 g1)
                            (lambda (st)
                              (mplus ((goal-term-eval g0) st) (zzz (g1 st)))))
@@ -109,6 +116,8 @@
     ((gt-type tag e) (eval-typeo tag e))
     ((gt-absent atom e) (eval-absento atom e))
     ((gt-=/= e0 e1) (eval-=/= e0 e1))
+    ((gt-success) unit)
+    ((gt-failure) fail)
     (_ gterm)))
 
 (define (var<? v0 v1) (symbol<? (var-name v0) (var-name v1)))
@@ -478,9 +487,9 @@
 
 (define-syntax conj*
   (syntax-rules ()
-    ((_) unit)
+    ((_) success)
     ((_ goal) goal)
-    ((_ goal goals ...) (gt-conj (list goal goals ...)))))
+    ((_ goal goals ...) (conj goal (conj* goals ...)))))
 (define-syntax fresh
   (syntax-rules ()
     ((_ () body ...) (conj* body ...))
@@ -488,11 +497,12 @@
                                      (fresh (lvars ...) body ...)))))
 (define-syntax disj*
   (syntax-rules ()
-    ((_) fail)
+    ((_) failure)
     ((_ goal) goal)
-    ((_ goals ...) (gt-disj (list goals ...)))))
+    ((_ goal goals ...) (disj goal (disj* goals ...)))))
 (define-syntax conde
-  (syntax-rules () ((_ (goal ...) ...) (gt-zzz (zzz (disj* (conj* goal ...) ...))))))
+  (syntax-rules ()
+    ((_ (goal ...) ...) (gt-zzz (zzz (disj* (conj* goal ...) ...))))))
 
 (define var-initial (var 'initial))
 (define (reify-var ix) (string->symbol (string-append "_." (number->string ix))))
