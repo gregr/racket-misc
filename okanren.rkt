@@ -660,6 +660,50 @@
       (((1 2 3) (4 5)))
       (((1 2 3 4) (5)))
       (((1 2 3 4 5) ()))))
+
+  (kanren-define (rev-appendo xs ys rxys)
+    (conde ((== '() xs) (== ys rxys))
+           ((fresh (x0 xs0 xys)
+              (== `(,x0 . ,xs0) xs)
+              (== `(,x0 . ,ys) xys)
+              (rev-appendo xs0 xys rxys)))))
+
+  (check-equal?
+    (run* (q) (rev-appendo '(3 2 1) '(4 5) q))
+    '((((1 2 3 4 5)))))
+  (check-equal?
+    (run 1 (q) (rev-appendo q '(4 5) '(1 2 3 4 5)))
+    '((((3 2 1)))))
+  (check-equal?
+    (run 6 (q r) (rev-appendo q r '(1 2 3 4 5)))
+    '(((() (1 2 3 4 5)))
+      (((1) (2 3 4 5)))
+      (((2 1) (3 4 5)))
+      (((3 2 1) (4 5)))
+      (((4 3 2 1) (5)))
+      (((5 4 3 2 1) ()))))
+
+  (kanren-define (reverso1 xs rxs)
+    (conde ((== '() xs) (== '() rxs))
+           ((fresh (x0 xs0 rxs0)
+              (== `(,x0 . ,xs0) xs)
+              (reverso1 xs0 rxs0)
+              (appendo rxs0 `(,x0) rxs)))))
+
+  (kanren-define (reverso2 xs rxs)
+    (conde ((== '() xs) (== '() rxs))
+           ((fresh (x0 xs0 rxs0)
+              (== `(,x0 . ,xs0) xs)
+              (appendo rxs0 `(,x0) rxs)
+              (reverso2 xs0 rxs0)))))
+
+  (check-equal?
+    (run* (q) (reverso1 '(1 2 3 4 5) q))
+    '((((5 4 3 2 1)))))
+
+  (check-equal?
+    (run* (q) (reverso2 q '(5 4 3 2 1)))
+    '((((1 2 3 4 5)))))
   )
 
 ;; TODO
